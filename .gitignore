@@ -1,0 +1,18 @@
+.env
+.env.*
+node_modules/
+__pycache__/
+.next/
+dist/
+coverage/
+.DS_Store
+
+# Nebius / spike artifacts
+.nebius/
+spike-out/
+*.jobid
+
+# Playwright / Lighthouse (added when the harness lands)
+/test-results/
+/playwright-report/
+.lighthouseci/
