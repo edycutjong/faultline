@@ -168,7 +168,7 @@ export async function reconcile(ctx: StoreContext, hunt: Hunt): Promise<Hunt> {
 
   // The round is complete. Refuse before narrowing: a contradiction means the verdicts
   // cannot all be explained by one culprit, so narrowing them would blame someone.
-  const inconclusive = classifyInconclusive(probes, next.commits);
+  const inconclusive = classifyInconclusive(probes);
   if (inconclusive) {
     next = {
       ...next,

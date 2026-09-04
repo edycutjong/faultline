@@ -59,10 +59,6 @@ export function detectContradiction(probes: readonly Probe[]): Contradiction | n
   return { passSha: highestPass.sha, failSha: lowestFail.sha };
 }
 
-function describe(commits: readonly Commit[], sha: string, index: number): string {
-  const commit = commits.find((c) => c.sha === sha || c.index === index);
-  return commit === undefined ? short(sha) : `${short(commit.sha)} "${commit.subject}"`;
-}
 
 /** Probes from the most recent round present, which is the unit "half a round" refers to. */
 function latestRound(probes: readonly Probe[]): Probe[] {
@@ -80,10 +76,7 @@ function latestRound(probes: readonly Probe[]): Probe[] {
  * failed AND a later probe passed is a contradiction first and an "already broken" range
  * second — reporting the weaker reason would hide the real problem.
  */
-export function classifyInconclusive(
-  probes: readonly Probe[],
-  commits: readonly Commit[],
-): Inconclusive | null {
+export function classifyInconclusive(probes: readonly Probe[]): Inconclusive | null {
   const contradiction = detectContradiction(probes);
   if (contradiction !== null) {
     return {
@@ -104,10 +97,6 @@ export function classifyInconclusive(
     const errored = latestRound(probes).filter((probe) => probe.verdict === "error");
     return errored.length === 0 ? null : probeErrors(errored.length, latestRound(probes).length);
   }
-
-  const sorted = [...answers].sort((a, b) => a.index - b.index);
-  const oldest = sorted[0];
-  const newest = sorted[sorted.length - 1];
 
   // `all_fail` and `all_pass` are deliberately NOT refusals.
   //

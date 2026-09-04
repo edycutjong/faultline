@@ -99,24 +99,21 @@ describe("detectContradiction", () => {
 
 describe("classifyInconclusive", () => {
   it("returns null while the search can legitimately continue", () => {
-    const result = classifyInconclusive(
-      [probe(7, "pass"), probe(14, "pass"), probe(21, "fail"), probe(28, "fail")],
-      RANGE,
-    );
+    const result = classifyInconclusive([probe(7, "pass"), probe(14, "pass"), probe(21, "fail"), probe(28, "fail")]);
     expect(result).toBeNull();
   });
 
   it("returns null for no probes at all", () => {
-    expect(classifyInconclusive([], RANGE)).toBeNull();
+    expect(classifyInconclusive([])).toBeNull();
   });
 
   it("returns null while probes are still running", () => {
-    expect(classifyInconclusive([probe(7, null), probe(14, null)], RANGE)).toBeNull();
+    expect(classifyInconclusive([probe(7, null), probe(14, null)])).toBeNull();
   });
 
   describe("contradiction", () => {
     const probes = [probe(5, "fail"), probe(20, "pass"), probe(35, "fail")];
-    const result = classifyInconclusive(probes, RANGE);
+    const result = classifyInconclusive(probes);
 
     it("is reported with the offending pair as evidence", () => {
       expect(result?.reason).toBe("contradiction");
@@ -133,20 +130,14 @@ describe("classifyInconclusive", () => {
 
     it("outranks all_fail when both could apply", () => {
       // Oldest probe failed and most probes failed, but one later pass breaks the premise.
-      const mostlyFailing = classifyInconclusive(
-        [probe(5, "fail"), probe(10, "fail"), probe(15, "fail"), probe(40, "pass")],
-        RANGE,
-      );
+      const mostlyFailing = classifyInconclusive([probe(5, "fail"), probe(10, "fail"), probe(15, "fail"), probe(40, "pass")]);
       expect(mostlyFailing?.reason).toBe("contradiction");
       expect(mostlyFailing?.evidence?.passSha).toBe(commit(40).sha);
       expect(mostlyFailing?.evidence?.failSha).toBe(commit(5).sha);
     });
 
     it("outranks probe_errors when both could apply", () => {
-      const noisy = classifyInconclusive(
-        [probe(5, "fail"), probe(20, "pass"), probe(30, "error"), probe(40, "error")],
-        RANGE,
-      );
+      const noisy = classifyInconclusive([probe(5, "fail"), probe(20, "pass"), probe(30, "error"), probe(40, "error")]);
       expect(noisy?.reason).toBe("contradiction");
     });
   });
@@ -156,19 +147,16 @@ describe("classifyInconclusive", () => {
     // passes, so a round where everything fails just means the culprit is early in the
     // range. classifyInconclusive must resolve to null and let the search keep narrowing.
     it("is no longer reported — it resolves to null with no evidence pair", () => {
-      const result = classifyInconclusive(
-        [probe(1, "fail"), probe(9, "fail"), probe(18, "fail"), probe(27, "fail")],
-        RANGE,
-      );
+      const result = classifyInconclusive([probe(1, "fail"), probe(9, "fail"), probe(18, "fail"), probe(27, "fail")]);
       expect(result).toBeNull();
     });
 
     it("applies to a single failing probe too", () => {
-      expect(classifyInconclusive([probe(1, "fail")], RANGE)).toBeNull();
+      expect(classifyInconclusive([probe(1, "fail")])).toBeNull();
     });
 
     it("does not apply when one probe passed", () => {
-      const mixed = classifyInconclusive([probe(1, "pass"), probe(9, "fail")], RANGE);
+      const mixed = classifyInconclusive([probe(1, "pass"), probe(9, "fail")]);
       expect(mixed).toBeNull();
     });
   });
@@ -178,23 +166,19 @@ describe("classifyInconclusive", () => {
     // the range, which relies on the failing ref really failing — a real, narrowable
     // answer, not an unexplainable one.
     it("is no longer reported — it resolves to null with no evidence pair", () => {
-      const result = classifyInconclusive(
-        [probe(9, "pass"), probe(18, "pass"), probe(27, "pass"), probe(36, "pass")],
-        RANGE,
-      );
+      const result = classifyInconclusive([probe(9, "pass"), probe(18, "pass"), probe(27, "pass"), probe(36, "pass")]);
       expect(result).toBeNull();
     });
 
     it("falls back to null even when the commit is not in the supplied range", () => {
-      const orphan = classifyInconclusive([probe(9, "pass")], []);
+      const orphan = classifyInconclusive([probe(9, "pass")]);
       expect(orphan).toBeNull();
     });
   });
 
   describe("probe_errors", () => {
     it("fires when exactly half a round returned nothing", () => {
-      const result = classifyInconclusive(
-        [
+      const result = classifyInconclusive([
           probe(7, "pass"),
           probe(14, "pass"),
           probe(21, "fail"),
@@ -203,51 +187,40 @@ describe("classifyInconclusive", () => {
           probe(42, "error"),
           probe(49, "error"),
           probe(56, "error"),
-        ],
-        RANGE,
-      );
+        ]);
       expect(result?.reason).toBe("probe_errors");
       expect(result?.evidence).toBeNull();
       expect(result?.explanation).toContain("4 of 8");
     });
 
     it("fires when nothing in the round reported at all", () => {
-      const result = classifyInconclusive([probe(7, "error"), probe(14, "error")], RANGE);
+      const result = classifyInconclusive([probe(7, "error"), probe(14, "error")]);
       expect(result?.reason).toBe("probe_errors");
       expect(result?.explanation).toContain("2 of 2");
     });
 
     it("does not fire below half a round", () => {
-      const result = classifyInconclusive(
-        [probe(7, "pass"), probe(14, "pass"), probe(21, "fail"), probe(28, "error")],
-        RANGE,
-      );
+      const result = classifyInconclusive([probe(7, "pass"), probe(14, "pass"), probe(21, "fail"), probe(28, "error")]);
       expect(result).toBeNull();
     });
 
     it("counts only the latest round, so old failures do not poison a clean one", () => {
-      const result = classifyInconclusive(
-        [
+      const result = classifyInconclusive([
           probe(7, "error", 1),
           probe(14, "error", 1),
           probe(21, "pass", 2),
           probe(28, "fail", 2),
-        ],
-        RANGE,
-      );
+        ]);
       expect(result).toBeNull();
     });
 
     it("fires on the latest round even when earlier rounds were clean", () => {
-      const result = classifyInconclusive(
-        [
+      const result = classifyInconclusive([
           probe(7, "pass", 1),
           probe(14, "fail", 1),
           probe(9, "error", 2),
           probe(11, "error", 2),
-        ],
-        RANGE,
-      );
+        ]);
       expect(result?.reason).toBe("probe_errors");
       expect(result?.explanation).toContain("2 of 2");
     });
@@ -263,7 +236,7 @@ describe("classifyInconclusive", () => {
 
     for (const [reason, probes] of cases) {
       it(`${reason} reads as a refusal, not a crash`, () => {
-        const result = classifyInconclusive(probes, RANGE);
+        const result = classifyInconclusive(probes);
         expect(result).not.toBeNull();
         expect(result?.reason).toBe(reason);
         expect(result?.headline.length).toBeGreaterThan(15);
@@ -278,18 +251,18 @@ describe("classifyInconclusive", () => {
     }
 
     it("all_fail reads as a resolution, not a refusal", () => {
-      const result = classifyInconclusive([probe(1, "fail"), probe(9, "fail")], RANGE);
+      const result = classifyInconclusive([probe(1, "fail"), probe(9, "fail")]);
       expect(result).toBeNull();
     });
 
     it("all_pass reads as a resolution, not a refusal", () => {
-      const result = classifyInconclusive([probe(9, "pass"), probe(18, "pass")], RANGE);
+      const result = classifyInconclusive([probe(9, "pass"), probe(18, "pass")]);
       expect(result).toBeNull();
     });
 
     it("carries evidence only for the contradiction case", () => {
       for (const [reason, probes] of cases) {
-        const result = classifyInconclusive(probes, RANGE);
+        const result = classifyInconclusive(probes);
         if (reason === "contradiction") {
           expect(result?.evidence).not.toBeNull();
         } else {
@@ -305,14 +278,14 @@ describe("classifyInconclusive", () => {
     // be treated as unexplainable. It must narrow instead.
     it("an all-fail round over a real range returns null — the culprit is early, not unexplainable", () => {
       const probes = [probe(1, "fail"), probe(16, "fail"), probe(32, "fail"), probe(48, "fail")];
-      expect(classifyInconclusive(probes, RANGE)).toBeNull();
+      expect(classifyInconclusive(probes)).toBeNull();
     });
 
     // The mirror image: every probe passing means the culprit is late in the range, not
     // that the round is unexplainable.
     it("an all-pass round over a real range returns null — the culprit is late", () => {
       const probes = [probe(16, "pass"), probe(32, "pass"), probe(48, "pass"), probe(63, "pass")];
-      expect(classifyInconclusive(probes, RANGE)).toBeNull();
+      expect(classifyInconclusive(probes)).toBeNull();
     });
 
     it("a contradiction still wins even when every other verdict is a fail", () => {
@@ -323,7 +296,7 @@ describe("classifyInconclusive", () => {
         probe(8, "fail"),
         probe(60, "pass"), // the one probe that disagrees with an otherwise all-fail round
       ];
-      const result = classifyInconclusive(probes, RANGE);
+      const result = classifyInconclusive(probes);
       expect(result?.reason).toBe("contradiction");
       expect(result?.evidence).toEqual({ passSha: commit(60).sha, failSha: commit(2).sha });
     });
