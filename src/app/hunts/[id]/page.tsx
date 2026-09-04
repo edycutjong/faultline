@@ -131,12 +131,16 @@ export default function HuntPage() {
                   ? "Faultline will not name a culprit."
                   : hunt.status === "error"
                     ? "The hunt stopped early."
-                    : "Eliminating suspects."}
+                    : hunt.status === "narrating"
+                      ? "Culprit named. Explaining it now."
+                      : "Eliminating suspects."}
             </h1>
             <p className="mt-2 max-w-[70ch] text-[15px] leading-relaxed text-muted">
-              {isActive(hunt.status)
-                ? "Each band goes out together. Every two seconds this page collects the verdicts that landed, narrows the range, and dispatches the next band."
-                : "The search is finished. Every probe below ran as a real Nebius Serverless AI Job."}
+              {hunt.status === "narrating"
+                ? "The search is over — the commit below is final. A single explanatory paragraph is being generated from its diff."
+                : isActive(hunt.status)
+                  ? "Each band goes out together. Every two seconds this page collects the verdicts that landed, narrows the range, and dispatches the next band."
+                  : "The search is finished. Every probe below ran as a real Nebius Serverless AI Job."}
             </p>
           </header>
 

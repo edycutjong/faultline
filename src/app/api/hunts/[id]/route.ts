@@ -21,7 +21,19 @@ export async function GET(
 
   const hunt = await readHunt(ctx, id);
   if (!hunt) {
-    return NextResponse.json({ error: "No such hunt." }, { status: 404 });
+    // Without Nebius credentials hunts live in process memory, which is not shared between
+    // serverless instances or across a dev-server reload. Say that, rather than implying the
+    // hunt never existed — the distinction is the difference between a bug and a boundary.
+    return NextResponse.json(
+      ctx.config
+        ? { error: "No such hunt." }
+        : {
+            error:
+              "This hunt is no longer readable. Without Nebius credentials hunts are held in memory rather than in Object Storage, so they do not survive being read by a different server instance. Live hunts need the credentials configured.",
+            ephemeral: true,
+          },
+      { status: 404 },
+    );
   }
 
   try {

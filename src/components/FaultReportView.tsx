@@ -51,8 +51,10 @@ export function FaultReportView({ hunt }: { hunt: Hunt }) {
     <section aria-labelledby="fault-report" className="rounded-card border border-line bg-surface">
       <header className="border-b border-line px-6 py-5">
         <p className="text-[12px] uppercase tracking-[0.14em] text-muted">Fault report</p>
-        <h2 id="fault-report" className="mt-2 text-[26px] font-semibold tracking-tight">
-          One commit explains every verdict.
+        {/* The heading is the commit message: the most useful string on the screen, and the
+            one a maintainer will recognise. */}
+        <h2 id="fault-report" className="mt-2 max-w-[46ch] text-[26px] font-semibold leading-tight tracking-tight">
+          {report.culpritSubject || "The culprit"}
         </h2>
       </header>
 
@@ -69,8 +71,7 @@ export function FaultReportView({ hunt }: { hunt: Hunt }) {
             verified by executed tests
           </span>
         </div>
-        <p className="mt-3 text-[17px] text-text">{report.culpritSubject || EM_DASH}</p>
-        <dl className="mt-4 grid grid-cols-1 gap-x-10 gap-y-2 text-[14px] sm:grid-cols-3">
+        <dl className="mt-5 grid grid-cols-1 gap-x-10 gap-y-2 text-[14px] sm:grid-cols-3">
           <div>
             <dt className="text-muted">Author</dt>
             <dd className="mt-0.5">{report.culpritAuthor || EM_DASH}</dd>

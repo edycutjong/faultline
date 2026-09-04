@@ -158,46 +158,57 @@ details > summary::-webkit-details-marker { display: none; }
 /* --------------------------------------------------------------------------
    Timeline layout. Desktop-first: horizontal ticks, oldest left.
    ONE breakpoint (768px) stacks it vertically with identical colour semantics.
+
+   Probed commits are full height; unprobed ones are a short stub. At 256 commits
+   a tick is 3px wide, so height — not width — is what makes "eight things just
+   lit up" readable across the room.
    -------------------------------------------------------------------------- */
 .timeline {
   display: flex;
   flex-direction: row;
   align-items: stretch;
   gap: var(--tick-gap, 2px);
-  min-height: 64px;
+  height: 72px;
 }
 .timeline .tick {
   flex: 1 1 var(--tick-w, 6px);
   min-width: var(--tick-w, 6px);
   max-width: 22px;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .tick-body {
   position: relative;
   display: block;
   width: 100%;
-  height: 100%;
+  height: 46%;
   border-radius: var(--r-tick);
   background: var(--unknown);
   overflow: hidden;
+  transition: height var(--dur-verdict) var(--ease-out);
 }
+.tick[data-probed="true"] .tick-body { height: 100%; }
 .tick-fill { position: absolute; inset: 0; border-radius: var(--r-tick); }
 .tick:hover .tick-body { outline: 1px solid var(--text); outline-offset: 1px; }
-.tick[data-culprit="true"] .tick-body { outline: 2px solid var(--text); outline-offset: 2px; }
+.tick[data-culprit="true"] .tick-body { outline: 2px solid var(--text); outline-offset: 3px; }
 
 @media (max-width: 767px) {
   .timeline {
     flex-direction: column;
     align-items: stretch;
     overflow-x: visible !important;
-    gap: 2px;
-    min-height: 0;
+    gap: 1px;
+    height: auto;
   }
   .timeline .tick {
     flex: 0 0 auto;
     width: 100%;
     min-width: 0;
     max-width: none;
-    height: 8px;
+    height: 5px;
   }
+  .tick-body { width: 46%; height: 100%; margin-inline: auto; transition: width var(--dur-verdict) var(--ease-out); }
+  .tick[data-probed="true"] .tick-body { width: 100%; height: 100%; }
 }

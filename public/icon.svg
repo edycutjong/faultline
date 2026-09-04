@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="fl-icon-t fl-icon-d">
+  <title id="fl-icon-t">Faultline</title>
+  <desc id="fl-icon-d">A horizontal line of eight commit ticks, fractured and displaced at one point: four green passing commits on the left, four red failing commits on the right, split by a bright vertical seam — the guilty commit.</desc>
+
+  <!-- MARK: a strata line, slipped at the fault.
+       Left stratum  #10B981 innocent : commits whose test passed
+       Right stratum #EF4444 guilty   : commits whose test failed
+       White seam    #EDEDEF          : the located boundary — the culprit commit
+       Eight ticks total = the eight parallel probes of one round. -->
+
+  <!-- plate: self-contained so the mark holds on light AND dark surfaces -->
+  <rect x="0" y="0" width="512" height="512" rx="114" fill="#141416"/>
+  <rect x="3" y="3" width="506" height="506" rx="111.5" fill="none" stroke="#2E2E36" stroke-width="6"/>
+
+  <!-- left stratum — innocent, upper -->
+  <g fill="#10B981">
+    <rect x="58"  y="184" width="38" height="62" rx="13"/>
+    <rect x="104" y="184" width="38" height="62" rx="13"/>
+    <rect x="150" y="184" width="38" height="62" rx="13"/>
+    <rect x="196" y="184" width="38" height="62" rx="13"/>
+  </g>
+
+  <!-- right stratum — guilty, displaced downward: the slip -->
+  <g fill="#EF4444">
+    <rect x="278" y="266" width="38" height="62" rx="13"/>
+    <rect x="324" y="266" width="38" height="62" rx="13"/>
+    <rect x="370" y="266" width="38" height="62" rx="13"/>
+    <rect x="416" y="266" width="38" height="62" rx="13"/>
+  </g>
+
+  <!-- the fault: the single commit the hunt names -->
+  <rect x="243" y="146" width="26" height="220" rx="13" fill="#EDEDEF"/>
+</svg>

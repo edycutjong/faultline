@@ -38,6 +38,7 @@ export function Timeline({ hunt }: { hunt: Hunt }) {
   const tickWidth = count > 160 ? 3 : count > 80 ? 5 : count > 32 ? 9 : 14;
   const gap = count > 120 ? 1 : count > 48 ? 2 : 3;
 
+  const stopped = hunt.status === "inconclusive" || hunt.status === "error";
   const live = hunt.commits.filter((c) => isLive(hunt, c.index)).length;
   const eliminated = count - live;
 
@@ -61,6 +62,11 @@ export function Timeline({ hunt }: { hunt: Hunt }) {
             const isCulprit = culpritSha !== null && commit.sha === culpritSha;
             const dispatching = state === "pending";
 
+            // A commit can be named without ever being probed: narrowing settles the range
+            // to one index, and that index is guilty whether or not a probe landed on it.
+            const painted = isCulprit ? "guilty" : state;
+            const filled = painted === "innocent" || painted === "guilty" || painted === "error";
+
             return (
               <li
                 key={commit.sha}
@@ -68,14 +74,17 @@ export function Timeline({ hunt }: { hunt: Hunt }) {
                 data-live={liveTick ? "true" : "false"}
                 data-dispatch={dispatching ? "true" : "false"}
                 data-culprit={isCulprit ? "true" : "false"}
-                title={`${shortSha(commit.sha)} · ${commit.subject} · ${STATE_TEXT[state]}`}
+                data-probed={filled || dispatching ? "true" : "false"}
+                title={`${shortSha(commit.sha)} · ${commit.subject} · ${
+                  isCulprit ? "the culprit" : STATE_TEXT[state]
+                }`}
               >
                 <span className="tick-body">
-                  {state !== "unknown" && state !== "pending" ? (
+                  {filled ? (
                     <span
                       className="tick-fill"
-                      data-verdict={state}
-                      style={{ background: tickColor(state) }}
+                      data-verdict={painted}
+                      style={{ background: tickColor(painted) }}
                     />
                   ) : null}
                 </span>
@@ -85,13 +94,16 @@ export function Timeline({ hunt }: { hunt: Hunt }) {
         </ol>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 text-[13px] text-muted">
-        <span className="font-mono">
-          {hunt.goodRef} <span className="not-italic">(known good)</span>
+      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 font-mono text-[13px] text-muted">
+        <span>{hunt.goodRef} (known good)</span>
+        <span className="text-text">
+          {culpritSha
+            ? `commit ${hunt.highIndex} named`
+            : stopped
+              ? `search stopped · commits ${Math.min(hunt.lowIndex + 1, count)}\u2013${hunt.highIndex} unresolved`
+              : `commits ${Math.min(hunt.lowIndex + 1, count)}\u2013${hunt.highIndex} still suspect`}
         </span>
-        <span className="font-mono">
-          {hunt.badRef} <span className="not-italic">(failing)</span>
-        </span>
+        <span>{hunt.badRef} (failing)</span>
       </div>
 
       {/* The same facts, in text, for anyone who cannot see 256 coloured rectangles. */}

@@ -124,7 +124,7 @@ function NoRecording({ reason }: { reason: string }) {
       <div className="px-6 py-8">
         <h2
           id="no-recording"
-          className="max-w-[26ch] text-[24px] font-semibold leading-tight tracking-tight"
+          className="max-w-[40ch] text-[24px] font-semibold leading-tight tracking-tight"
         >
           There is no recorded hunt to replay yet.
         </h2>

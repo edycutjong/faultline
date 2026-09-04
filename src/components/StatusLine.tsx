@@ -15,6 +15,10 @@
 import type { Hunt } from "@/lib/types";
 import { EM_DASH, formatCost, isActive, statusFacts } from "./format";
 
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
 function Dot() {
   return (
     <span aria-hidden="true" className="px-2 text-unknown">
@@ -32,25 +36,37 @@ export function StatusLine({ hunt }: { hunt: Hunt }) {
   let remaining: React.ReactNode;
   let costSuffix: string;
 
-  if (active) {
+  // A named culprit ends the search even while narration is still running, so the line stops
+  // counting rounds the moment there is a report rather than implying more probing to come.
+  const settled = hunt.report !== null;
+
+  if (settled) {
+    lead = <>Settled in {plural(f.round, "round")}</>;
+    remaining = <>1 commit named</>;
+    costSuffix = hunt.status === "narrating" ? "so far" : "total";
+  } else if (active) {
     lead = (
       <>
         Round {f.round} of ~{f.totalRounds}
       </>
     );
-    remaining = <>~{f.commitsRemaining} commits remaining</>;
+    remaining = (
+      <>
+        ~{f.commitsRemaining} {f.commitsRemaining === 1 ? "commit" : "commits"} remaining
+      </>
+    );
     costSuffix = "so far";
-  } else if (hunt.status === "done") {
-    lead = <>Settled in {f.round} rounds</>;
-    remaining = <>1 commit named</>;
-    costSuffix = "total";
   } else if (hunt.status === "inconclusive") {
-    lead = <>Stopped after {f.round} rounds</>;
+    lead = <>Stopped after {plural(f.round, "round")}</>;
     remaining = <>no culprit named</>;
     costSuffix = "total";
   } else {
     lead = <>Halted in round {f.round}</>;
-    remaining = <>{f.commitsRemaining} commits unresolved</>;
+    remaining = (
+      <>
+        {f.commitsRemaining} {f.commitsRemaining === 1 ? "commit" : "commits"} unresolved
+      </>
+    );
     costSuffix = "total";
   }
 
@@ -62,7 +78,7 @@ export function StatusLine({ hunt }: { hunt: Hunt }) {
     >
       <span>{lead}</span>
       <Dot />
-      <span>{f.probesComplete} probes complete</span>
+      <span>{plural(f.probesComplete, "probe")} complete</span>
       <Dot />
       <span>{remaining}</span>
       <Dot />

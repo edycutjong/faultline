@@ -20,6 +20,7 @@ export const metadata: Metadata = {
   description:
     "Your laptop can only be one machine. Faultline bisects a broken commit range across eight Nebius cloud machines at once — and tells you why it broke.",
   applicationName: "Faultline",
+  icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }] },
 };
 
 export const viewport: Viewport = {
