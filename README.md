@@ -12,7 +12,7 @@ Faultline bisects a broken commit range across eight cloud machines at once — 
 [![Nebius AI Cloud](https://img.shields.io/badge/Nebius-Serverless%20AI%20Jobs-6057F7)](https://docs.nebius.com/serverless)
 [![NVIDIA](https://img.shields.io/badge/NVIDIA-OpenCodeReasoning--Nemotron--14B-76B900)](https://huggingface.co/nvidia/OpenCodeReasoning-Nemotron-14B)
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000)](https://nextjs.org)
-[![Tests](https://img.shields.io/badge/tests-96%20passing-10B981)](#-tests)
+[![Tests](https://img.shields.io/badge/tests-104%20passing-10B981)](#-tests)
 [![License](https://img.shields.io/badge/license-MIT-8B8B93)](LICENSE)
 
 </div>
@@ -140,7 +140,7 @@ a bisection must handle; the end-to-end test caught it. They earn a caveat on th
 
 ## 🧪 Tests
 
-**96 passing.** `npm test`
+**104 passing.** `npm test`
 
 | Suite | What it pins down |
 |---|---|
@@ -148,12 +148,13 @@ a bisection must handle; the end-to-end test caught it. They earn a caveat on th
 | `tests/verdicts.test.ts` (39) | Every refusal branch, contradiction outranking everything, and the edge-culprit regression. |
 | `tests/sigv4.test.ts` (13) | The S3 signer against **AWS's own published signature vectors** — the only way to trust a signature implementation without live credentials. |
 | `tests/hunt.integration.test.ts` (8) | A full hunt through the real dispatch and reconcile code, with Nebius simulated at the HTTP boundary. Asserts "3 rounds, ≤24 job-runs, correct culprit" against the system as shipped. |
+| `tests/issue.test.ts` (8) | The pasteable GitHub issue: evidence trail, model attribution, and no invented prose when narration fails. |
 
 ## 🚀 Running it
 
 ```bash
 npm install
-npm test          # 96 tests, no credentials needed
+npm test          # 104 tests, no credentials needed
 npm run dev
 ```
 
@@ -183,6 +184,7 @@ Stated plainly, because a README that hides this is worth less than one that doe
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — written from the code, every claim naming its file
 - [`FEEDBACK.md`](FEEDBACK.md) — feedback for Nebius, including five documentation and API gaps
 - [`probe/README.md`](probe/README.md) — the probe container's env-var and verdict contracts
+- [`DEMO.md`](DEMO.md) — every command, with the output it actually printed
 - [`narration/README.md`](narration/README.md) — why narration is a job and not an endpoint
 
 ## 📄 License
