@@ -16,3 +16,6 @@ spike-out/
 /test-results/
 /playwright-report/
 .lighthouseci/
+
+# TypeScript incremental build state
+*.tsbuildinfo
