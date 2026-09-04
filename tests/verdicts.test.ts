@@ -298,4 +298,73 @@ describe("classifyInconclusive", () => {
       }
     });
   });
+
+  describe("regression: edge culprits are not refusals", () => {
+    // Pins the bug an end-to-end test caught: a 64-commit hunt with the culprit at index 1
+    // returned `inconclusive` instead of naming commit 1, because an all-fail round used to
+    // be treated as unexplainable. It must narrow instead.
+    it("an all-fail round over a real range returns null — the culprit is early, not unexplainable", () => {
+      const probes = [probe(1, "fail"), probe(16, "fail"), probe(32, "fail"), probe(48, "fail")];
+      expect(classifyInconclusive(probes, RANGE)).toBeNull();
+    });
+
+    // The mirror image: every probe passing means the culprit is late in the range, not
+    // that the round is unexplainable.
+    it("an all-pass round over a real range returns null — the culprit is late", () => {
+      const probes = [probe(16, "pass"), probe(32, "pass"), probe(48, "pass"), probe(63, "pass")];
+      expect(classifyInconclusive(probes, RANGE)).toBeNull();
+    });
+
+    it("a contradiction still wins even when every other verdict is a fail", () => {
+      const probes = [
+        probe(2, "fail"),
+        probe(4, "fail"),
+        probe(6, "fail"),
+        probe(8, "fail"),
+        probe(60, "pass"), // the one probe that disagrees with an otherwise all-fail round
+      ];
+      const result = classifyInconclusive(probes, RANGE);
+      expect(result?.reason).toBe("contradiction");
+      expect(result?.evidence).toEqual({ passSha: commit(60).sha, failSha: commit(2).sha });
+    });
+  });
+});
+
+describe("edgeCaveat", () => {
+  it("flags the culprit landing on the first commit of the range", () => {
+    const caveat = edgeCaveat(RANGE, 0);
+    expect(caveat).not.toBeNull();
+    expect(caveat?.toLowerCase()).toContain("first commit");
+    expect(caveat?.toLowerCase()).toContain("good ref");
+  });
+
+  it("flags the culprit landing on the last commit of the range", () => {
+    const caveat = edgeCaveat(RANGE, RANGE.length - 1);
+    expect(caveat).not.toBeNull();
+    expect(caveat?.toLowerCase()).toContain("last commit");
+    expect(caveat?.toLowerCase()).toContain("failing ref");
+  });
+
+  it("says nothing when the culprit sits in the middle of the range", () => {
+    expect(edgeCaveat(RANGE, 32)).toBeNull();
+  });
+
+  it("says nothing when there is no culprit at all", () => {
+    expect(edgeCaveat(RANGE, null)).toBeNull();
+  });
+
+  it("says nothing over an empty commit list", () => {
+    expect(edgeCaveat([], 0)).toBeNull();
+  });
+
+  it("treats a single-commit range as one edge, not two — first wins over last", () => {
+    // With one commit, index 0 is simultaneously `first` and `last`. The implementation
+    // checks the `first` branch before the `last` branch and returns as soon as one
+    // matches, so a single-commit range always reads as the "first commit" caveat.
+    const single = [commit(5)];
+    const caveat = edgeCaveat(single, 5);
+    expect(caveat).not.toBeNull();
+    expect(caveat?.toLowerCase()).toContain("first commit");
+    expect(caveat?.toLowerCase()).not.toContain("last commit");
+  });
 });
