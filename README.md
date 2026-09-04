@@ -12,7 +12,7 @@ Faultline bisects a broken commit range across eight cloud machines at once — 
 [![Nebius AI Cloud](https://img.shields.io/badge/Nebius-Serverless%20AI%20Jobs-6057F7)](https://docs.nebius.com/serverless)
 [![NVIDIA](https://img.shields.io/badge/NVIDIA-OpenCodeReasoning--Nemotron--14B-76B900)](https://huggingface.co/nvidia/OpenCodeReasoning-Nemotron-14B)
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000)](https://nextjs.org)
-[![Tests](https://img.shields.io/badge/tests-104%20passing-10B981)](#-tests)
+[![Tests](https://img.shields.io/badge/tests-164%20passing-10B981)](#-tests)
 [![License](https://img.shields.io/badge/license-MIT-8B8B93)](LICENSE)
 
 </div>
@@ -140,7 +140,7 @@ a bisection must handle; the end-to-end test caught it. They earn a caveat on th
 
 ## 🧪 Tests
 
-**104 passing.** `npm test`
+**164 passing**, 89% statement coverage on `src/lib`. `npm test`
 
 | Suite | What it pins down |
 |---|---|
@@ -149,12 +149,15 @@ a bisection must handle; the end-to-end test caught it. They earn a caveat on th
 | `tests/sigv4.test.ts` (13) | The S3 signer against **AWS's own published signature vectors** — the only way to trust a signature implementation without live credentials. |
 | `tests/hunt.integration.test.ts` (8) | A full hunt through the real dispatch and reconcile code, with Nebius simulated at the HTTP boundary. Asserts "3 rounds, ≤24 job-runs, correct culprit" against the system as shipped. |
 | `tests/issue.test.ts` (8) | The pasteable GitHub issue: evidence trail, model attribution, and no invented prose when narration fails. |
+| `tests/git.test.ts` (28) | Range resolution, including the pagination that exists because GitHub's compare endpoint truncates at 250 commits and the headline case is 256. |
+| `tests/narrate.test.ts` (16) | That the prompt tells the model the culprit is established fact. It explains; it never re-litigates. |
+| `tests/storage.test.ts` (16) | The verdict channel: a torn read reads as "not there yet", and a truncated listing with no continuation token terminates instead of looping against a billed API. |
 
 ## 🚀 Running it
 
 ```bash
 npm install
-npm test          # 104 tests, no credentials needed
+npm test          # 164 tests, no credentials needed
 npm run dev
 ```
 

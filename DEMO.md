@@ -21,11 +21,14 @@ Observed:
  ✓ tests/sigv4.test.ts (13 tests)
  ✓ tests/issue.test.ts (8 tests)
  ✓ tests/verdicts.test.ts (39 tests)
+ ✓ tests/git.test.ts (28 tests)
+ ✓ tests/storage.test.ts (16 tests)
+ ✓ tests/narrate.test.ts (16 tests)
  ✓ tests/planner.test.ts (36 tests)
  ✓ tests/hunt.integration.test.ts (8 tests)
 
- Test Files  5 passed (5)
-      Tests  104 passed (104)
+ Test Files  8 passed (8)
+      Tests  164 passed (164)
 ```
 
 The two worth opening:
@@ -189,7 +192,7 @@ cost a week.
 
 ## What to run first, if you have five minutes
 
-1. `npm test` — 104 tests, no setup.
+1. `npm test` — 164 tests, no setup.
 2. Open `tests/planner.test.ts` and read `worstCaseRounds`. That function is the product's
    central claim, written so it cannot flatter itself.
 3. `curl` the range-resolution example in §3 and check the probe spacing arithmetic.

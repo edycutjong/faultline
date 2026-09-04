@@ -222,6 +222,27 @@ describe("resolveRange", () => {
     expect(commits.map((c) => c.sha)).not.toContain(shaFor(0));
   });
 
+  it("names an unknown author rather than rendering undefined in the issue", async () => {
+    // GitHub returns a null author block for a commit whose account was deleted. That text
+    // is pasted verbatim into someone else's repository, so it must read as a fact, not a bug.
+    const github = fakeGitHub({
+      refs: { good: shaFor(0), bad: shaFor(1) },
+      page: (page) =>
+        page === 1
+          ? [
+              { sha: shaFor(1), commit: { message: "orphaned change", author: null } },
+              commitPayload(0),
+            ]
+          : [],
+    });
+
+    const commits = await resolveRange(REPO, "good", "bad", github.impl);
+
+    expect(commits[0]?.author).toBe("unknown");
+    expect(commits[0]?.date).toBe("");
+    expect(commits[0]?.subject).toBe("orphaned change");
+  });
+
   it("carries only the subject line, the author and the date onto each commit", async () => {
     const github = fakeGitHub(linearHistory(3));
 
@@ -361,6 +382,31 @@ describe("fetchCommitDiff", () => {
 
     expect(diff).toBe("x".repeat(100));
     expect(diff).not.toContain("truncated");
+  });
+
+  it("sends a bearer token when one is configured, and none when it is not", async () => {
+    // Unauthenticated GitHub allows 60 requests/hour per IP. Several judges opening the
+    // deploy at once exhaust that; a token raises the ceiling to 5000.
+    const seen: Array<string | null> = [];
+    const impl: typeof fetch = async (input, init) => {
+      seen.push(new Headers(init?.headers).get("Authorization"));
+      return new Response("diff", { status: 200 });
+    };
+
+    const previous = process.env.GITHUB_TOKEN;
+    try {
+      delete process.env.GITHUB_TOKEN;
+      await fetchCommitDiff(REPO, shaFor(1), 24_000, impl);
+
+      process.env.GITHUB_TOKEN = "  ghp_testtoken  ";
+      await fetchCommitDiff(REPO, shaFor(1), 24_000, impl);
+    } finally {
+      if (previous === undefined) delete process.env.GITHUB_TOKEN;
+      else process.env.GITHUB_TOKEN = previous;
+    }
+
+    expect(seen[0]).toBeNull();
+    expect(seen[1]).toBe("Bearer ghp_testtoken");
   });
 
   it("throws with the upstream status when the diff cannot be fetched", async () => {

@@ -33,6 +33,7 @@ const { privateKey } = generateKeyPairSync("rsa", {
 
 function testConfig(): NebiusConfig {
   const result = loadConfig({
+    NODE_ENV: "test",
     NEBIUS_SERVICE_ACCOUNT_ID: "serviceaccount-e00test",
     NEBIUS_AUTH_KEY_ID: "publickey-e00test",
     NEBIUS_AUTH_PRIVATE_KEY: privateKey,
