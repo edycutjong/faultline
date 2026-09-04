@@ -1,0 +1,6 @@
+# The kitchen never crosses into a deploy, same as it never crosses into the repo.
+scripts/
+probe/
+narration/
+tests/
+coverage/

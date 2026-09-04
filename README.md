@@ -15,6 +15,8 @@ Faultline bisects a broken commit range across eight cloud machines at once — 
 [![Tests](https://img.shields.io/badge/tests-164%20passing-10B981)](#-tests)
 [![License](https://img.shields.io/badge/license-MIT-8B8B93)](LICENSE)
 
+### [→ Open the live demo](https://faultline-edy-cus-projects.vercel.app)
+
 </div>
 
 ---
@@ -161,7 +163,7 @@ npm test          # 164 tests, no credentials needed
 npm run dev
 ```
 
-The app runs with **no environment variables at all** — the landing page and the recorded example
+The [live deploy](https://faultline-edy-cus-projects.vercel.app) runs with **no environment variables at all** — the landing page and the recorded example
 render without credentials, which is what a cold visit must survive. Credentials are needed only
 to dispatch live hunts; see [`.env.example`](.env.example) and `scripts/provision.sh`.
 

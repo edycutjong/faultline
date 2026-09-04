@@ -19,3 +19,4 @@ spike-out/
 
 # TypeScript incremental build state
 *.tsbuildinfo
+.vercel
