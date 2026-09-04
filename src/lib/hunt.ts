@@ -15,10 +15,11 @@ import { DEFAULT_BAND_SIZE, culpritIndex, isSettled, narrow, planBand, estimateR
 import { classifyInconclusive } from "@/lib/verdicts";
 import { readProbeResult, writeHunt, type StoreContext } from "@/lib/store";
 import { createJob, getJob, cancelJob, NebiusApiError } from "@/lib/nebius/jobs";
-import { probeCostUsd } from "@/lib/nebius/config";
+import { buildPrompt, dispatchNarration, pollNarration } from "@/lib/narrate";
+import { fetchCommitDiff, parseRepoUrl } from "@/lib/git";
+import { probeCostUsd, PROBE_MOUNT_PATH } from "@/lib/nebius/config";
 
-/** Where the hunt bucket is mounted inside every probe container. */
-export const PROBE_MOUNT_PATH = "/out";
+export { PROBE_MOUNT_PATH };
 
 export interface CreateHuntInput {
   repoUrl: string;
@@ -153,6 +154,7 @@ export async function reconcile(ctx: StoreContext, hunt: Hunt): Promise<Hunt> {
     return hunt;
   }
   if (hunt.recorded) return hunt;
+  if (hunt.status === "narrating") return advanceNarration(ctx, hunt);
 
   const probes = await Promise.all(hunt.probes.map((probe) => refreshProbe(ctx, hunt, probe)));
   let next: Hunt = { ...hunt, probes, costUsd: totalCost(probes) };
@@ -326,4 +328,74 @@ function elapsed(hunt: Hunt): number {
 function describeError(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);
+}
+
+/**
+ * Drive the narration stage.
+ *
+ * Narration is strictly a decoration on an answer that already exists, so every failure path
+ * here lands on `done` with an explanation of what went wrong — never on `error`. A hunt that
+ * found its culprit has succeeded even if the model never speaks.
+ */
+async function advanceNarration(ctx: StoreContext, hunt: Hunt): Promise<Hunt> {
+  const report = hunt.report;
+  if (!ctx.config || !report) {
+    return finishNarration(ctx, hunt, {
+      narrationError: ctx.config
+        ? "No report to narrate."
+        : "Nebius is not configured, so the root-cause explanation was not generated.",
+    });
+  }
+
+  if (!report.narrationJobId) {
+    try {
+      const ref = parseRepoUrl(hunt.repoUrl);
+      const diff = await fetchCommitDiff(ref, report.culpritSha);
+      const failureOutput =
+        hunt.probes.find((p) => p.commitSha === report.culpritSha && p.verdict === "fail")
+          ?.detail ?? "";
+
+      const jobId = await dispatchNarration(
+        ctx.config,
+        { ...hunt, report: { ...report, diffText: diff } },
+        buildPrompt({ ...hunt, report }, diff, failureOutput),
+      );
+
+      const next: Hunt = {
+        ...hunt,
+        report: { ...report, diffText: diff, narrationJobId: jobId },
+      };
+      await writeHunt(ctx, next);
+      return next;
+    } catch (error) {
+      return finishNarration(ctx, hunt, { narrationError: describeError(error) });
+    }
+  }
+
+  const status = await pollNarration(ctx.config, hunt, report.narrationJobId);
+  if (status.state === "pending") return hunt;
+  if (status.state === "failed") {
+    return finishNarration(ctx, hunt, { narrationError: status.reason });
+  }
+  return finishNarration(ctx, hunt, { rootCauseMd: status.result.rootCauseMd });
+}
+
+async function finishNarration(
+  ctx: StoreContext,
+  hunt: Hunt,
+  patch: { rootCauseMd?: string; narrationError?: string },
+): Promise<Hunt> {
+  const next: Hunt = {
+    ...hunt,
+    status: "done",
+    report: hunt.report
+      ? {
+          ...hunt.report,
+          rootCauseMd: patch.rootCauseMd ?? hunt.report.rootCauseMd,
+          narrationError: patch.narrationError ?? hunt.report.narrationError,
+        }
+      : null,
+  };
+  await writeHunt(ctx, next);
+  return next;
 }

@@ -121,3 +121,6 @@ export function narrationCostUsd(durationMs: number): number {
       32 * PRICING.ramPerGibHourUsd)
   );
 }
+
+/** Where the hunt bucket is mounted inside every job container, probe and narration alike. */
+export const PROBE_MOUNT_PATH = "/out";

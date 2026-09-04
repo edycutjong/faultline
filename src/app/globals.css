@@ -1,0 +1,156 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   faultline — design tokens
+   Transcribed verbatim from assets/brand/tokens.css (the designed palette).
+   Dark only, deliberately: specs/ui.md — "A half-done light mode reads worse
+   than a committed dark one." There is no [data-theme="light"] block.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* surfaces & type colour */
+  --bg:        #0A0A0B;
+  --surface:   #141416;
+  --border:    #2E2E36;
+  --text:      #EDEDEF;
+  --muted:     #8B8B93;
+
+  /* accent — 3.96:1 on --bg. Graphics and large type only, NEVER body copy. */
+  --accent:    #6057F7;
+  --on-accent: #EDEDEF;
+
+  /* verdict states — a tick is in exactly one of these */
+  --unknown:      #3A3A40;
+  --innocent:     #10B981;
+  --guilty:       #EF4444;
+  --inconclusive: #F59E0B;
+  --culprit:      #EDEDEF;
+
+  /* the eliminated span */
+  --op-eliminated: 0.2;
+
+  /* motion */
+  --dur-verdict: 180ms;
+  --dur-narrow:  400ms;
+  --dur-copy:   2000ms;
+  --scale-dispatch: 1.15;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* geometry */
+  --r-tick: 5px;
+  --r-card: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-verdict: 1ms; --dur-narrow: 1ms; --scale-dispatch: 1; }
+}
+
+/* Tailwind v4 bridge — one source of truth, no second drifting copy. */
+@theme inline {
+  --color-bg:           var(--bg);
+  --color-surface:      var(--surface);
+  --color-line:         var(--border);
+  --color-text:         var(--text);
+  --color-muted:        var(--muted);
+  --color-accent:       var(--accent);
+  --color-unknown:      var(--unknown);
+  --color-innocent:     var(--innocent);
+  --color-guilty:       var(--guilty);
+  --color-inconclusive: var(--inconclusive);
+  --color-culprit:      var(--culprit);
+  --font-sans: var(--font-inter), Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius-card: var(--r-card);
+  --radius-tick: var(--r-tick);
+}
+
+html { background: var(--bg); }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection { background: color-mix(in srgb, var(--accent) 45%, transparent); }
+
+/* Visible focus everywhere. Never remove the ring; the accent clears 3:1 as a graphic. */
+:where(a, button, input, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ==========================================================================
+   The timeline
+   ========================================================================== */
+
+/* Eliminated span fades to 20% over 400ms; the live range stays full contrast. */
+.tick {
+  transition: opacity var(--dur-narrow) var(--ease-out);
+  transform-origin: center;
+}
+.tick[data-live="false"] { opacity: var(--op-eliminated); }
+
+/* Round dispatch: every tick in the band scales 1.0 -> 1.15 IN UNISON, then settles.
+   The animation is applied to all band ticks in the same commit, so they share a start
+   frame. Never stagger this: simultaneity is the entire point of the product. */
+@keyframes tick-dispatch {
+  0%   { transform: scaleY(1); }
+  38%  { transform: scaleY(var(--scale-dispatch)); }
+  100% { transform: scaleY(1); }
+}
+.tick[data-dispatch="true"] .tick-body {
+  animation: tick-dispatch 1400ms var(--ease-out) infinite;
+}
+
+/* Verdict lands: colour fills from the centre, 180ms ease-out. */
+@keyframes tick-fill {
+  from { transform: scaleY(0); opacity: 0.4; }
+  to   { transform: scaleY(1); opacity: 1; }
+}
+.tick-fill {
+  transform-origin: center;
+  animation: tick-fill var(--dur-verdict) var(--ease-out) both;
+}
+
+/* Culprit found: the guilty tick pulses once, slowly. */
+@keyframes culprit-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--guilty) 0%, transparent); }
+  45%      { box-shadow: 0 0 0 7px color-mix(in srgb, var(--guilty) 45%, transparent); }
+}
+.tick[data-culprit="true"] .tick-body {
+  animation: culprit-pulse 1600ms var(--ease-out) 1 both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tick[data-dispatch="true"] .tick-body,
+  .tick[data-culprit="true"] .tick-body,
+  .tick-fill { animation: none !important; }
+  .tick-fill { transform: none; opacity: 1; }
+  * { scroll-behavior: auto !important; }
+}
+
+/* Copy button morph */
+.copied-flash { color: var(--innocent); border-color: var(--innocent); }
+
+/* Diff rendering */
+.diff-line { display: block; white-space: pre; padding: 0 0.75rem; }
+.diff-add  { background: color-mix(in srgb, var(--innocent) 14%, transparent); color: #A7F3D0; }
+.diff-del  { background: color-mix(in srgb, var(--guilty)  14%, transparent); color: #FECACA; }
+.diff-hunk { color: var(--muted); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.diff-meta { color: var(--muted); }
+
+/* Details marker */
+details > summary { list-style: none; cursor: pointer; }
+details > summary::-webkit-details-marker { display: none; }

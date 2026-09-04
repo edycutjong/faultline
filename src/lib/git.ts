@@ -188,3 +188,32 @@ export function validateTestCommand(command: string): string {
   }
   return trimmed;
 }
+
+/**
+ * Fetch a commit's patch. This is what the narration model reads, alongside the failing
+ * test output, to explain causation.
+ *
+ * Capped because a single commit can carry a lockfile refresh of tens of thousands of lines,
+ * and the model has a 32K-token context that is better spent on the code that changed.
+ */
+export async function fetchCommitDiff(
+  { owner, repo }: RepoRef,
+  sha: string,
+  maxChars = 24_000,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string> {
+  const res = await fetchImpl(`${GITHUB_API}/repos/${owner}/${repo}/commits/${sha}`, {
+    headers: { ...githubHeaders(), Accept: "application/vnd.github.diff" },
+  });
+
+  if (!res.ok) {
+    throw new GitRangeError(
+      `Could not fetch the diff for ${sha.slice(0, 7)}: ${res.status}`,
+      res.status,
+    );
+  }
+
+  const diff = await res.text();
+  if (diff.length <= maxChars) return diff;
+  return `${diff.slice(0, maxChars)}\n\n[diff truncated at ${maxChars} characters]`;
+}
