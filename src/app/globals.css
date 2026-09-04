@@ -154,3 +154,50 @@ body {
 /* Details marker */
 details > summary { list-style: none; cursor: pointer; }
 details > summary::-webkit-details-marker { display: none; }
+
+/* --------------------------------------------------------------------------
+   Timeline layout. Desktop-first: horizontal ticks, oldest left.
+   ONE breakpoint (768px) stacks it vertically with identical colour semantics.
+   -------------------------------------------------------------------------- */
+.timeline {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: var(--tick-gap, 2px);
+  min-height: 64px;
+}
+.timeline .tick {
+  flex: 1 1 var(--tick-w, 6px);
+  min-width: var(--tick-w, 6px);
+  max-width: 22px;
+  position: relative;
+}
+.tick-body {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--r-tick);
+  background: var(--unknown);
+  overflow: hidden;
+}
+.tick-fill { position: absolute; inset: 0; border-radius: var(--r-tick); }
+.tick:hover .tick-body { outline: 1px solid var(--text); outline-offset: 1px; }
+.tick[data-culprit="true"] .tick-body { outline: 2px solid var(--text); outline-offset: 2px; }
+
+@media (max-width: 767px) {
+  .timeline {
+    flex-direction: column;
+    align-items: stretch;
+    overflow-x: visible !important;
+    gap: 2px;
+    min-height: 0;
+  }
+  .timeline .tick {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    height: 8px;
+  }
+}

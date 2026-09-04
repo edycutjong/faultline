@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import type { Hunt } from "@/lib/types";
 import { readHunt, storeContext } from "@/lib/store";
+import { edgeCaveat } from "@/lib/verdicts";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,14 @@ export function renderIssue(hunt: Hunt): string {
     `**Rounds:** ${hunt.round} · **Probes run:** ${hunt.probes.length}`,
     "",
   ];
+
+  const caveat = edgeCaveat(
+    hunt.commits,
+    hunt.commits.find((c) => c.sha === report.culpritSha)?.index ?? null,
+  );
+  if (caveat) {
+    lines.push(`> **Worth knowing.** ${caveat}`, "");
+  }
 
   if (report.rootCauseMd) {
     lines.push(

@@ -109,33 +109,15 @@ export function classifyInconclusive(
   const oldest = sorted[0];
   const newest = sorted[sorted.length - 1];
 
-  if (answers.every((item) => item.verdict === "fail")) {
-    return {
-      reason: "all_fail",
-      headline: "The break is older than this range.",
-      explanation:
-        `Every commit tested failed, including the oldest one probed — ` +
-        `${describe(commits, oldest.sha, oldest.index)}. A bisection can only work when the ` +
-        `range starts from something that genuinely passes, and nothing here does. The break ` +
-        `is older than this window: the good ref needs to move further back, to a commit where ` +
-        `this test is actually green.`,
-      evidence: null,
-    };
-  }
-
-  if (answers.every((item) => item.verdict === "pass")) {
-    return {
-      reason: "all_pass",
-      headline: "Nothing in this range reproduces the failure.",
-      explanation:
-        `Every commit tested passed, up to and including ` +
-        `${describe(commits, newest.sha, newest.index)}. The code itself is green under this ` +
-        `test command, which points away from the commits and toward what surrounds them — ` +
-        `dependency versions, service state, seed data, or the machine. A bisection cannot ` +
-        `find a fault the code does not contain.`,
-      evidence: null,
-    };
-  }
+  // `all_fail` and `all_pass` are deliberately NOT refusals.
+  //
+  // A hunt asserts two things it never probes: the good ref passes and the bad ref fails.
+  // Under those assumptions a round in which every probe fails simply means the culprit is
+  // early in the range, and one in which every probe passes means it is late. Both narrow
+  // correctly and settle on a real commit. Refusing here would make Faultline decline to
+  // answer precisely when the guilty commit sits at either edge of the range — the two
+  // positions a bisection tool must handle. What those cases do earn is a caveat on the
+  // report, which `edgeCaveat` below supplies.
 
   const round = latestRound(probes);
   const errored = round.filter((probe) => probe.verdict === "error").length;
@@ -158,4 +140,39 @@ function probeErrors(errored: number, total: number): Inconclusive {
       `command and the probe image are where the answer is.`,
     evidence: null,
   };
+}
+
+/**
+ * A caveat for a culprit that landed on the very edge of the searched range.
+ *
+ * Neither case is a refusal — both are correct answers — but each rests on an assumption the
+ * hunt never tested, and a report that hides that is overstating its evidence.
+ */
+export function edgeCaveat(
+  commits: readonly Commit[],
+  culpritIndex: number | null,
+): string | null {
+  if (culpritIndex === null || commits.length === 0) return null;
+
+  const first = Math.min(...commits.map((c) => c.index));
+  const last = Math.max(...commits.map((c) => c.index));
+
+  if (culpritIndex === first) {
+    return (
+      "This is the first commit in the range, so every commit Faultline tested failed. That " +
+      "is consistent with this commit being the cause, but it also assumes the known-good ref " +
+      "genuinely passes. If it does not, the real break is older than this window and the good " +
+      "ref needs to move further back."
+    );
+  }
+
+  if (culpritIndex === last) {
+    return (
+      "This is the last commit in the range, so every earlier commit Faultline tested passed. " +
+      "That is consistent with this commit being the cause, and it rests on the failing ref " +
+      "genuinely failing — which is the observation that started the hunt."
+    );
+  }
+
+  return null;
 }

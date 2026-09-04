@@ -1,0 +1,135 @@
+# Feedback for Nebius and the hackathon organisers
+
+**Send by: 2026-10-01.** Written 2026-09-04 while building [Faultline](./README.md), which runs
+entirely on Nebius AI Cloud Serverless AI Jobs.
+
+Everything below is reproducible and dated. Where something blocked us, we say what we did
+next, because a report that only complains is less useful than one that shows the workaround.
+
+---
+
+## 1. A new tenant is suspended at signup, with no notification and no stated path out
+
+**This is the highest-impact issue we hit, by a wide margin.** It stopped the project's engine
+for a week and is still unresolved.
+
+- Tenant `tenant-e00rzrgpcth7hvbajg` was created `2026-08-28T04:32:42Z` and its
+  `status.suspension_state` became `SUSPENDED` at `2026-08-28T04:33:03Z` — **21 seconds after
+  creation**, before a single API call was made.
+- Re-verified `2026-09-04`: still `SUSPENDED`, seven days later.
+
+What makes this expensive is not the suspension itself but how it presents:
+
+| Surface | What it does under suspension |
+|---|---|
+| `nebius iam tenant list` | Succeeds, and correctly shows `suspension_state: SUSPENDED` |
+| `nebius iam project list` | Returns `{}` — an **empty list**, not an error |
+| `nebius ai job list` | Returns `{}` — an **empty list**, not an error |
+| `nebius ai job create` | `PermissionDenied: you do not have permission to access the requested object` |
+
+A developer reads "empty project list" as "I have not created a project yet" and
+`PermissionDenied` as "my IAM roles are wrong". Both send you down a long, wrong diagnostic
+path. Neither mentions the tenant is suspended, even though the API plainly knows it is.
+
+**Three changes would have saved us a week:**
+
+1. Have `PermissionDenied` say so when the cause is tenant suspension. The error already
+   carries a `Trace ID`; a `suspension_state=SUSPENDED` hint costs nothing and ends the
+   investigation immediately.
+2. Do not return an empty list for a resource collection the caller cannot see because of a
+   tenant-level hold. An error is honest; `{}` is misleading.
+3. Email on suspension. We received nothing at signup, and there is no self-service banner
+   explaining what triggered it or how to clear it.
+
+We understand new-account holds exist for good anti-abuse reasons. The problem is silence, not
+the hold.
+
+## 2. Token Factory presents a credit-card wall at first access
+
+The hackathon grants **$25 in Token Factory credits** (activation code
+`NEBIUS-DEVPOST-GLOBAL26`). Token Factory requires a payment method to be attached before
+first use. The granted credit is therefore unreachable for any participant who cannot or will
+not attach a card — which, for a global hackathon with a large student entry, is a meaningful
+fraction of the field.
+
+This directly changed what we built. Our first project design used Token Factory Sandboxes as
+its engine; we dropped it the day we found the wall and rebuilt on AI Cloud Serverless AI Jobs,
+which we verified reachable without a payment method.
+
+**Suggestion:** let a promo activation code stand in for the card, at least up to the credit
+value. A prize that cannot be spent is not a prize.
+
+## 3. The Builder Program link on the Resources page 404s
+
+The event's Resources tab links to `dev.nebius.com/builders` **without a URL scheme**. A
+schemeless `href` resolves relative to the current origin, so the anchor points at
+`https://nebiusglobalaihackathon.devpost.com/dev.nebius.com/builders` and 404s.
+
+Participants who follow that link conclude the Builder Program is closed and miss a further
+$25 in credits plus Tavily credits. The fix is one `https://` prefix. Typing the URL directly
+works.
+
+## 4. Serverless AI Jobs has no exit code and no logs over REST
+
+This is a genuine API design gap, and it shaped our architecture.
+
+- **No exit code.** There is no `exitCode` field anywhere in the `Job`, `JobSpec`, `JobStatus`,
+  `JobInstanceStatus` or `JobStateDetails` schemas. `status.state` distinguishes `COMPLETED`
+  from `FAILED`, but a container that exits non-zero on purpose — which is exactly what a test
+  runner does — is indistinguishable from one that crashed.
+- **No logs over REST.** `serverless/jobs/manage` and `serverless/quickstart/jobs` both state
+  verbatim: *"Checking job logs is available only in the web console and CLI."* Every other
+  operation in those documents has a REST tab; logs do not.
+
+Together these mean **a job cannot report a result to a programmatic caller through the Jobs
+API at all.** Our workaround is to mount an Object Storage bucket into every job and have the
+container write a JSON verdict file, treating the object's existence as the completion signal.
+That works, and we would defend it as a good design anyway — but we arrived at it by
+elimination, not by choice.
+
+**Suggestion:** expose the container's exit code on `JobStatus`. It is one integer, the
+platform already has it, and it would remove the need for a side channel in the most common
+batch-job shape there is: *run a thing, tell me if it worked.*
+
+## 5. `--volume s3://bucket:/path:rw:profile` — the `profile` argument is undocumented
+
+The CLI documents the mount syntax and says *"The `profile` is the AWS credentials profile to
+use"*, but nowhere in the docs is it stated which file the container reads (`~/.aws/credentials`?),
+under which user, or whether `AWS_PROFILE` is honoured. There is no example of the file's
+contents.
+
+The REST API's structured `s3Config` object (inline `accessKeyId`/`secretAccessKey`) is fully
+specified and we used that instead. But a CLI user has no equivalent escape hatch, and the CLI
+is what the quickstart teaches.
+
+## 6. Smaller things
+
+- **Docs vs. reality on GPU quota.** The default `eu-north1` allowance is **2** L40S GPUs for
+  regular VMs. That is easy to miss, and it caps concurrent GPU jobs at one for most presets.
+  Worth stating on the Serverless AI quotas page rather than only in the Compute quota tables,
+  since Serverless AI is where people will hit it.
+- **`POST /ai/v1/jobs/restart` has no prose documentation** — only an OpenAPI stub. What
+  "restart" means for a batch job is not explained anywhere.
+- **No refresh-token flow is documented** for the service-account access token. The only
+  documented path is minting a fresh RS256 JWT and re-running the exchange every 12 hours.
+  That is fine, but say so explicitly — we spent time looking for the refresh grant.
+- **`OpenCodeReasoning-Nemotron-14B` model card is internally inconsistent**: it states
+  *"Engine: vLLM"* under Inference but the only code sample uses `transformers.pipeline`.
+- **Event page:** Toronto and Mexico City link to the same Luma event.
+- **City Winner Awards eligibility is contradictory** between the Official Rules (which say
+  attending) and the Resources page (which says attendance is not needed).
+
+---
+
+## What we would keep exactly as it is
+
+- **Per-second billing.** This is the feature the whole project is built on. Fanning 8 short
+  probes out in parallel is only rational because a 40-second container costs 40 seconds.
+  Per-minute rounding would have killed the design.
+- **Job lifecycle states are well chosen.** `PROVISIONING → STARTING → IMAGE_PULLING → RUNNING
+  → COMPLETED` gave us exactly the granularity we needed for a progress UI, and the
+  `NotEnoughResources` / `TimeoutExceeded` / `ContainerFailed` cause codes are genuinely
+  actionable.
+- **The docs are unusually complete.** We wrote a full REST client for Jobs, IAM token
+  exchange and Object Storage entirely offline from the documentation, with no live API access
+  — and the only things we got wrong were the five gaps listed above. That is a good ratio.

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { classifyInconclusive, detectContradiction } from "@/lib/verdicts";
+import { classifyInconclusive, detectContradiction, edgeCaveat } from "@/lib/verdicts";
 import type { Commit, Probe, Verdict } from "@/lib/types";
 
 function commit(index: number): Commit {
@@ -152,24 +152,19 @@ describe("classifyInconclusive", () => {
   });
 
   describe("all_fail", () => {
-    const result = classifyInconclusive(
-      [probe(1, "fail"), probe(9, "fail"), probe(18, "fail"), probe(27, "fail")],
-      RANGE,
-    );
-
-    it("is reported with no evidence pair", () => {
-      expect(result?.reason).toBe("all_fail");
-      expect(result?.evidence).toBeNull();
-    });
-
-    it("names the oldest probed commit and points at the good ref", () => {
-      expect(result?.explanation).toContain(shortSha(1));
-      expect(result?.explanation).toContain("commit number 1");
-      expect(result?.explanation).toContain("good ref");
+    // `all_fail` is no longer a refusal reason: the hunt assumes the good ref really
+    // passes, so a round where everything fails just means the culprit is early in the
+    // range. classifyInconclusive must resolve to null and let the search keep narrowing.
+    it("is no longer reported — it resolves to null with no evidence pair", () => {
+      const result = classifyInconclusive(
+        [probe(1, "fail"), probe(9, "fail"), probe(18, "fail"), probe(27, "fail")],
+        RANGE,
+      );
+      expect(result).toBeNull();
     });
 
     it("applies to a single failing probe too", () => {
-      expect(classifyInconclusive([probe(1, "fail")], RANGE)?.reason).toBe("all_fail");
+      expect(classifyInconclusive([probe(1, "fail")], RANGE)).toBeNull();
     });
 
     it("does not apply when one probe passed", () => {
@@ -179,26 +174,20 @@ describe("classifyInconclusive", () => {
   });
 
   describe("all_pass", () => {
-    const result = classifyInconclusive(
-      [probe(9, "pass"), probe(18, "pass"), probe(27, "pass"), probe(36, "pass")],
-      RANGE,
-    );
-
-    it("is reported with no evidence pair", () => {
-      expect(result?.reason).toBe("all_pass");
-      expect(result?.evidence).toBeNull();
+    // `all_pass` is no longer a refusal reason either: it means the culprit is late in
+    // the range, which relies on the failing ref really failing — a real, narrowable
+    // answer, not an unexplainable one.
+    it("is no longer reported — it resolves to null with no evidence pair", () => {
+      const result = classifyInconclusive(
+        [probe(9, "pass"), probe(18, "pass"), probe(27, "pass"), probe(36, "pass")],
+        RANGE,
+      );
+      expect(result).toBeNull();
     });
 
-    it("names the newest probed commit and points at the environment", () => {
-      expect(result?.explanation).toContain(shortSha(36));
-      expect(result?.explanation).toContain("commit number 36");
-      expect(result?.explanation.toLowerCase()).toContain("dependency");
-    });
-
-    it("falls back to a bare sha when the commit is not in the range", () => {
+    it("falls back to null even when the commit is not in the supplied range", () => {
       const orphan = classifyInconclusive([probe(9, "pass")], []);
-      expect(orphan?.reason).toBe("all_pass");
-      expect(orphan?.explanation).toContain(shortSha(9));
+      expect(orphan).toBeNull();
     });
   });
 
@@ -265,10 +254,10 @@ describe("classifyInconclusive", () => {
   });
 
   describe("copy quality (this is rendered on a judged screen)", () => {
+    // Only `contradiction` and `probe_errors` are refusals now — `all_fail` and `all_pass`
+    // produce no copy at all because they no longer produce an Inconclusive.
     const cases: ReadonlyArray<[string, Probe[]]> = [
       ["contradiction", [probe(5, "fail"), probe(20, "pass")]],
-      ["all_fail", [probe(1, "fail"), probe(9, "fail")]],
-      ["all_pass", [probe(9, "pass"), probe(18, "pass")]],
       ["probe_errors", [probe(9, "error"), probe(18, "error")]],
     ];
 
@@ -287,6 +276,16 @@ describe("classifyInconclusive", () => {
         expect(result?.headline.toLowerCase()).not.toMatch(/error|failed to|sorry|oops/);
       });
     }
+
+    it("all_fail reads as a resolution, not a refusal", () => {
+      const result = classifyInconclusive([probe(1, "fail"), probe(9, "fail")], RANGE);
+      expect(result).toBeNull();
+    });
+
+    it("all_pass reads as a resolution, not a refusal", () => {
+      const result = classifyInconclusive([probe(9, "pass"), probe(18, "pass")], RANGE);
+      expect(result).toBeNull();
+    });
 
     it("carries evidence only for the contradiction case", () => {
       for (const [reason, probes] of cases) {
