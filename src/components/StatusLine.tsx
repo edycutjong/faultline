@@ -3,7 +3,7 @@
 /**
  * The status line above the timeline.
  *
- * Shape, fixed by specs/ui.md and on screen in the demo video:
+ * Shape:
  *   Round 2 of ~3 · 8 probes complete · ~28 commits remaining · $0.0041 so far
  *
  * The round estimate is `estimateRounds(commits.length, DEFAULT_BAND_SIZE)` — the same
