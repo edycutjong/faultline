@@ -28,7 +28,7 @@ Observed:
  ✓ tests/hunt.integration.test.ts (8 tests)
 
  Test Files  8 passed (8)
-      Tests  164 passed (164)
+      Tests  173 passed (173)
 ```
 
 The two worth opening:
@@ -242,7 +242,7 @@ cost a week.
 
 ## What to run first, if you have five minutes
 
-1. `npm test` — 164 tests, no setup.
+1. `npm test` — 173 tests, no setup.
 2. Open `tests/planner.test.ts` and read `worstCaseRounds`. That function is the product's
    central claim, written so it cannot flatter itself.
 3. `curl` the range-resolution example in §3 and check the probe spacing arithmetic.

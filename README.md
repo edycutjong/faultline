@@ -12,7 +12,7 @@ Faultline bisects a broken commit range across eight cloud machines at once — 
 [![Nebius AI Cloud](https://img.shields.io/badge/Nebius-Serverless%20AI%20Jobs-6057F7)](https://docs.nebius.com/serverless)
 [![NVIDIA](https://img.shields.io/badge/NVIDIA-OpenCodeReasoning--Nemotron--14B-76B900)](https://huggingface.co/nvidia/OpenCodeReasoning-Nemotron-14B)
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000)](https://nextjs.org)
-[![Tests](https://img.shields.io/badge/tests-164%20passing-10B981)](#-tests)
+[![Tests](https://img.shields.io/badge/tests-173%20passing-10B981)](#-tests)
 [![License](https://img.shields.io/badge/license-MIT-8B8B93)](LICENSE)
 
 ### [→ Open the live demo](https://faultline-edy-cus-projects.vercel.app)
@@ -142,7 +142,7 @@ a bisection must handle; the end-to-end test caught it. They earn a caveat on th
 
 ## 🧪 Tests
 
-**164 passing**, 89% statement coverage on `src/lib`. `npm test`
+**173 passing**, 89% statement coverage on `src/lib`. `npm test`
 
 | Suite | What it pins down |
 |---|---|
@@ -159,7 +159,7 @@ a bisection must handle; the end-to-end test caught it. They earn a caveat on th
 
 ```bash
 npm install
-npm test          # 164 tests, no credentials needed
+npm test          # 173 tests, no credentials needed
 npm run dev
 ```
 
