@@ -13,9 +13,11 @@ coverage/
 spike-out/
 *.jobid
 
-# Playwright / Lighthouse (added when the harness lands)
+# Playwright / Lighthouse
 /test-results/
 /playwright-report/
+/blob-report/
+/playwright/.cache/
 .lighthouseci/
 
 # TypeScript incremental build state

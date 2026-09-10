@@ -62,17 +62,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <header className="border-b border-line/60">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4">
-            <Link href="/" className="flex items-center gap-2.5" aria-label="Faultline home">
+            <Link href="/" className="flex min-h-[40px] items-center gap-2.5" aria-label="Faultline home">
               <FaultlineMark />
               <span className="text-[15px] font-semibold tracking-tight">Faultline</span>
             </Link>
             <nav aria-label="Primary" className="flex items-center gap-5 text-[13px] text-muted">
-              <a className="hover:text-text" href="/api/integrations/verify">
+              <a
+                className="inline-flex min-h-[40px] items-center hover:text-text"
+                href="/api/integrations/verify"
+              >
                 Integration proof
               </a>
               <a
-                className="hover:text-text"
-                href="https://github.com/edycu/faultline"
+                className="inline-flex min-h-[40px] items-center hover:text-text"
+                href="https://github.com/edycutjong/faultline"
                 rel="noreferrer noopener"
                 target="_blank"
               >

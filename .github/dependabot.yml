@@ -1,0 +1,31 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      # Major bumps are framework migrations, not maintenance. On a project that must stay
+      # live and working for judges through 2026-12-15, an unattended next 15 -> 16 is a way
+      # to wake up to a broken demo. Security alerts stay on; they are a separate feature.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: "docker"
+    directory: "/probe"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 2

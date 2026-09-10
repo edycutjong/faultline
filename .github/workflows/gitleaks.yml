@@ -1,0 +1,25 @@
+name: gitleaks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# The system contract requires a history scan for secrets and kitchen filenames before any
+# private -> public flip. This repo flips public at submission, so this is the mechanical
+# version of that rule rather than a nice-to-have. GitHub's own secret scanning only matches
+# known provider patterns; gitleaks catches project-shaped names (NEBIUS_AUTH_PRIVATE_KEY,
+# NEBIUS_S3_SECRET_ACCESS_KEY) and, with fetch-depth 0, it reads the whole past.
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
