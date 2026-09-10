@@ -7,7 +7,7 @@
 **Your laptop can only be one machine.**
 Faultline bisects a broken commit range across eight cloud machines at once — and tells you why it broke.
 
-<img src="docs/img/og.png" width="720" alt="Faultline">
+<img src="docs/assets/readme-hero-animated.svg" width="100%" alt="Faultline — narrows a broken commit range to the one commit that broke it, by testing eight commits at once on separate cloud machines">
 
 [![Nebius AI Cloud](https://img.shields.io/badge/Nebius-Serverless%20AI%20Jobs-6057F7)](https://docs.nebius.com/serverless)
 [![NVIDIA](https://img.shields.io/badge/NVIDIA-OpenCodeReasoning--Nemotron--14B-76B900)](https://huggingface.co/nvidia/OpenCodeReasoning-Nemotron-14B)

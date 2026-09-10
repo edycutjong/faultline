@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"
+     role="img" aria-label="Faultline — narrows a broken commit range to the one commit that broke it, by testing eight commits at once on separate cloud machines">
+
+<!-- STORYBOARD (dur 6s — must equal this file's single master dur)
+  0-8%    steady state: eight grey commit ticks, level and aligned. Every commit equally suspect,
+                        none probed. Plate and ring fully opaque — this frame is the poster.
+  8-22%   trigger:      dispatch. All eight ticks scale IN UNISON and a ring leaves the plate.
+                        Never staggered: simultaneity is the entire mechanism.        data-story="beat-2"
+  22-52%  mechanism:    Eight gray commit ticks resolve at once: green passed, red failed, and the
+                        range collapses to one.                                        data-story="beat-3"
+  52-80%  resolution:   the slip. Passing strata rise, failing strata drop, and the seam draws
+                        down between them — the located culprit. It PERSISTS.          data-story="beat-4"
+  80-96%  glow breath on the seam; the held state stays on screen (3-second-window rule)
+  96-100% seam fades, ticks return to level grey — the loop reseeds a new hunt, no hard cut
+-->
+
+  <defs>
+    <filter id="fl-glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+    <filter id="fl-ring-blur" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+  </defs>
+
+  <style>
+    /* Story CSS runs on the master 6s timeline so every layer stays in sync (hard rule 4). */
+    .tick { transform-box: fill-box; transform-origin: center; animation: fl-dispatch 6s linear infinite; }
+    @keyframes fl-dispatch {
+      0%, 8%   { transform: scale(1); }
+      13%      { transform: scale(1.16); }
+      20%, 93% { transform: scale(1); }
+      100%     { transform: scale(1); }
+    }
+    [data-story] .breath { animation: fl-breath 6s ease-in-out infinite; }
+    @keyframes fl-breath {
+      0%, 66%  { opacity: 0; }
+      73%      { opacity: .55; }
+      80%      { opacity: .18; }
+      87%      { opacity: .48; }
+      93%,100% { opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+  </style>
+
+  <!-- BRAND LAYER — opaque at t=0, so frame 0 is a usable still (poster rule 6) -->
+  <rect x="0" y="0" width="512" height="512" rx="114" fill="#141416"/>
+  <rect x="3" y="3" width="506" height="506" rx="111.5" fill="none" stroke="#2E2E36" stroke-width="6"/>
+
+  <!-- dispatch ring: the band of jobs leaving for the cloud, once per hunt -->
+  <circle data-story="beat-2" cx="256" cy="256" r="10" fill="none" stroke="#6057F7"
+          stroke-width="5" opacity="0" filter="url(#fl-ring-blur)">
+    <animate attributeName="r"       dur="6s" repeatCount="indefinite"
+             keyTimes="0;0.08;0.24;1"      values="10;10;210;210"/>
+    <animate attributeName="opacity" dur="6s" repeatCount="indefinite"
+             keyTimes="0;0.08;0.13;0.24;1" values="0;0;0.7;0;0"/>
+  </circle>
+
+  <!-- LEFT STRATUM — the commits whose test passed. grey -> innocent, then rise. -->
+  <g>
+    <rect class="tick" x="58"  y="225" width="38" height="62" rx="13" fill="#3A3A40">
+      <animate attributeName="fill" dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.22;0.30;0.93;0.98;1" values="#3A3A40;#3A3A40;#10B981;#10B981;#3A3A40;#3A3A40"/>
+      <animate attributeName="y"    dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.52;0.68;0.93;0.98;1" values="225;225;184;184;225;225"/>
+    </rect>
+    <rect class="tick" x="104" y="225" width="38" height="62" rx="13" fill="#3A3A40">
+      <animate attributeName="fill" dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.22;0.30;0.93;0.98;1" values="#3A3A40;#3A3A40;#10B981;#10B981;#3A3A40;#3A3A40"/>
+      <animate attributeName="y"    dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.52;0.68;0.93;0.98;1" values="225;225;184;184;225;225"/>
+    </rect>
+    <rect class="tick" x="150" y="225" width="38" height="62" rx="13" fill="#3A3A40">
+      <animate attributeName="fill" dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.22;0.30;0.93;0.98;1" values="#3A3A40;#3A3A40;#10B981;#10B981;#3A3A40;#3A3A40"/>
+      <animate attributeName="y"    dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.52;0.68;0.93;0.98;1" values="225;225;184;184;225;225"/>
+    </rect>
+    <rect class="tick" x="196" y="225" width="38" height="62" rx="13" fill="#3A3A40">
+      <animate attributeName="fill" dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.22;0.30;0.93;0.98;1" values="#3A3A40;#3A3A40;#10B981;#10B981;#3A3A40;#3A3A40"/>
+      <animate attributeName="y"    dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.52;0.68;0.93;0.98;1" values="225;225;184;184;225;225"/>
+    </rect>
+  </g>
+
+  <!-- RIGHT STRATUM — the commits whose test failed. grey -> guilty, then drop. -->
+  <g>
+    <rect class="tick" x="278" y="225" width="38" height="62" rx="13" fill="#3A3A40">
+      <animate attributeName="fill" dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.22;0.30;0.93;0.98;1" values="#3A3A40;#3A3A40;#EF4444;#EF4444;#3A3A40;#3A3A40"/>
+      <animate attributeName="y"    dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.52;0.68;0.93;0.98;1" values="225;225;266;266;225;225"/>
+    </rect>
+    <rect class="tick" x="324" y="225" width="38" height="62" rx="13" fill="#3A3A40">
+      <animate attributeName="fill" dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.22;0.30;0.93;0.98;1" values="#3A3A40;#3A3A40;#EF4444;#EF4444;#3A3A40;#3A3A40"/>
+      <animate attributeName="y"    dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.52;0.68;0.93;0.98;1" values="225;225;266;266;225;225"/>
+    </rect>
+    <rect class="tick" x="370" y="225" width="38" height="62" rx="13" fill="#3A3A40">
+      <animate attributeName="fill" dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.22;0.30;0.93;0.98;1" values="#3A3A40;#3A3A40;#EF4444;#EF4444;#3A3A40;#3A3A40"/>
+      <animate attributeName="y"    dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.52;0.68;0.93;0.98;1" values="225;225;266;266;225;225"/>
+    </rect>
+    <rect class="tick" x="416" y="225" width="38" height="62" rx="13" fill="#3A3A40">
+      <animate attributeName="fill" dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.22;0.30;0.93;0.98;1" values="#3A3A40;#3A3A40;#EF4444;#EF4444;#3A3A40;#3A3A40"/>
+      <animate attributeName="y"    dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.52;0.68;0.93;0.98;1" values="225;225;266;266;225;225"/>
+    </rect>
+  </g>
+
+  <!-- THE FAULT — the one commit the hunt names. Draws down between the two strata. -->
+  <g data-story="beat-4" opacity="0">
+    <animate attributeName="opacity" dur="6s" repeatCount="indefinite"
+             keyTimes="0;0.52;0.66;0.93;0.98;1" values="0;0;1;1;0;0"/>
+    <line class="breath" x1="256" y1="159" x2="256" y2="353" stroke="#EDEDEF" stroke-width="26"
+          stroke-linecap="round" filter="url(#fl-glow)"/>
+    <line x1="256" y1="159" x2="256" y2="353" stroke="#EDEDEF" stroke-width="26"
+          stroke-linecap="round" pathLength="100" stroke-dasharray="100">
+      <animate attributeName="stroke-dashoffset" dur="6s" repeatCount="indefinite"
+               keyTimes="0;0.52;0.70;1" values="100;100;0;0"/>
+    </line>
+  </g>
+</svg>

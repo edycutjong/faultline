@@ -15,12 +15,33 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const SITE = "https://faultline-edy-cus-projects.vercel.app";
+const DESCRIPTION =
+  "Your laptop can only be one machine. Faultline bisects a broken commit range across eight Nebius cloud machines at once — and tells you why it broke.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE),
   title: "Faultline — parallel bisection of a broken commit range",
-  description:
-    "Your laptop can only be one machine. Faultline bisects a broken commit range across eight Nebius cloud machines at once — and tells you why it broke.",
+  description: DESCRIPTION,
   applicationName: "Faultline",
   icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }] },
+  // Without these the deploy unfurls as a bare link. Slack, X and LinkedIn centre-crop the
+  // card to 2:1, so og-image.png is composed to survive that crop — verified in
+  // assets/qa/og-2to1-crop.png.
+  openGraph: {
+    type: "website",
+    siteName: "Faultline",
+    url: SITE,
+    title: "Faultline — parallel bisection of a broken commit range",
+    description: DESCRIPTION,
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Faultline — 3 rounds, ≤24 job-runs" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Faultline — parallel bisection of a broken commit range",
+    description: DESCRIPTION,
+    images: ["/og-image.png"],
+  },
 };
 
 export const viewport: Viewport = {
