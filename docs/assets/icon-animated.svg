@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"
-     role="img" aria-label="Faultline — narrows a broken commit range to the one commit that broke it, by testing eight commits at once on separate cloud machines">
+     role="img" aria-label="Faultline — narrows a broken commit range to the one commit that broke it. Eight gray commit ticks resolve at once: green passed, red failed, and the range collapses to one.">
 
 <!-- STORYBOARD (dur 6s — must equal this file's single master dur)
   0-8%    steady state: eight grey commit ticks, level and aligned. Every commit equally suspect,
