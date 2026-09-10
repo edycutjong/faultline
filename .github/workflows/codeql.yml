@@ -9,8 +9,32 @@ on:
     - cron: "27 4 * * 1"   # weekly, so a new rule finds old code
 
 jobs:
+  # Code scanning is a GitHub Advanced Security feature. On a PRIVATE repo without GHAS the
+  # analysis runs to completion and then fails at the upload with "Code scanning is not enabled
+  # for this repository" — a red X on every push that says nothing about the code.
+  #
+  # This repo is private until submission and goes public then (system contract, git rule 4), so
+  # the guard below turns CodeQL on automatically at the flip rather than leaving a broken badge
+  # in the meantime. Nothing else about the workflow changes.
+  gate:
+    name: Is code scanning available?
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        run: |
+          if [ "${{ github.event.repository.visibility }}" = "public" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Repository is private and has no GitHub Advanced Security, so code scanning results cannot be uploaded. CodeQL runs automatically once the repo is made public at submission."
+          fi
+
   analyze:
     name: Analyze
+    needs: [gate]
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     permissions:
       actions: read
