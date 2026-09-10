@@ -64,6 +64,7 @@ function hunt(overrides: Partial<Hunt> = {}): Hunt {
     testCommand: "pytest tests/test_window.py::test_daily_boundary",
     goodRef: "v1.4.0",
     badRef: "HEAD",
+    bandSize: 8,
     status: "narrating",
     commits,
     probes: [],

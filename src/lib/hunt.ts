@@ -27,6 +27,8 @@ export interface CreateHuntInput {
   goodRef: string;
   badRef: string;
   commits: Commit[];
+  /** Probes per round. Omitted means DEFAULT_BAND_SIZE. */
+  bandSize?: number;
 }
 
 export function newHunt(input: CreateHuntInput): Hunt {
@@ -38,6 +40,7 @@ export function newHunt(input: CreateHuntInput): Hunt {
     badRef: input.badRef,
     status: "planning",
     commits: input.commits,
+    bandSize: input.bandSize ?? DEFAULT_BAND_SIZE,
     probes: [],
     round: 0,
     lowIndex: 0,
@@ -55,7 +58,17 @@ export function newHunt(input: CreateHuntInput): Hunt {
 
 /** Total rounds this hunt is expected to need, for the "Round 2 of ~3" status line. */
 export function expectedRounds(hunt: Hunt): number {
-  return estimateRounds(hunt.commits.length, DEFAULT_BAND_SIZE);
+  return estimateRounds(hunt.commits.length, huntBandSize(hunt));
+}
+
+/**
+ * Hunts written before `bandSize` existed do not carry the field. Reading them back from
+ * Object Storage must not produce a band of `undefined`, which planBand would turn into an
+ * empty round and a hunt that silently stalls forever.
+ */
+export function huntBandSize(hunt: Hunt): number {
+  const n = hunt.bandSize;
+  return Number.isInteger(n) && n > 0 ? n : DEFAULT_BAND_SIZE;
 }
 
 function commitAt(hunt: Hunt, index: number): Commit | null {
@@ -195,7 +208,7 @@ export async function reconcile(ctx: StoreContext, hunt: Hunt): Promise<Hunt> {
     return settle(ctx, next);
   }
 
-  const band = planBand(next.lowIndex, next.highIndex, DEFAULT_BAND_SIZE);
+  const band = planBand(next.lowIndex, next.highIndex, huntBandSize(next));
   if (band.length === 0) {
     // Unreachable while `isSettled` is false, but a stalled planner must not spin forever.
     return settle(ctx, next);

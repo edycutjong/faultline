@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Expected a JSON body." }, { status: 400 });
   }
 
-  const { repoUrl, testCommand, goodRef, badRef } = (body ?? {}) as Record<string, unknown>;
+  const { repoUrl, testCommand, goodRef, badRef, bandSize } = (body ?? {}) as Record<string, unknown>;
   if (typeof repoUrl !== "string" || typeof testCommand !== "string" || typeof goodRef !== "string") {
     return NextResponse.json(
       { error: "repoUrl, testCommand and goodRef are required." },
@@ -54,6 +54,18 @@ export async function POST(request: Request) {
     const ref = parseRepoUrl(repoUrl);
     const command = validateTestCommand(testCommand);
     const head = typeof badRef === "string" && badRef.trim() ? badRef.trim() : "HEAD";
+    // The eu-north1 default quota is 12 concurrent non-GPU VMs, so a band above that would
+    // queue rather than fan out and the measurement would silently stop meaning what it says.
+    let band_n = DEFAULT_BAND_SIZE;
+    if (bandSize !== undefined) {
+      if (typeof bandSize !== "number" || !Number.isInteger(bandSize) || bandSize < 1 || bandSize > 12) {
+        return NextResponse.json(
+          { error: "bandSize must be an integer between 1 and 12 (the eu-north1 concurrent-VM quota)." },
+          { status: 400 },
+        );
+      }
+      band_n = bandSize;
+    }
     const commits = await resolveRange(ref, goodRef.trim(), head);
 
     if (commits.length === 0) {
@@ -69,10 +81,11 @@ export async function POST(request: Request) {
       goodRef: goodRef.trim(),
       badRef: head,
       commits,
+      bandSize: band_n,
     });
     await writeHunt(ctx, hunt);
 
-    const band = planBand(hunt.lowIndex, hunt.highIndex, DEFAULT_BAND_SIZE);
+    const band = planBand(hunt.lowIndex, hunt.highIndex, band_n);
     const dispatched = await dispatchBand(ctx, hunt, band);
     await incrementDailyCount(ctx).catch(() => undefined);
 

@@ -160,6 +160,56 @@ so it is how this one is verified rather than by inspection.
 
 ---
 
+## 6. The benchmark instrument, driven end to end without Nebius
+
+`scripts/bench.py` is the instrument that will produce the only performance numbers this
+project ever publishes. An instrument that has never itself been run is not trustworthy, so it
+ships with an offline harness that exercises it end to end today.
+
+```bash
+# 1. build the seeded histories (three repos, one planted regression each, fixed seed)
+python3 scripts/seed.py --out /tmp/faultbench
+python3 scripts/seed.py --out /tmp/faultbench --verify     # re-derives every SHA
+
+# 2. drive bench.py against the stub API — no Nebius, no network, no app
+python3 scripts/bench_stub.py &
+python3 scripts/bench.py --manifest /tmp/faultbench/FAULTBENCH.json \
+    --api http://127.0.0.1:8731 --repo-base https://github.com/faultline-bench \
+    --trials 1 --out /tmp/results.json
+```
+
+Observed output:
+
+```
+parallel    3/3 completed  rounds p50 2  wall p50 100000 ms  p95 150000 ms  (p95 over <20 samples)
+sequential  3/3 completed  rounds p50 7  wall p50 350000 ms  p95 400000 ms  (p95 over <20 samples)
+speedup p50 3.5x  p95 2.67x  (job-runs 16 vs 7)
+```
+
+**Read that as a test of the harness, not as a result.** The stub emits fixed synthetic
+timings; `bench.py` stamps `SIMULATED: true` and a warning at the top of any results file
+produced this way, and prints the same warning to stderr, so such a file cannot be mistaken
+for a measurement.
+
+Three things in it are worth checking anyway, because they are structural and therefore true
+before anything is measured:
+
+- On the 256-commit history the parallel run took **3 rounds** and the sequential run took
+  **8** — the product's headline claim, reproduced by a stub whose band arithmetic is written
+  independently of `src/lib/planner.ts`. If those two ever disagree, one is wrong.
+- Parallelism **costs job-runs to buy wall-clock**: 16 versus 7. `bench.py` reports that ratio
+  next to every speedup, because a speedup quoted without it is half the story.
+- Three hunts already yielded **49 cold-start samples**, because every probe reports
+  `dispatchedAt → startedAt`. A full FAULTBENCH-3 pass clears the N ≥ 50 measurement bar
+  several times over without dispatching a single job that does no work.
+
+The baseline is **measured, not derived**. A hunt at `bandSize: 1` is literally `git bisect` —
+same API, same container image, same cold starts — so the comparison isolates parallelism
+rather than measuring a laptop. That is why `POST /api/hunts` accepts `bandSize`.
+
+When the tenant is unsuspended, the same two commands run against the real deployment and the
+`SIMULATED` stamp disappears. Nothing else changes.
+
 ## Why there is no live hunt
 
 The second half of a hunt — dispatching probes as Nebius Serverless AI Jobs — has never run.

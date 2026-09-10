@@ -44,6 +44,7 @@ function hunt(overrides: Partial<Hunt> = {}): Hunt {
     badRef: "HEAD",
     status: "done",
     commits,
+    bandSize: 8,
     probes: [probe(7, "pass"), probe(14, "fail")],
     round: 2,
     lowIndex: 12,
