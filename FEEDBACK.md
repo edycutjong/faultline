@@ -1,7 +1,7 @@
 # Feedback for Nebius and the hackathon organisers
 
-**Send by: 2026-10-01.** Written 2026-09-04 while building [Faultline](./README.md), which runs
-entirely on Nebius AI Cloud Serverless AI Jobs.
+**Send by: 2026-10-01.** Written 2026-09-04, updated 2026-09-10, while building
+[Faultline](./README.md), which runs entirely on Nebius AI Cloud Serverless AI Jobs.
 
 Everything below is reproducible and dated. Where something blocked us, we say what we did
 next, because a report that only complains is less useful than one that shows the workaround.
@@ -16,7 +16,10 @@ for a week and is still unresolved.
 - Tenant `tenant-e00rzrgpcth7hvbajg` was created `2026-08-28T04:32:42Z` and its
   `status.suspension_state` became `SUSPENDED` at `2026-08-28T04:33:03Z` — **21 seconds after
   creation**, before a single API call was made.
-- Re-verified `2026-09-04`: still `SUSPENDED`, seven days later.
+- Re-verified `2026-09-04` with a freshly issued federation token — still `SUSPENDED`, so the
+  original failure was not an expired-credential artefact.
+- Re-verified again `2026-09-10`: still `SUSPENDED`, **thirteen days later**, with no email, no
+  console banner, and no reply to a support enquiry.
 
 What makes this expensive is not the suspension itself but how it presents:
 
@@ -58,6 +61,35 @@ which we verified reachable without a payment method.
 
 **Suggestion:** let a promo activation code stand in for the card, at least up to the credit
 value. A prize that cannot be spent is not a prize.
+
+### This is not one participant's local problem
+
+We initially reported this as our own account trouble. It is not. As of 2026-09-10 the event's
+own discussion board carries a thread — *"Token Factory billing — country (Ghana) not
+selectable, blocking account activation"* — in which **four participants from four countries
+describe the same outcome through four different mechanisms**:
+
+| Country | Mechanism | Outcome |
+|---|---|---|
+| Ghana | Country absent from the billing country list | Cannot activate |
+| Kyrgyzstan | Country absent from the list (neighbours present); `/settings/billing` 404s | Cannot activate |
+| Indonesia | Country present; locally-issued Visa **and** Mastercard both declined at card verification | Cannot activate |
+| Indonesia (us) | AI Cloud tenant suspended 21s after signup (§1) | Cannot create resources |
+
+None of the four are excluded by the Official Rules, and all four hold the hackathon's $25
+promo code. The billing country list has 65 entries; the hackathon is advertised as global and
+has over 3,300 registered participants.
+
+The shape of the problem is that **eligibility and access are decided by two different
+systems.** Devpost accepted every one of these registrations; the Nebius onboarding funnel then
+declined them, for reasons that have nothing to do with the rules. Every one of these
+participants must, per those same rules, make a runtime call to Nebius in order to submit at
+all.
+
+**Suggestion, concretely:** for a sponsored hackathon, provision participant accounts from the
+registration list with the credit pre-attached, and skip card verification up to the credit
+value. Failing that, publish a named support path for onboarding failures before the event
+opens — the current path is a public forum thread and a hope.
 
 ## 3. The Builder Program link on the Resources page 404s
 
@@ -118,6 +150,10 @@ is what the quickstart teaches.
 - **Event page:** Toronto and Mexico City link to the same Luma event.
 - **City Winner Awards eligibility is contradictory** between the Official Rules (which say
   attending) and the Resources page (which says attendance is not needed).
+- **The prize-stacking sentence is ambiguous.** *"Each Project is eligible for one (1) Overall
+  Award OR one (1) Track Award and one (1) Bonus Award"* parses two ways depending on whether
+  the `OR` or the `and` binds tighter: either an Overall Award excludes a Bonus Award, or it
+  does not. That changes how a team allocates effort across the bonus tracks.
 
 ---
 
