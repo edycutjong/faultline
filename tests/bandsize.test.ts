@@ -41,10 +41,12 @@ describe("hunt band size", () => {
    * worst possible failure, because it looks like a slow hunt rather than a broken one.
    */
   it("falls back to the default for hunts stored before the field existed", () => {
-    const legacy = { ...newHunt({
+    // Omit<> rather than an intersection: `Hunt & { bandSize?: number }` still has bandSize
+    // required, so `delete` on it is a type error.
+    const legacy: Omit<Hunt, "bandSize"> & { bandSize?: number } = newHunt({
       repoUrl: "https://github.com/a/b", testCommand: "pytest", goodRef: "v1",
       badRef: "HEAD", commits: commits(64),
-    }) } as Hunt & { bandSize?: number };
+    });
     delete legacy.bandSize;
 
     expect(huntBandSize(legacy as Hunt)).toBe(DEFAULT_BAND_SIZE);
