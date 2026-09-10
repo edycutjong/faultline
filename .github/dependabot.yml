@@ -23,9 +23,23 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+    ignore:
+      # Same rule as npm, and it is not theoretical: the first run of this config opened a PR
+      # taking actions/checkout and actions/setup-node from v4 to v7 in one jump. A major
+      # action bump changes runner behaviour and can take the whole pipeline down on a project
+      # whose demo has to stay up through judging.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
     directory: "/probe"
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 2
+    ignore:
+      # The probe image's Python version is PRODUCT BEHAVIOUR, not a dependency: it decides
+      # which repositories' test suites the container can actually run. The first run proposed
+      # 3.11 -> 3.14, which would silently change what a hunt is capable of testing. That is a
+      # deliberate decision with a benchmark behind it, never an unattended bump.
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
