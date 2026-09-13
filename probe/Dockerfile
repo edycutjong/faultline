@@ -31,7 +31,7 @@
 # could not be written. Nebius does not surface this; it is for local runs.
 # =====================================================================================
 
-FROM python:3.11.13-slim-bookworm
+FROM python:3.11.16-slim-bookworm
 
 # git is the only OS package the probe needs. ca-certificates for https remotes.
 RUN apt-get update \
