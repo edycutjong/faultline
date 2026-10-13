@@ -1,0 +1,48 @@
+{
+  "check": "compute.instance.count is 2 per region: three jobs created together in eu-west1",
+  "ranAt": "2026-10-13 (jobs created 12:28:39Z; read back via `nebius ai job get` on 2026-10-13)",
+  "jobs": [
+    {
+      "jobId": "aijob-e01t8pdpnybtndzfve",
+      "name": "faultline-fan3-1",
+      "project": "project-e01phrcvpa003r6v2aep14",
+      "createdAt": "2026-10-13T12:28:39.887913Z",
+      "state": "ERROR",
+      "startedAt": null,
+      "finishedAt": null,
+      "stateDetails": {
+        "code": "QuotaExceeded",
+        "message": "Quota limit exceeded. Exceeded limit for container tenant-e00rzrgpcth7hvbajg, quota compute.instance.count."
+      },
+      "platform": "cpu-d3",
+      "preset": "2vcpu-8gb",
+      "image": "python:3.11"
+    },
+    {
+      "jobId": "aijob-e01yc0s0t4zment99q",
+      "name": "faultline-fan3-2",
+      "project": "project-e01phrcvpa003r6v2aep14",
+      "createdAt": "2026-10-13T12:28:39.895503Z",
+      "state": "COMPLETED",
+      "startedAt": "2026-10-13T12:32:53.945726580Z",
+      "finishedAt": "2026-10-13T12:32:59.117109189Z",
+      "stateDetails": null,
+      "platform": "cpu-d3",
+      "preset": "2vcpu-8gb",
+      "image": "python:3.11"
+    },
+    {
+      "jobId": "aijob-e01bt5zjj4w9eks093",
+      "name": "faultline-fan3-3",
+      "project": "project-e01phrcvpa003r6v2aep14",
+      "createdAt": "2026-10-13T12:28:39.486462Z",
+      "state": "COMPLETED",
+      "startedAt": "2026-10-13T12:32:57.867315556Z",
+      "finishedAt": "2026-10-13T12:33:02.844741733Z",
+      "stateDetails": null,
+      "platform": "cpu-d3",
+      "preset": "2vcpu-8gb",
+      "image": "python:3.11"
+    }
+  ]
+}

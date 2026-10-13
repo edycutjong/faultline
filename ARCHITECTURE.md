@@ -44,17 +44,17 @@ dependencies, on Nebius Serverless AI Jobs.
   fails" on faith; Faultline runs both in clean containers. When the backend has room for a
   full band beside them the endpoint probes are added; otherwise they take two of its slots.
 - **N probes cut a range into N+1 segments** (`planBand`), placed at `k·C/(N+1)`. N is not a
-  constant: it is the backend's capacity (`effectiveBand`, `probeCapacity` in
-  `src/lib/nebius/config.ts`).
+  constant: it is the backend's capacity (`effectiveBand` in `src/lib/planner.ts`,
+  `probeCapacity` in `src/lib/nebius/config.ts`).
 - **Untestable commits are skipped, not blamed** (`planBand(..., skipped)`): the next band is
   spread over testable commits; a skipped commit is still a candidate culprit.
 - Round counts are the worst case over every culprit position, computed by simulating the real
   planner (`estimateRounds`, `estimateHuntRounds`), never from a logarithm — the "Round 2 of ~3"
   line in the UI uses the same function, so it cannot disagree with the search.
 
-On this deployment's capacity — 2 VMs per region × 4 regions = 8 probes — a 255-commit range
-needs at most 3 rounds (`tests/bandsize.test.ts`: `estimateHuntRounds(256, 8, 8) === 3`); on a
-single region's 2 slots it would need 7.
+On this deployment's capacity — 2 VMs per region × 4 regions = 8 probes — a 256-commit range
+needs at most 3 rounds (`tests/bandsize.test.ts`: `estimateHuntRounds(256, 8, 8) === 3`), and the
+255-commit hero fixture took 3; on a single region's 2 slots it would need 7.
 
 **Refusal** — `src/lib/verdicts.ts`, pure functions over verdicts already collected:
 
@@ -145,9 +145,9 @@ races of 2, 5 and 8 concurrent creators on one key, exactly one won every time, 
 
 `ProbeBackend` (`src/lib/backend/types.ts`) is three verbs — dispatch, status, cancel (plus
 `find` for recovery) — and a capacity. `JobsBackend` implements it on Serverless AI Jobs,
-`cpu-d3` / `2vcpu-8gb`, stock `python:3.11`. A Token Factory Sandboxes backend would be a second
-implementation of the same interface once the account is granted spawn permission
-(`GET /sandboxes/v1/whoami` reports every permission `false` today).
+`cpu-d3` / `2vcpu-8gb`, stock `python:3.11`. A Token Factory Sandboxes backend would have to
+implement the same verbs; we have not been able to try one — `GET /sandboxes/v1/whoami` reports
+every permission `false` on this account (`evidence/sandboxes-whoami.json`).
 
 Measured on this tenant (2026-10-13; `evidence/smoke-jobs*.json`, `evidence/first-live-hunt.json`):
 
@@ -157,7 +157,8 @@ Measured on this tenant (2026-10-13; `evidence/smoke-jobs*.json`, `evidence/firs
   in all (`FAULTLINE_EXTRA_REGIONS`, parsed by `parseExtraRegions`). A probe in `uk-south1`
   writes its verdict into the `eu-west1` bucket over HTTPS — the presigned URL is what makes the
   regions interchangeable.
-- **Cold start ≈ 4.5 min** from create to workload start, for ~5 s of work; VM time per probe
+- **Cold start about 4 min 20 s** from create to workload start (258–271 s in the four-region
+  smoke run; 260.6 s p50 over the hero hunt's 19 jobs), for ~5 s of work; VM time per probe
   262–288 s on the first hunt. Rounds overlap their cold starts; consecutive rounds do not.
 
 ## One live hunt at a time
@@ -176,8 +177,8 @@ configured only in the deployment's environment, lifts the cap — never the loc
 One `POST /v1/chat/completions` per hunt to `nvidia/nemotron-3-super-120b-a12b`
 (`src/lib/narrate.ts`), after test execution has already named the culprit: the diff, the
 failing test's output, and an instruction to write one paragraph. Nemotron 3 Super is a
-reasoning model — with a 40-token budget it spent every token thinking and returned no answer —
-so the call asks for `reasoning_effort: "low"` with `max_tokens: 4096` and reads `content` only.
+reasoning model — with a small budget it can return its reasoning and no answer — so the call
+asks for `reasoning_effort: "low"` with `max_tokens: 4096` and reads `content` only.
 An empty answer is a narration error, never invented prose. The model explains; it never
 decides.
 
@@ -193,9 +194,12 @@ All of it stays in the app. A probe job receives none of it.
 
 ## Cost
 
-List price × measured VM time: `probeCostUsd` (`cpu-d3`: $0.012 per vCPU-hour, $0.0032 per
-GiB-hour). VM time is Nebius's own create→finish for each job once it has ended; until then,
-dispatch→verdict, replaced by the job's figure on a later read (`billedMs`, `settleBill`).
+Measured VM time × today's list price, always derived, never stored: `huntCostUsd` in
+`src/lib/pricing.ts` (`cpu-d3` from 1 October 2026: $0.015 per vCPU-hour, $0.0045 per GiB-hour;
+before that, $0.012 and $0.0032). VM time is Nebius's own create→finish for each job once it
+has ended; until then, dispatch→verdict, replaced by the job's figure on a later read
+(`billedMs`; `settleBill` in `src/lib/hunt.ts`). The UI prices a recorded hunt the same way, so a
+price change re-prices old hunts instead of leaving stale figures on screen.
 
 ## State
 
@@ -207,7 +211,7 @@ memory with the same 412 semantics (`MemoryKv`), so a cold visit renders.
 ## Limits
 
 - Python test suites, public GitHub repositories.
-- A round costs ~4.5 minutes of cold start. For a fast suite a careful local bisect that builds a
+- A round costs about 4 min 20 s of cold start, more when job creation is throttled. For a fast suite a careful local bisect that builds a
   fresh environment per step finishes sooner; Faultline's case is correctness without writing
   that harness, both ends verified, and the work off your machine.
 - One live hunt at a time on this deployment's 8 slots.

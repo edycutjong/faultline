@@ -1,0 +1,9 @@
+{
+  "check": "a single job create, sent by hand at 15:48:36Z on 2026-10-13 after round-2 creates of hunt 295a5c3c had been refused with 429 three times",
+  "status": 200,
+  "retryAfterHeader": null,
+  "upstreamServiceTimeMs": 11635,
+  "operationCreatedAt": "2026-10-13T15:48:36.527996750Z",
+  "jobId": "aijob-e01y3n9faxn42mzqph",
+  "script": "tests/live/ratelimit.live.ts"
+}

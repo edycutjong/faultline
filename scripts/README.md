@@ -7,7 +7,7 @@ against histories where the answer is known in advance. `seed.py` builds three o
 
 | Repo | Commits | Planted at | Regression | Dependency drift |
 |---|---|---|---|---|
-| `tzdata-pipeline` | 256 | index 173 | the classic pytz pitfall: `replace(tzinfo=zone)` instead of `localize()` | `pytz==2022.1` → `2023.3` at index 150, golden values updated with it |
+| `tzdata-pipeline` | 256 (255 after the known-good scaffold commit) | index 173 | the classic pytz pitfall: `replace(tzinfo=zone)` instead of `localize()` | `pytz==2022.1` → `2023.3` at index 150, golden values updated with it |
 | `retry-lib` | 128 | index 91 | off-by-one in the backoff schedule length | none |
 | `id-mint` | 64 | index 41 | hash key truncated, so similar names collide | none |
 

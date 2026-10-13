@@ -1,0 +1,23 @@
+{
+  "check": "Token Factory Sandboxes GET /sandboxes/v1/whoami with the project API key",
+  "ranAt": "2026-10-13T16:45:10+00:00",
+  "permissions": {
+    "import": false,
+    "spawn": false,
+    "spawn_disposable": false,
+    "list": false,
+    "cancel": false,
+    "set_image_tag": false
+  },
+  "operations_stat": {
+    "running_instances": 0,
+    "running_imports": 0
+  },
+  "limits": {
+    "instance_max_timeout": 3600,
+    "instance_max_concurrency": 50,
+    "instance_max_layer_bytes": 12884901888,
+    "images_import_max_concurrency": 8,
+    "images_import_max_timeout": 3600
+  }
+}

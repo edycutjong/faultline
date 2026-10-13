@@ -95,7 +95,8 @@ describe the same outcome through four different mechanisms**:
 
 None of the four are excluded by the Official Rules, and all four hold the hackathon's $25
 promo code. The billing country list has 65 entries; the hackathon is advertised as global and
-has over 3,300 registered participants.
+had over 3,300 registered participants when we wrote this (2026-09-10) — the event page shows
+22,638 on 2026-10-13.
 
 The shape of the problem is that **eligibility and access are decided by two different
 systems.** Devpost accepted every one of these registrations; the Nebius onboarding funnel then
@@ -149,34 +150,32 @@ Measured 2026-10-13, all in one session, reproducible with `nebius ai job create
 
 | What | Measured |
 |---|---|
-| `compute.instance.count` per region | **2**. Three jobs launched together in one region → two `COMPLETED`, the third `ERROR` `QuotaExceeded … limit 2 requested 3`. The compute pricing/quotas page reads as 12 non-GPU VMs. |
+| `compute.instance.count` per region | **2**. Three jobs launched together in one region → two `COMPLETED`, the third `ERROR`, `QuotaExceeded`: *"Quota limit exceeded. Exceeded limit for container tenant-e00rzrgpcth7hvbajg, quota compute.instance.count."* (`evidence/quota-third-job-rejected.json`). The compute pricing/quotas page reads as 12 non-GPU VMs. |
 | Rejected vs queued | **Rejected.** A batch product that rejects instead of queueing pushes a scheduler into every caller. |
 | CPU quota in `eu-north1` | **0 vCPU** on this tenant, so `cpu-e2` (eu-north1 only, and home of the smallest `2vcpu-8gb` preset) is unusable; `cpu-d3/2vcpu-8gb` in `eu-west1` works. |
-| Cold start, stock `python:3.11` (~1 GB) on `cpu-d3/2vcpu-8gb` | create → `RUNNING` **4m17s**: provisioning ~50 s, starting ~2m05s, image pull ~1m35s. The workload itself (clone, install, 297 tests) took **4.8 s**. |
+| Cold start, stock `python:3.11` (~1 GB) on `cpu-d3/2vcpu-8gb` | create → workload start **4 m 18 s – 4 m 31 s** across four regions (`evidence/smoke-jobs*.json`; the first job, `evidence/spike-job.json`, took 4 m 28 s). Polled every 15 s: `STARTING` from about 1 min, `IMAGE_PULLING` from about 3 min, the workload at about 4 min 20 s. The workload itself (clone, install, 297 tests) took **4.8 s**. |
 | Parallel cold starts | Overlap well: 1, 2 and 4 concurrent jobs (2 regions × 2) all finished ~4m20–4m30s after creation. |
 
 **Suggestions:** queue over-quota jobs (or offer a flag to), and state the per-region instance
 count for new tenants where the quota is documented. On the jobs quickstart, say both halves of the
-cold start: `STARTING` (~2m05s here) is fixed platform overhead, while image pull (~1m35s for a
-~1 GB image, about 37% of the total) grows with image size and is the part a user can shrink.
+cold start: provisioning and `STARTING` (about 3 minutes here) are fixed platform overhead, while
+image pull (the last 70–80 s for a ~1 GB image, about 30% of the total) grows with image size
+and is the part a user can shrink.
 
 ## 4c. Job creation is throttled, and the limit is not documented
 
 Measured 2026-10-13 on hunt `295a5c3c`: eight jobs were created at 15:42 UTC (two in each of
-four regions, all accepted). About 4½ minutes later the next two creates returned
-**`429 Too Many Requests`** — three times over ~1½ minutes, from separate requests — and a
-create at 15:48:36 was accepted. The docs state no rate limit for the Jobs API, and the 429
-carried no `Retry-After` header. A single accepted create also took **11.6 s** server-side
-(`x-envoy-upstream-service-time: 11635`).
+four regions, all accepted). About five minutes later the next two creates returned
+**`429 Too Many Requests`** — three times over ~1½ minutes, from separate requests — while a
+single create we then sent by hand at 15:48:36 was accepted (`evidence/create-throttle-check.json`).
+The docs state no rate limit for the Jobs API, and the 429 carried no `Retry-After` header. That
+accepted create took **11.6 s** server-side (`x-envoy-upstream-service-time: 11635`).
 
-We now treat 429 as backoff (30 s, doubling to 4 min) and dispatch at most four creates at a
-time. **Suggestions:** document the create rate limit, send `Retry-After` with a 429, and
+It recurred on the next hunt (`827dfe7e`, 16:00 UTC): of a round's eight creates, sent four at a
+time, six were accepted and two were refused with 429; both were accepted on the first retry 30 s
+later. We now treat 429 as backoff (30 s, doubling to 4 min) and dispatch at most four creates at
+a time. **Suggestions:** document the create rate limit, send `Retry-After` with a 429, and
 consider a batch create — a fan-out workload creates its jobs in bursts by definition.
-
-A smaller observation from the same hunt: job `aijob-e01gr1yzxzwky378sp` still reported
-`state: IMAGE_PULLING` 14 s after its `status.startedAt` had been set, by which time the
-container had already uploaded its result. Consumers should not treat `state` as current to the
-second.
 
 ## 5. `--volume s3://bucket:/path:rw:profile` — the `profile` argument is undocumented
 
@@ -214,9 +213,9 @@ is what the quickstart teaches.
 
 ## What we would keep exactly as it is
 
-- **Per-second billing.** A probe's VM lives ~4½ minutes for ~5 seconds of work, so a round of
-  probes costs cents only because billing is per second. Per-minute rounding would have
-  doubled it for nothing.
+- **Per-second billing.** A probe's VM lives about 4 min 20 s for ~5 seconds of work and costs
+  about half a cent at list price ($0.0948 for the 19 jobs of our 255-commit hunt). Billing by
+  the second keeps that honest.
 - **`spec.injectedFiles`.** It let us run every probe on the stock `python:3.11` image with our
   22 KB probe script written into the container at launch — no image build, no registry, no
   credentials for either. A small field that removed a whole step.

@@ -1,0 +1,16 @@
+{
+  "check": "first real Serverless AI Job (spike): stock python:3.11, clone + pip install + pytest",
+  "job": {
+    "jobId": "aijob-e01pdym781hte0wqtw",
+    "name": "faultline-spike-1",
+    "project": "project-e01phrcvpa003r6v2aep14",
+    "createdAt": "2026-10-13T12:20:32.253198Z",
+    "state": "COMPLETED",
+    "startedAt": "2026-10-13T12:24:59.781764510Z",
+    "finishedAt": "2026-10-13T12:25:04.795510814Z",
+    "stateDetails": null,
+    "platform": "cpu-d3",
+    "preset": "2vcpu-8gb",
+    "image": "python:3.11"
+  }
+}

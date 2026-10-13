@@ -1,249 +1,194 @@
-# Demo
+# Demo — every number, and the command that produced it
 
-Every command below was run on 2026-09-04, and the output shown is what it actually printed.
-Where a step cannot be run yet, it says so instead of showing an invented result.
-
-**Nothing here requires a Nebius account.** The parts that do are marked, and they are the
-parts that do not work yet — see [Why there is no live hunt](#why-there-is-no-live-hunt).
+Everything below was run on 2026-10-13 against the live deployment
+(https://faultline-edy-cus-projects.vercel.app) and real Nebius infrastructure. The raw output of
+every run is committed under [`evidence/`](evidence). Where a figure is a property of a fixture we
+built, it says so.
 
 ---
 
-## 1. The test suite (30 seconds, no credentials)
+## 1. The test suites — no credentials
 
 ```bash
 npm install
-npm test
+npm test            # 272 unit + integration tests
+npm run test:probe  # 7 tests: the real probe.py against a local repo and HTTP server
+npm run e2e         # 44 checks: the app with NO environment, desktop and mobile
 ```
 
-Observed:
+The integration suite drives a whole hunt through the production code path — service-account
+auth, the Jobs REST client, SigV4 storage with conditional writes, presigned verdict URLs, the
+tick, Token Factory narration — with Nebius simulated at the HTTP boundary. It also asserts, for
+every job a hunt creates, that the job is given `probe.py` as an injected file and **no
+credential and no bucket mount**.
 
+## 2. Conditional writes on the real bucket (G5)
+
+The control loop has no daemon and no database; it rests on two Object Storage primitives. They
+were measured before anything was built on them:
+
+```bash
+npm run test:live -- tests/live/g5-conditional-put.live.ts   # needs the Nebius env
 ```
- ✓ tests/sigv4.test.ts (13 tests)
- ✓ tests/issue.test.ts (8 tests)
- ✓ tests/verdicts.test.ts (39 tests)
- ✓ tests/git.test.ts (28 tests)
- ✓ tests/storage.test.ts (16 tests)
- ✓ tests/narrate.test.ts (16 tests)
- ✓ tests/planner.test.ts (36 tests)
- ✓ tests/hunt.integration.test.ts (8 tests)
 
- Test Files  8 passed (8)
-      Tests  173 passed (173)
+[`evidence/g5-conditional-writes.json`](evidence/g5-conditional-writes.json): 20 races with 2, 5
+and 8 concurrent `If-None-Match: "*"` creators on one fresh key — **exactly one winner in 20 of
+20**, every loser `412`. A replace with a stale `If-Match` ETag: `412`; with the fresh one: `2xx`.
+
+## 3. A probe, in four regions (smoke)
+
+```bash
+SMOKE_EXTRA_REGION="uk-south1:<project>:<subnet>" npm run test:live -- tests/live/smoke-jobs.live.ts
 ```
 
-The two worth opening:
+[`evidence/smoke-jobs.json`](evidence/smoke-jobs.json),
+[`evidence/smoke-jobs-more-regions.json`](evidence/smoke-jobs-more-regions.json): real jobs on
+the stock `python:3.11` image, `probe.py` injected as a file, no mount, no credential — each
+delivered its verdict into the `eu-west1` bucket through a presigned URL:
 
-- **`tests/planner.test.ts`** proves the claim the product is built on. It does not check a
-  formula — it simulates the real planner against *every possible culprit position* for each
-  range size and takes the worst case. The N+1 divisor is pinned directly:
-  `planBand(0, 256, 8) === [28, 57, 85, 114, 142, 171, 199, 228]`, and the worst range
-  surviving round 1 is asserted `=== 29` and `< 32`. A `256 → 32` trail fails the suite.
-- **`tests/hunt.integration.test.ts`** runs a whole hunt through the real dispatch and
-  reconcile code with Nebius simulated at the HTTP boundary, and asserts *3 rounds, at most 24
-  job-runs, correct culprit* — against the system as shipped, not the planner in isolation.
+| Region | Job | Verdict | Create → workload start |
+|---|---|---|---|
+| eu-west1 | `aijob-e01r34w4tx1qvvss89` | pass (exit 0) | 4 m 26 s |
+| uk-south1 | `aijob-e03mbvtcvpcfhrzwbj` | fail (exit 5) | 4 m 18 s |
+| uk-south2 | `aijob-e05h4ab6aja7far8d2` | fail (exit 5) | 4 m 29 s |
+| me-west1 | `aijob-i00qatnkkk2eby3v2y` | fail (exit 5) | 4 m 31 s |
 
-## 2. The app, cold, with no environment variables
+Inside the container the work took ~4–8 s (clone, `pip install`, pytest). The rest is cold start.
+
+## 4. The first live hunt
+
+[`evidence/first-live-hunt.json`](evidence/first-live-hunt.json) — hunt `295a5c3c` on a
+15-commit slice of the hero fixture. Ten jobs across four regions; culprit `4e133d6c`, which
+matches the fixture's answer key; Nemotron's paragraph (Token Factory request
+`chatcmpl-b5427963b682a6b8`) explains the `localize()` → `replace(tzinfo=...)` change.
+
+What it also showed, recorded rather than smoothed over:
+
+- **It advanced with nobody watching.** Round 1 finished and round 2 was dispatched while no
+  client polled — the record was read straight from the bucket.
+- **Nebius throttled job creation.** Round 2's two creates came back `429 Too Many Requests`.
+  They were recorded as infrastructure failures, never verdicts; that build counted them against
+  the retry budget, so the hunt **paused** with its reason and was **resumed** once. The engine
+  now treats `429` as backoff with its own budget, and wakes the hunt when the backoff ends.
+
+## 5. The benchmark — three baselines, two axes
+
+```bash
+python3 scripts/seed.py --out /tmp/faultbench          # regenerate the fixtures (byte-identical)
+python3 scripts/seed.py --out /tmp/faultbench --verify
+
+# git bisect run: one reused env (built at the good ref, then at the failing ref), and a fresh
+# venv per step — 5 trials each, scored against the answer key
+python3 scripts/bench.py local --repo <clone of faultbench-tzdata-pipeline> --good v0.1.0 --bad main \
+  --truth 4e133d6c856c2e756fce5a328896f20fecfc62eb \
+  --test "python -m pytest -q -p no:cacheprovider tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone" \
+  --install "pip install -e .[test]" --trials 5 --label tzdata-pipeline --out evidence/bench/hero-local.json
+
+# Faultline: one hunt through the deployed app, polled to the end
+python3 scripts/bench.py faultline --api https://faultline-edy-cus-projects.vercel.app \
+  --repo-url https://github.com/edycutjong/faultbench-tzdata-pipeline --good v0.1.0 --bad main \
+  --test "python -m pytest -q tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone" \
+  --install "pip install -e .[test]" --truth 4e133d6c856c2e756fce5a328896f20fecfc62eb \
+  --label tzdata-pipeline --out evidence/bench/hero-faultline-1.json
+
+python3 scripts/bench.py report evidence/bench/*.json
+```
+
+Local runs: a MacBook, Python 3.11, git 2.50, warm pip cache (the favourable case for the
+baselines).
+
+### The drifting history — `faultbench-tzdata-pipeline`, 255 commits
+
+A generated fixture: `pytz` is pinned at `2022.1` and moves to `2023.3` at commit 150 (Mexico
+abolished daylight saving time, tzdata 2022f) together with the golden value of the failing test;
+commit 173 plants the classic pytz bug, `replace(tzinfo=zone)` instead of `localize()`. Each
+commit's test is right under its own pin and wrong under the other.
+
+| How | Named | Right | Wall-clock (N) |
+|---|---|---|---|
+| `git bisect run`, one env built at the known-good ref (`pytz 2022.1`) | `e46e5342` build(deps): bump pytz to 2023.3 — Mexico abolished DST, update golden values | **0 / 5** | 1.43 s p50 (5) — plus 7.9 s to build the env once |
+| `git bisect run`, one env built at the failing ref (`pytz 2023.3`) | `acebfbfa` docs(changelog): spell out the units on the public helpers (#104) | **0 / 5** | 1.49 s p50 (5) — plus 7.1 s to build the env once |
+| `git bisect run`, fresh venv at every step | `4e133d6c` | 5 / 5 | 57.44 s p50, 58.02 s max (5); 8 steps each |
+| **Faultline** — hunt `827dfe7e`, 8 slots in 4 regions | `4e133d6c` | 1 / 1 | 957 s (1); 3 rounds, 19 jobs; 5,173 VM-seconds = $0.0948 at list price |
+
+Faultline's 957 s, round by round ([`evidence/bench/hero-faultline-1.json`](evidence/bench/hero-faultline-1.json)):
+round 1, 8 probes, 318.5 s; round 2, 8 probes, 374.3 s; round 3, 3 probes, 268.6 s. Ten creates
+were refused with `429` and retried (two in round 1, eight in round 2) — every one visible as an
+attempt number in the recorded hunt. Across the 19 jobs: create → workload start 260.6 s p50
+(251.9–278.6 s), work inside the container 5.35 s p50 (4.8–8.2 s).
+
+### A real regression — `python-attrs/attrs` 22.1.0 → 22.2.0, 135 commits
+
+Culprit `89a890a3` ("Change `__getstate__` and `__setstate__` to use a dict"), named by the fix
+itself: *"Regression in 89a890a"*, linking that commit
+([#1085](https://github.com/python-attrs/attrs/pull/1085)). The test feeds the old tuple-style
+pickle state to `__setstate__`. One commit in the range cannot be installed with today's
+setuptools — a real skip, had a probe landed on it (none did):
+
+```bash
+git -C attrs checkout -q 300d3ee32ce6fb312b34b972879d1f7e5819626d   # "Looks like pytest-mypy is broken on 3.11"
+python3 -m venv /tmp/v && /tmp/v/bin/python -m pip install -q -e attrs
+#   error in attrs setup command: 'extras_require' must be a dictionary whose values are strings or
+#   lists of strings containing valid project/version requirement specifiers.      (pip exits 1)
+```
+
+```bash
+python3 scripts/bench.py local --repo <clone of python-attrs/attrs> \
+  --good b3dfebe2e10b44437c4f97d788fb5220d790efd0 --bad a9960de98d0f58ccb2880d03c97dafba3fc1111c \
+  --truth 89a890a3262273514619d1881c6a8b0fe26c66ac --install "pip install -e ." --trials 3 --label attrs \
+  --test "python -c \"assert (lambda C: (lambda i: (i.__setstate__((1, 2)), (i.x, i.y))[1])(C.__new__(C)))(__import__('attr').make_class('C', ['x', 'y'], slots=True)) == (1, 2)\"" \
+  --out evidence/bench/attrs-local.json
+python3 scripts/bench.py faultline --api https://faultline-edy-cus-projects.vercel.app \
+  --repo-url https://github.com/python-attrs/attrs --good b3dfebe2e10b44437c4f97d788fb5220d790efd0 \
+  --bad a9960de98d0f58ccb2880d03c97dafba3fc1111c --install "pip install -e ." \
+  --truth 89a890a3262273514619d1881c6a8b0fe26c66ac --label attrs --test "<the same command>" \
+  --out evidence/bench/attrs-faultline-1.json
+```
+
+| How | Named | Right | Wall-clock (N) |
+|---|---|---|---|
+| `git bisect run`, one env built at the known-good ref | `89a890a3` | 3 / 3 | 0.56 s p50 (3) |
+| `git bisect run`, one env built at the failing ref | `89a890a3` | 3 / 3 | 0.55 s p50 (3) |
+| `git bisect run`, fresh venv at every step | `89a890a3` | 3 / 3 | 43.81 s p50, 44.67 s max (3); 8 steps each |
+| **Faultline** — hunt `50824b63`, 8 slots in 4 regions | `89a890a3` | 1 / 1 | 918.9 s (1); 3 rounds, 17 jobs; 4,528 VM-seconds = $0.0830 at list price |
+
+Round by round ([`evidence/bench/attrs-faultline-1.json`](evidence/bench/attrs-faultline-1.json)): 290.3 s,
+337.2 s, 258.1 s; 16 creates refused with `429` and retried. Create → workload start 256.4 s p50 over
+the 17 jobs.
+
+**The explanation on this one is partly wrong, and that is the design working.** Nemotron's paragraph
+(Token Factory request `chatcmpl-95d7f86bfadb7974`) correctly names the change — `__getstate__` now
+returns a dict instead of a tuple — but then claims the new dict is empty. The real break is that state
+pickled by the old version is a tuple, and the new `__setstate__` only reads names out of a dict. The
+culprit is right because it came from running the test, not from the model; the report labels the
+paragraph as generated, and the hunt record keeps the request ID so it can be checked.
+
+### What the numbers say
+
+- **Correctness.** On the drifting history, `git bisect run` in one reused environment named the
+  wrong commit in 10 of 10 runs; a fresh environment per step named the right one in 8 of 8 local
+  runs (5 on the fixture, 3 on attrs) and in both Faultline hunts (one per repository). On attrs,
+  where nothing drifts, every method is right.
+- **Wall-clock.** Faultline is slower than both local methods on both repositories. A probe's VM
+  takes about 4 min 20 s to start for ~5 s of work, and Nebius throttled job creation during these
+  runs, so a round costs minutes where a local step costs seconds.
+- **So the claim is not speed.** It is the right commit without knowing about the drift or
+  writing the fresh-environment harness, both ends proven, skips and contradictions handled, the
+  work off your machine, and an explained report.
+
+## 6. The recorded example
+
+[`data/recorded-hunt.json`](data/recorded-hunt.json) is the hero hunt above, committed verbatim
+from the bucket and labelled *recorded run, 2026-10-13* wherever it appears. It is what the
+landing page shows by default (`GET /api/examples/recorded`), and it costs nothing to view.
+
+## 7. The app, cold, with no environment variables
 
 ```bash
 npm run build && npm start
+curl -s localhost:3000/api/hunts              # {"liveHuntsToday":0,"dailyCap":10,"nebiusConfigured":false,"slots":0,"liveHuntId":null}
+curl -s localhost:3000/api/examples/recorded  # {"available":true,"hunt":{...}}
 ```
 
-```bash
-curl -s localhost:3000/api/hunts
-```
-
-Observed:
-
-```json
-{"liveHuntsToday":0,"dailyCap":10,"nebiusConfigured":false}
-```
-
-```bash
-curl -s localhost:3000/api/examples/recorded
-```
-
-Observed:
-
-```json
-{"available":false,"reason":"No recorded hunt has been captured yet. A recording is a real run against live Nebius Serverless AI Jobs, so it cannot be produced until the account can dispatch them."}
-```
-
-That is the honest state, and the landing page renders it as a designed panel rather than an
-error. **No sample hunt is fabricated anywhere in this repository.**
-
-## 3. Resolving a real commit range (needs network, not Nebius)
-
-This is the first half of a hunt and it works today against the live GitHub API.
-
-```bash
-curl -s -X POST localhost:3000/api/hunts \
-  -H 'Content-Type: application/json' \
-  -d '{"repoUrl":"https://github.com/psf/requests",
-       "testCommand":"pytest tests/test_requests.py::TestRequests::test_entry_points",
-       "goodRef":"v2.31.0","badRef":"v2.32.0"}'
-```
-
-Observed:
-
-```
-commits      : 127
-round        : 1
-probe indices: [14, 28, 42, 56, 71, 85, 99, 113]
-first commit : 6e5b15d542 Fix linting issues
-last commit  : d6ebc4a2f1 v2.32.0
-```
-
-**Check the arithmetic yourself.** 127 candidates, 8 probes: 127 ÷ 9 ≈ 14.1, and the probes
-land on multiples of 14. That is the N+1 divisor on real data. Under a ÷8 divisor they would
-sit ~15.9 apart.
-
-Every probe then reports `verdict: "error"` with
-`"Nebius is not configured, so no probe job could be dispatched."` — the honest result, not a
-silent failure and not a fabricated pass.
-
-## 4. The probe container, run directly (needs network, not Nebius)
-
-`probe/probe.py` is stdlib-only, so it runs without Docker. This is the exact code the
-container executes. All three verdict paths, run against a real commit in `pallets/click`:
-
-**Pass** — the test exits 0:
-
-```json
-{"schema": "faultline.probe.v1", "huntId": "localtest",
- "commitSha": "874ca2bc1c30d93a4ac6e36a15ed685eafe89097",
- "verdict": "pass", "exitCode": 0, "durationMs": 2288,
- "detail": "deps: setup.py + uv pip install -e .; test exited 0", "tail": null}
-```
-
-**Fail** — the test itself exits non-zero:
-
-```json
-{"verdict": "fail", "exitCode": 3, "durationMs": 2353,
- "detail": "deps: setup.py + uv pip install -e .; test exited 3"}
-```
-
-**Error** — the commit does not exist, so the test never ran:
-
-```json
-{"verdict": "error", "exitCode": null, "durationMs": 1141,
- "detail": "git step failed (exit 128): git fetch --quiet --depth 1 origin deadbeef...",
- "tail": "fatal: remote error: upload-pack: not our ref deadbeef..."}
-```
-
-**That third case is the one that matters.** A container that could not run the test reports
-`error`, never `fail`. A `fail` narrows the search; recording a broken probe as a failure
-would blame a commit whose test never ran. The distinction is asserted in
-`tests/hunt.integration.test.ts` ("records an error, not a fail, when a job finishes without
-writing a verdict").
-
-Reproduce it:
-
-```bash
-mkdir -p /tmp/faultline-out
-FAULTLINE_HUNT_ID=localtest \
-FAULTLINE_REPO_URL=https://github.com/pallets/click \
-FAULTLINE_COMMIT_SHA=874ca2bc1c30d93a4ac6e36a15ed685eafe89097 \
-FAULTLINE_TEST_COMMAND='python -c "import sys; sys.exit(0)"' \
-FAULTLINE_OUTPUT_PATH=/tmp/faultline-out \
-python3 probe/probe.py
-```
-
-## 5. The SigV4 signer, checked against AWS
-
-```bash
-npx vitest run tests/sigv4.test.ts
-```
-
-13 tests, five of which assert **AWS's own published signature values** for their published
-example requests. Without live credentials that is the only way to know a signer is correct,
-so it is how this one is verified rather than by inspection.
-
----
-
-## 6. The benchmark instrument, driven end to end without Nebius
-
-`scripts/bench.py` is the instrument that will produce the only performance numbers this
-project ever publishes. An instrument that has never itself been run is not trustworthy, so it
-ships with an offline harness that exercises it end to end today.
-
-```bash
-# 1. build the seeded histories (three repos, one planted regression each, fixed seed)
-python3 scripts/seed.py --out /tmp/faultbench
-python3 scripts/seed.py --out /tmp/faultbench --verify     # re-derives every SHA
-
-# 2. drive bench.py against the stub API — no Nebius, no network, no app
-python3 scripts/bench_stub.py &
-python3 scripts/bench.py --manifest /tmp/faultbench/FAULTBENCH.json \
-    --api http://127.0.0.1:8731 --repo-base https://github.com/faultline-bench \
-    --trials 1 --out /tmp/results.json
-```
-
-Observed output:
-
-```
-parallel    3/3 completed  rounds p50 2  wall p50 100000 ms  p95 150000 ms  (p95 over <20 samples)
-sequential  3/3 completed  rounds p50 7  wall p50 350000 ms  p95 400000 ms  (p95 over <20 samples)
-speedup p50 3.5x  p95 2.67x  (job-runs 16 vs 7)
-```
-
-**Read that as a test of the harness, not as a result.** The stub emits fixed synthetic
-timings; `bench.py` stamps `SIMULATED: true` and a warning at the top of any results file
-produced this way, and prints the same warning to stderr, so such a file cannot be mistaken
-for a measurement.
-
-Three things in it are worth checking anyway, because they are structural and therefore true
-before anything is measured:
-
-- On the 256-commit history the parallel run took **3 rounds** and the sequential run took
-  **8** — the product's headline claim, reproduced by a stub whose band arithmetic is written
-  independently of `src/lib/planner.ts`. If those two ever disagree, one is wrong.
-- Parallelism **costs job-runs to buy wall-clock**: 16 versus 7. `bench.py` reports that ratio
-  next to every speedup, because a speedup quoted without it is half the story.
-- Three hunts already yielded **49 cold-start samples**, because every probe reports
-  `dispatchedAt → startedAt`. A full FAULTBENCH-3 pass clears the N ≥ 50 measurement bar
-  several times over without dispatching a single job that does no work.
-
-The baseline is **measured, not derived**. A hunt at `bandSize: 1` is literally `git bisect` —
-same API, same container image, same cold starts — so the comparison isolates parallelism
-rather than measuring a laptop. That is why `POST /api/hunts` accepts `bandSize`.
-
-When the tenant is unsuspended, the same two commands run against the real deployment and the
-`SIMULATED` stamp disappears. Nothing else changes.
-
-## Why there is no live hunt
-
-The second half of a hunt — dispatching probes as Nebius Serverless AI Jobs — has never run.
-
-The account's tenant has been `SUSPENDED` since **21 seconds after it was created**
-(`created_at 2026-08-28T04:32:42Z`, `updated_at 2026-08-28T04:33:03Z`), so every create call
-returns `PermissionDenied`. Re-verified with a fresh token on 2026-09-04:
-
-```
-$ nebius ai job create --name faultline-spike-probe --image python:3.11-slim \
-    --platform cpu-e2 --preset 2vcpu-8gb --dry-run
-Error: rpc error: code = PermissionDenied desc = you do not have permission to
-access the requested object
-```
-
-Consequently, and stated plainly:
-
-- **No wall-clock or cost figure appears anywhere in this repository.** Not in the README, not
-  in the UI, not here. The app renders an em dash where a measured cost would go.
-- **There is no recorded example hunt**, because a recording means real job IDs from a real
-  run.
-- The probe and narration images have not been pulled by a Nebius job.
-
-Every Nebius call path is implemented against the documented API and exercised by tests
-against a simulation at the HTTP boundary. None has met the real service. That gap is the
-honest boundary of this submission, and it is described further in [`FEEDBACK.md`](FEEDBACK.md)
-§1, where it is also the lead item of feedback to Nebius — because the way suspension presents
-itself (an empty project list, and a `PermissionDenied` that never mentions it) is what made it
-cost a week.
-
-## What to run first, if you have five minutes
-
-1. `npm test` — 173 tests, no setup.
-2. Open `tests/planner.test.ts` and read `worstCaseRounds`. That function is the product's
-   central claim, written so it cannot flatter itself.
-3. `curl` the range-resolution example in §3 and check the probe spacing arithmetic.
-4. Read the "What is not true yet" section of the [README](README.md#-what-is-not-true-yet).
+A cold visit renders the landing page and the recorded run; starting a live hunt says plainly
+that this deployment has no Nebius credentials.

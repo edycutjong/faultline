@@ -4,15 +4,16 @@
 
 # Faultline
 
-**Your laptop can only be one machine.**
-Faultline bisects a broken commit range across eight cloud machines at once — and tells you why it broke.
+**Find the commit that broke it — in a clean room.**
+Faultline bisects a broken commit range by testing each suspect in a fresh Nebius container built from that commit's own dependencies. It proves both ends first, refuses to guess when the evidence disagrees, and has NVIDIA Nemotron on Nebius Token Factory explain the culprit.
 
-<img src="docs/assets/readme-hero-animated.svg" width="100%" alt="Faultline — narrows a broken commit range to the one commit that broke it. Eight gray commit ticks resolve at once: green passed, red failed, and the range collapses to one.">
+<img src="docs/assets/readme-hero-animated.svg" width="100%" alt="Faultline — a range of suspect commits narrows to the one that broke the test, each probe a fresh container.">
 
-[![Nebius AI Cloud](https://img.shields.io/badge/Nebius-Serverless%20AI%20Jobs-6057F7)](https://docs.nebius.com/serverless)
-[![NVIDIA](https://img.shields.io/badge/NVIDIA-OpenCodeReasoning--Nemotron--14B-76B900)](https://huggingface.co/nvidia/OpenCodeReasoning-Nemotron-14B)
+[![Nebius Serverless AI Jobs](https://img.shields.io/badge/Nebius-Serverless%20AI%20Jobs-6057F7)](https://docs.nebius.com/serverless)
+[![Nebius Token Factory](https://img.shields.io/badge/Nebius-Token%20Factory-6057F7)](https://docs.tokenfactory.nebius.com)
+[![NVIDIA Nemotron](https://img.shields.io/badge/NVIDIA-Nemotron%203%20Super-76B900)](https://huggingface.co/nvidia)
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000)](https://nextjs.org)
-[![Tests](https://img.shields.io/badge/tests-173%20passing-10B981)](#-tests)
+[![Tests](https://img.shields.io/badge/tests-272%20passing-10B981)](#-tests)
 [![License](https://img.shields.io/badge/license-MIT-8B8B93)](LICENSE)
 
 ### [→ Open the live demo](https://faultline-edy-cus-projects.vercel.app)
@@ -23,174 +24,175 @@ Faultline bisects a broken commit range across eight cloud machines at once — 
 
 ## 🩸 The problem
 
-`git bisect` is twenty years old and still the right algorithm. What changed is that a modern
-repository's test suite is **environment-sensitive**: dependency versions drift across a commit
-range, so testing commit N needs a build that commit N+50 would break. That makes unattended
-`git bisect run` unsafe — a false "pass" from a stale environment sends the search down the
-wrong half and silently blames an innocent commit.
+`git bisect` is the right algorithm. What is unsafe is running it unattended in the environment
+you already have. A Python repository pins its dependencies, and the pins move across a commit
+range — so commit N's test is only right under commit N's pins. Bisect every commit in one
+reused environment and some verdicts are wrong, the search goes down the wrong half, and an
+innocent commit gets blamed with total confidence.
 
-So maintainers bisect by hand. And because a laptop is one machine, they bisect **sequentially**:
-log₂(256) ≈ 8 rounds, each a full rebuild.
-
-The bottleneck is not the algorithm. It is that **one developer has one machine**, and each
-probe needs a clean, differently-configured one.
+We measured it. On a 255-commit history whose `pytz` pin moves partway through (a generated
+fixture, [`faultbench-tzdata-pipeline`](https://github.com/edycutjong/faultbench-tzdata-pipeline);
+its planted commit is listed in [`scripts/README.md`](scripts/README.md) and the whole history
+regenerates byte-for-byte), `git bisect run` in one reused environment named the wrong commit in
+**10 of 10 runs** — the dependency bump when the environment came from the good ref, a
+changelog edit when it came from the failing ref.
 
 ## ⚡ What Faultline does
 
-Give it three things — a repository, a failing test command, a known-good ref — and it dispatches
-a **band** of candidate commits as independent Nebius Serverless AI Jobs. Each job is an isolated,
-terminating container that checks out one commit, installs **that commit's own declared
-dependencies from scratch**, runs the test, and reports a verdict. The band's result pattern
-narrows the suspect range; the next band goes out.
+You give it a public GitHub repository, a failing test command and the last ref where it passed.
+It resolves the commit range, suggests the install command from the repository's own packaging
+files (shown, editable), and starts a hunt:
 
-The output is not a commit hash. It is a **Fault Report**: the guilty commit, its diff, a
-plain-English explanation from an NVIDIA model, and a copy-as-GitHub-issue button.
+1. **Round 1 tests both ends** — the known-good ref and the failing ref — plus as many suspects
+   as there are free slots. Each probe is a terminating **Nebius Serverless AI Job** on a stock
+   `python:3.11` image: it fetches one commit, installs *that commit's* declared dependencies
+   from scratch, runs the test, and reports.
+2. **Each round narrows the range** — N probes cut it into N+1 segments — and the next round goes
+   out by itself. This deployment holds 8 probes at once: 2 per region (the measured quota)
+   across `eu-west1`, `uk-south1`, `uk-south2` and `me-west1`.
+3. **It ends in one of two ways.** A **Fault Report** — the guilty commit, its diff, one paragraph
+   from **NVIDIA Nemotron 3 Super on Nebius Token Factory** explaining why it breaks the test,
+   and a copy-as-GitHub-issue button. Or an **honest refusal** with the evidence: the failing ref
+   passes in a clean environment (the bug is your environment, not a commit), the known-good ref
+   fails or will not build, two verdicts contradict, or the culprit is one of a listed run of
+   commits that will not build.
 
-## 🧮 Why N-ary, not binary
+You can close the tab: each probe ticks the hunt when it reports, so it finishes with nobody
+watching.
 
-Binary bisection is optimal **when probes are sequential**, because each result informs the next
-choice. Faultline's probes are simultaneous, which changes the problem: with N probes per round
-the range is cut into **N+1 segments**, so it divides by **N+1**.
+## 📊 Measured
 
-With N = 8 the divisor is 9:
+Every figure below is in [`evidence/bench/`](evidence/bench), and [`DEMO.md`](DEMO.md) gives the
+command that reproduces each run. Costs are the Nebius VM time of every probe job at today's
+`cpu-d3` list price ($0.015 per vCPU-hour, $0.0045 per GiB-hour since 1 October 2026).
 
-| Range | Sequential binary | Faultline (N=8) | Chain |
+**The drifting history** — `faultbench-tzdata-pipeline`, 255 commits, culprit `4e133d6c`
+("normalize: attach the zone directly instead of localize()"):
+
+| How | Named | Right | Wall-clock |
 |---|---|---|---|
-| 64 commits | 6 rounds | **2 rounds** | 64 → ~8 → 1 |
-| 128 commits | 7 rounds | **3 rounds** | 128 → ~15 → ~2 → 1 |
-| 256 commits | 8 rounds | **3 rounds** | 256 → ~29 → ~3 → 1 |
-| 1000 commits | 10 rounds | **4 rounds** | 1000 → ~112 → ~13 → ~2 → 1 |
+| `git bisect run`, one env built at the known-good ref | `e46e5342` build(deps): bump pytz to 2023.3 | **0 / 5** | 1.4 s p50 |
+| `git bisect run`, one env built at the failing ref | `acebfbfa` docs(changelog): … | **0 / 5** | 1.5 s p50 |
+| `git bisect run`, fresh venv at every step | `4e133d6c` | 5 / 5 | 57.4 s p50 |
+| **Faultline**, 8 slots in 4 regions | `4e133d6c` | 1 / 1 | 957 s — 3 rounds, 19 jobs, $0.09 |
 
-These are not estimates from a formula. `tests/planner.test.ts` simulates the real planner
-against **every possible culprit position** for each range size and takes the worst case — and
-`estimateRounds()`, which drives the "Round 2 of ~3" line in the UI, simulates rather than
-computing a logarithm, so the number on screen cannot drift from the search actually performed.
+That fixture was built to drift, so the reused-environment failures are by construction; what it
+shows is the mechanism. **A real regression** — [python-attrs/attrs](https://github.com/python-attrs/attrs)
+22.1.0 → 22.2.0, 135 commits, culprit `89a890a3` as named by the fix itself
+([#1085](https://github.com/python-attrs/attrs/pull/1085)), a history with no dependency drift:
 
-> `256 ÷ 8 = 32` is the divisor for a different algorithm. The correct round-1 figure is **~29**,
-> and the test suite fails if it is ever 32.
+| How | Named | Right | Wall-clock |
+|---|---|---|---|
+| `git bisect run`, one reused env (either flavour) | `89a890a3` | 6 / 6 | 0.55 s p50 |
+| `git bisect run`, fresh venv at every step | `89a890a3` | 3 / 3 | 43.8 s p50 |
+| **Faultline**, 8 slots in 4 regions | `89a890a3` | 1 / 1 | 919 s — 3 rounds, 17 jobs, $0.08 |
 
-We trade total compute (up to 24 job-runs instead of 8) for wall-clock (3 rounds instead of 8).
-That trade is only rational because Serverless AI Jobs bill **per second** and run in parallel.
+**Read the wall-clock column honestly: Faultline is slower on both.** A probe's VM takes about
+4 minutes 20 seconds to start for about 5 seconds of work, and Nebius throttles job creation, so a round
+costs minutes where a local fresh-venv step costs seconds. Faultline is not a faster bisect. It
+is a bisect that does not need you to know about the drift, write the fresh-environment harness,
+or trust the two ends — that runs on someone else's machines and hands back an explained,
+paste-ready report. On a suite whose build takes minutes per commit, the parallel rounds would
+start to pay for their cold starts; we have not measured such a repository, so we do not claim it.
 
 ## 🔌 Where Nebius does the work
 
-The genuinely hard part of bisection-at-scale is **manufacturing N isolated, correctly-versioned
-build environments simultaneously**. Faultline does not implement that. Nebius does.
-
 | Surface | Where in the code | What it does |
 |---|---|---|
-| Serverless AI Jobs (CPU) | `src/lib/nebius/jobs.ts` | every probe — 8 concurrent, terminating, `cpu-e2`/`2vcpu-8gb` |
-| Serverless AI Jobs (GPU) | `src/lib/narrate.ts` | the NVIDIA model, one terminating job per hunt, `gpu-l40s-a`/`1gpu-8vcpu-32gb` |
-| Job polling and cancel | `getJob`, `cancelJob` | the reconcile tick; outstanding probes are cancelled the moment the answer is known, because jobs bill per second |
-| Object Storage, mounted | `spec.volumes[].s3Config` | **the verdict channel** — see below |
-| Object Storage, S3 API | `src/lib/nebius/storage.ts` | hunt state, probe verdicts, narration output |
+| **Serverless AI Jobs** (CPU) | `src/lib/backend/jobs-backend.ts`, `src/lib/nebius/jobs.ts` | every probe: one terminating job per commit, `cpu-d3`/`2vcpu-8gb`, stock `python:3.11`, `probe.py` delivered through `spec.injectedFiles`, at most 2 per region |
+| Job status, get-by-name, cancel | `getJob`, `getJobByName`, `cancelJob` | the tick; recovering a dispatch whose creator died; cancelling a probe past its deadline |
+| **Object Storage** (S3 API) | `src/lib/nebius/storage.ts` | hunt records and every coordination decision (`If-None-Match` / `If-Match`), plus a presigned PUT URL per probe — the only thing a probe can write |
+| **Token Factory** inference | `src/lib/narrate.ts` | one `chat/completions` call per hunt to `nvidia/nemotron-3-super-120b-a12b` |
 | IAM token exchange | `src/lib/nebius/auth.ts` | RS256 JWT signed with the service-account key, exchanged for a Bearer token |
 
-**Remove Serverless AI Jobs and Faultline degrades into a `git bisect` wrapper that already
-exists.**
+**Remove Serverless AI Jobs and Faultline is a `git bisect` wrapper with nowhere clean to run.**
+`GET /api/integrations/verify` shows the regions, capacity and recent API calls, so this table
+can be checked in thirty seconds.
 
-Deliberately **not** used: Serverless **Endpoints** (a `RUNNING` endpoint bills continuously and
-needs a human to stop and start it across a judging window; narration is one latency-insensitive
-call, so a job that exits is the correct shape), **Token Factory** (card-walled on this account —
-documented in [`FEEDBACK.md`](FEEDBACK.md), not faked), and **Sandboxes**.
+Sandboxes would be the natural home for a probe — this is the Coding and Agentic Engineering
+track — but the account's `GET /sandboxes/v1/whoami` reports every permission `false` while
+beta access is pending ([`evidence/sandboxes-whoami.json`](evidence/sandboxes-whoami.json)). The
+engine talks to a four-verb `ProbeBackend` interface (`src/lib/backend/types.ts`: dispatch,
+status, find, cancel); a Sandboxes backend would implement the same four. We have not been able
+to try one.
 
-`GET /api/integrations/verify` renders the job IDs and API calls already on record, so this table
-is checkable in thirty seconds without reading code.
+## 🧠 NVIDIA Nemotron on Token Factory
 
-## 🧠 The NVIDIA model
+`nvidia/nemotron-3-super-120b-a12b`, called once per hunt after test execution has named the
+culprit, with the culprit's diff and the failing test's output. It writes one paragraph: the
+mechanism, the lines responsible, and the fix if there is an obvious one. On the first live hunt
+it explained that `replace(tzinfo=...)` skips pytz's zone rules and lands at 06:37 UTC instead of
+06:00 ([`evidence/first-live-hunt.json`](evidence/first-live-hunt.json)).
 
-`nvidia/OpenCodeReasoning-Nemotron-14B` (Apache-2.0, 32K context), run as a terminating GPU job.
+It is a reasoning model, and with a small budget it can return its reasoning and no answer — so the call
+asks for low reasoning effort with room to answer, reads `content` only, and treats an empty
+answer as an error rather than inventing one. **The model explains; it never decides.** The UI
+labels its paragraph as generated, next to a culprit labelled as proven by executed tests.
 
-Chosen because the task is *reading a diff plus a traceback and explaining causation* — code
-reasoning, not code generation. A general instruct model summarises the diff ("this changes the
-timezone handling"); a code-reasoning model connects the change to the observed failure.
+## 🕵️ The design details
 
-**The model explains; it never decides.** The guilty commit is produced by test execution across
-the commit range, so a wrong or missing completion degrades the report's prose without touching
-the claim the product defends. The UI labels the generated paragraph so it is never mistaken for
-the verified part.
-
-## 🕵️ The design detail we are proudest of
-
-**The Jobs API cannot report a test result.** There is no exit-code field anywhere in the
-`Job`/`JobStatus` schemas, and job logs are not available over REST — the Nebius docs state that
-verbatim, twice. So `status.state` tells you the container *ran*; it cannot tell you the test
-*passed*, because a test runner exits non-zero on purpose.
-
-So the probe reports for itself: it writes a JSON verdict into the Object Storage bucket mounted
-into its own container, and the object's existence is the completion signal. Three consequences
-the code makes explicit:
-
-- **A terminal job with no verdict object is an `error`, never a `fail`.** Recording it as a
-  failure would narrow the range onto a commit whose test never ran, and blame an innocent author.
-- The verdict is written **atomically**, so a partially-flushed file is never read.
-- A transient polling failure leaves the probe pending rather than deciding a verdict.
+- **A probe holds nothing.** Any public repository's `conftest.py` is arbitrary code, so a probe
+  job gets no bucket mount and no key: one presigned URL that can write its own verdict object
+  and nothing else. That same URL is why the regions are interchangeable — a `uk-south1` probe
+  writes into the `eu-west1` bucket over HTTPS.
+- **No daemon, no database, no double dispatch.** The hunt record is only replaced with
+  `If-Match`, and every dispatch is claimed with `If-None-Match: "*"` first. Measured on the real
+  bucket: 20 races of 2–8 concurrent creators, exactly one winner every time
+  ([`evidence/g5-conditional-writes.json`](evidence/g5-conditional-writes.json)).
+- **Infrastructure is never evidence.** A job that dies without reporting is retried, then the
+  hunt pauses and says which probe and why. A throttled create (`429`) is waited out with backoff,
+  and the hunt wakes itself when the backoff ends. Neither ever becomes a verdict.
 
 ## 🛑 Honest refusal
 
-If the verdict sequence is non-monotonic — a `pass` at a **higher** commit index than a `fail` —
-then no single first-bad commit explains the results, and Faultline names none. It shows the
-contradicting pair and the evidence instead.
+| The evidence | What Faultline says |
+|---|---|
+| The failing ref passes in a clean environment | the failure is in your environment, not in a commit |
+| The known-good ref fails, or will not build | move the good ref; the break is older, or the floor is unusable |
+| A `pass` above a `fail` | names the contradicting pair; no single commit explains it |
+| Only unbuildable commits remain between the bounds | the culprit is one of these N commits — listed |
 
-This is a pure function over verdicts already collected, so the honest answer costs **zero extra
-jobs**. No commit is ever re-probed.
-
-What is *not* a refusal: a round where every probe fails, or every probe passes. Both are
-explicable — the culprit is early, or late — and both narrow correctly onto a real commit. An
-earlier version refused there, which made the tool decline to answer in exactly the two positions
-a bisection must handle; the end-to-end test caught it. They earn a caveat on the report instead.
+None of these costs an extra job: they are pure functions over verdicts already collected.
 
 ## 🧪 Tests
 
-**173 passing**, 89% statement coverage on `src/lib`. `npm test`
+**272 unit and integration tests**, **7 probe contract tests** and **44 end-to-end checks**
+(`npm test`, `npm run test:probe`, `npm run e2e`).
 
 | Suite | What it pins down |
 |---|---|
-| `tests/planner.test.ts` (36) | The N+1 divisor, directly. Round counts are the worst case over **every** culprit position, not an average. A 400-trial seeded fuzz always finds the planted culprit. |
-| `tests/verdicts.test.ts` (39) | Every refusal branch, contradiction outranking everything, and the edge-culprit regression. |
-| `tests/sigv4.test.ts` (13) | The S3 signer against **AWS's own published signature vectors** — the only way to trust a signature implementation without live credentials. |
-| `tests/hunt.integration.test.ts` (8) | A full hunt through the real dispatch and reconcile code, with Nebius simulated at the HTTP boundary. Asserts "3 rounds, ≤24 job-runs, correct culprit" against the system as shipped. |
-| `tests/issue.test.ts` (8) | The pasteable GitHub issue: evidence trail, model attribution, and no invented prose when narration fails. |
-| `tests/git.test.ts` (28) | Range resolution, including the pagination that exists because GitHub's compare endpoint truncates at 250 commits and the headline case is 256. |
-| `tests/narrate.test.ts` (16) | That the prompt tells the model the culprit is established fact. It explains; it never re-litigates. |
-| `tests/storage.test.ts` (16) | The verdict channel: a torn read reads as "not there yet", and a truncated listing with no continuation token terminates instead of looping against a billed API. |
+| `tests/engine.test.ts` | each required behaviour through the real tick: endpoints, racing ticks, retries and pauses, throttling, skips, the lock, one narration call |
+| `tests/hunt.integration.test.ts` | a full hunt through auth, Jobs REST, SigV4 storage with conditional writes and Token Factory, Nebius simulated at the HTTP boundary — including that no job is ever given a credential or a mount |
+| `probe/test_probe.py` | the real `probe.py` against a local git repository and HTTP server: pass, fail, unbuildable, its own deadline, an undeliverable verdict |
+| `tests/planner.test.ts`, `tests/bandsize.test.ts` | the N+1 divisor and worst-case round counts, simulated over every culprit position |
+| `tests/sigv4.test.ts` | the signer, including presigned URLs, against AWS's own published vectors |
 
 ## 🚀 Running it
 
 ```bash
 npm install
-npm test          # 173 tests, no credentials needed
+npm test          # no credentials needed
 npm run dev
 ```
 
-The [live deploy](https://faultline-edy-cus-projects.vercel.app) runs with **no environment variables at all** — the landing page and the recorded example
-render without credentials, which is what a cold visit must survive. Credentials are needed only
-to dispatch live hunts; see [`.env.example`](.env.example) and `scripts/provision.sh`.
+With no environment variables the app renders the landing page and the recorded example; live
+hunts need the Nebius and Token Factory credentials listed in [`.env.example`](.env.example).
 
-## ⚠️ What is not true yet
+## ⚠️ Limits
 
-Stated plainly, because a README that hides this is worth less than one that does not.
-
-- **No hunt has ever run against live Nebius infrastructure.** The account's tenant has been
-  `SUSPENDED` since 21 seconds after its creation, so `job create` returns `PermissionDenied`.
-  Every Nebius call path is implemented and tested against a simulated API at the HTTP boundary;
-  none has been exercised against the real one. Details and timestamps in
-  [`FEEDBACK.md`](FEEDBACK.md) §1.
-- **There are therefore no measured wall-clock or cost figures anywhere in this repository**, and
-  no recorded example hunt. `GET /api/examples/recorded` returns `available: false` with a reason
-  rather than synthesising a run. Every number above is a property of the algorithm, proven by
-  the test suite; none is a performance claim.
-- Python test suites only. Public GitHub repositories only.
-- Mobile is legible, not optimised: one breakpoint stacks the timeline with identical colour
-  semantics. There is no dedicated mobile design pass.
+- Python test suites; public GitHub repositories.
+- Slower than a careful local bisect on a fast suite — see the wall-clock column above.
+- One live hunt at a time: the deployment's 8 slots are shared. A visible daily cap keeps judge
+  traffic from draining the credit balance.
+- The root-cause paragraph is generated and can be wrong; the culprit is not.
 
 ## 📐 More
 
+- [`DEMO.md`](DEMO.md) — every measurement, with the command that reproduces it
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — written from the code, every claim naming its file
-- [`FEEDBACK.md`](FEEDBACK.md) — feedback for Nebius, including five documentation and API gaps
-- [`probe/README.md`](probe/README.md) — the probe container's env-var and verdict contracts
-- [`DEMO.md`](DEMO.md) — every command, with the output it actually printed
-- [`narration/README.md`](narration/README.md) — why narration is a job and not an endpoint
+- [`FEEDBACK.md`](FEEDBACK.md) — what building on Nebius taught us, including an undocumented create throttle
+- [`probe/README.md`](probe/README.md) — the probe's contract
+- [`scripts/README.md`](scripts/README.md) — the FAULTBENCH fixtures and how to regenerate them
 
 ## 📄 License
 
