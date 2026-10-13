@@ -15,22 +15,19 @@ Please **do not** open a public issue. Report privately:
 
 You will get an acknowledgment within 48 hours and a timeline after triage.
 
-## Known open advisories, and why they are open
+## Known advisories
 
-`npm audit --omit=dev` reports **two** advisories, one moderate and one high. Both are inside
-`next`, and both are fixable only by upgrading to `next@16` — a major-version framework
-migration.
+`npm audit --omit=dev` reports **none** (checked 2026-10-14, on `next@15.5.27`, after a
+non-breaking `npm audit fix` cleared advisories in `next`, `sharp` and `source-map-js`).
+Development-only tooling still reports advisories whose fix needs a major version bump
+(`npm audit` without `--omit=dev`); none of that code ships in the deployed app.
 
 This project must stay live and working for judges through **2026-12-15**. A major framework
-bump applied unattended to a submitted project is a realistic way to take the demo down, which
-is a larger risk than the advisories themselves: neither is reachable in this application's
-request path (the PostCSS issues concern build-time CSS stringification and source-map reads of
-attacker-supplied CSS; Faultline compiles no user-supplied CSS). The project is already on the
-latest 15.x patch, `15.5.25`.
-
-So the audit step in CI is **advisory rather than blocking**, and the reason is written here
+bump applied unattended to a submitted project is a realistic way to take the demo down, so
+the audit step in CI is **advisory rather than blocking**, and its reason is written here
 instead of being hidden behind a green check. Dependabot is configured to ignore major bumps
-for the same reason, while security alerts stay enabled.
+for the same reason, while security alerts stay enabled; patch and minor fixes are applied
+once the test suites pass.
 
 ## How secrets are handled
 

@@ -73,10 +73,9 @@ jobs:
           cache: npm
       - run: npm ci
       - name: npm audit (production dependencies)
-        # Advisory, deliberately. The two open production advisories are both inside `next`
-        # and are only fixable by a major bump to next@16 — a framework migration, which is
-        # not maintenance and must never happen unattended on a submitted project. They are
-        # documented in .github/SECURITY.md rather than hidden behind a passing gate.
+        # Advisory, deliberately: a fix that needs a major framework bump must never be applied
+        # unattended to a submitted project, so a new advisory reports here rather than blocking
+        # a fix to the live demo. The current state and the reasoning are in .github/SECURITY.md.
         run: npm audit --omit=dev --audit-level=high
         continue-on-error: true
       - name: License compliance
@@ -107,8 +106,8 @@ jobs:
           elif [ "$TOTAL" -gt 1500 ]; then echo "::warning::${TOTAL}KB exceeds the 1500KB warning line"
           else echo "within budget"; fi
 
-      # The probe image is the unit of work every hunt dispatches. If it stops building,
-      # every hunt fails at the same place — gate it here rather than at dispatch time.
+      # Optional prebuilt probe image (FAULTLINE_PROBE_IMAGE). The deployed path injects
+      # probe.py into the stock python:3.11 image instead; this keeps the alternative buildable.
       - name: Probe container builds
         run: docker build -t faultline/probe:ci probe/
 
@@ -229,7 +228,7 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Stage | Result |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| 1 · Quality (lint, typecheck, 173 tests) | passed |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 1 · Quality (lint, typecheck, unit + probe tests) | passed |" >> "$GITHUB_STEP_SUMMARY"
           echo "| 2 · Secret scanning + dependency audit | passed |" >> "$GITHUB_STEP_SUMMARY"
           echo "| 3 · Build + bundle budget + probe image | passed |" >> "$GITHUB_STEP_SUMMARY"
           echo "| 4 · E2E (Playwright, desktop + mobile) | passed |" >> "$GITHUB_STEP_SUMMARY"
