@@ -27,6 +27,15 @@ test.describe("cold visit, no credentials", () => {
     expect(errors, `uncaught page errors: ${errors.join(" | ")}`).toEqual([]);
   });
 
+  test("the story page and the pitch deck are served, and link back to the app", async ({ page }) => {
+    for (const [path, title] of [["/about", /refuses to blame the innocent/i], ["/pitch", /pitch deck/i]] as const) {
+      const response = await page.goto(path);
+      expect(response?.status(), path).toBe(200);
+      await expect(page).toHaveTitle(title);
+      await expect(page.locator('a[href="/"]').first()).toBeAttached();
+    }
+  });
+
   test("the hunt form asks for three things, and shows the install command it will run", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByText(/Three fields\. No YAML\./i)).toBeVisible();

@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Faultline — the bisect that refuses to blame the innocent</title>
+<meta name="description" content="On a history whose pin moves halfway, git bisect in one reused environment named the wrong commit 10 times out of 10. Faultline named the right one in 3 rounds.">
+<meta name="theme-color" content="#F2EDE0">
+<meta name="color-scheme" content="light">
+<link rel="canonical" href="https://faultline-edy-cus-projects.vercel.app/about">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Faultline">
+<meta property="og:url" content="https://faultline-edy-cus-projects.vercel.app/about">
+<meta property="og:title" content="Faultline — the bisect that refuses to blame the innocent">
+<meta property="og:description" content="On a history whose pin moves halfway, git bisect in one reused environment named the wrong commit 10 times out of 10. Faultline named the right one in 3 rounds.">
+<meta property="og:image" content="https://faultline-edy-cus-projects.vercel.app/landing/media/og-about.png?v=020">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Faultline — a 255-commit history drawn as rock strata, the dependency pin moving at layer 150 and the fault at layer 173">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Faultline — the bisect that refuses to blame the innocent">
+<meta name="twitter:description" content="On a history whose pin moves halfway, git bisect in one reused environment named the wrong commit 10 times out of 10. Faultline named the right one in 3 rounds.">
+<meta name="twitter:image" content="https://faultline-edy-cus-projects.vercel.app/landing/media/og-about.png?v=020">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Overpass+Mono:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg:      #F2EDE0;  /* survey paper — warm, unbleached; the sheet the section is printed on */
+  --paper:   #F8F4EA;  /* a lighter inset plate (legend box, cards) laid on the sheet */
+  --ink:     #1F1A14;  /* map ink, warm black — 14.8:1 on --bg */
+  --muted:   #5C5347;  /* pencil annotation — 6.5:1 on --bg, body-safe */
+  --rule:    #CDBFA6;  /* ruled lines, plate borders */
+  --contour: #A97C50;  /* topographic contour brown — linework only, never text */
+  --before:  #8C8272;  /* state: suspect, not yet probed — graphite (3.2:1, graphics only) */
+  --cleared: #2F6E4A;  /* state: probed in its own fresh container and passed — cleared */
+  --implicated: #9A4532; /* state: probed and failed — the break is at or below it */
+  --after:   #B8321A;  /* state: the fault, named — fires only on the culprit layer and the fault line */
+  --drift:   #8A6114;  /* the formation contact — where the dependency pin moves (pytz 2022.1 → 2023.3) */
+  --plate:   #1F1A14;  /* the one dark material: terminal plates and framed product screenshots */
+  --font-display: "Old Standard TT", "Iowan Old Style", Georgia, serif;  /* the Scotch Roman of 19th-c. survey bulletins */
+  --font-body:    "Libre Franklin", "Franklin Gothic Medium", "Helvetica Neue", Arial, sans-serif;  /* American gothic of map legends */
+  --font-data:    "Overpass Mono", ui-monospace, Menlo, monospace;  /* ONLY SHAs, job IDs, commands, measurements */
+  --measure: 64ch;
+  --ease: cubic-bezier(.2, .75, .15, 1);
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { overflow-x: clip; scroll-behavior: smooth; scroll-padding-top: 72px; scrollbar-color: var(--contour) var(--bg); -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 17px/1.62 var(--font-body); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; caret-color: var(--ink); }
+body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 60; opacity: .32; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .36 0 0 0 0 .29 0 0 0 0 .2 0 0 0 .42 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+::selection { background: #E6CFAA; color: var(--ink); }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 2px; }
+img { max-width: 100%; height: auto; display: block; }
+a { color: inherit; text-decoration-color: var(--contour); text-decoration-thickness: 1px; text-underline-offset: 3px; transition: color .18s var(--ease), text-decoration-color .18s var(--ease); }
+a:hover { text-decoration-color: var(--ink); }
+code, .mono { font-family: var(--font-data); font-size: .88em; letter-spacing: -.01em; }
+p { margin: 0; }
+h1, h2, h3 { margin: 0; font-family: var(--font-display); font-weight: 700; letter-spacing: -.012em; text-wrap: balance; }
+em { font-style: italic; }
+.skip { position: absolute; left: 12px; top: -60px; z-index: 80; background: var(--ink); color: var(--paper); padding: 10px 14px; text-decoration: none; font-weight: 600; }
+.skip:focus { top: 12px; }
+
+/* ---------- collar (the map's top margin) */
+.collar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 24px; padding: 0 40px; height: 60px;
+  background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--rule); }
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font: 700 19px/1 var(--font-display); letter-spacing: .01em; min-height: 44px; }
+.brand svg { width: 26px; height: 26px; transition: transform .35s var(--ease); }
+.brand:hover svg { transform: translateY(-1px) rotate(-4deg); }
+.sheet { font: 500 11px/1 var(--font-data); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.sheet .id { text-transform: none; letter-spacing: .06em; }
+.collar nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.collar nav a.t { font: 500 14px/1 var(--font-body); color: var(--muted); text-decoration: none; padding: 14px 10px; border-radius: 2px; }
+.collar nav a.t:hover { color: var(--ink); background: color-mix(in srgb, var(--rule) 35%, transparent); }
+
+/* ---------- buttons */
+.btn { display: inline-flex; align-items: center; gap: 9px; min-height: 46px; padding: 0 19px; font: 600 15px/1 var(--font-body); color: var(--ink); text-decoration: none;
+  border: 1.5px solid var(--ink); border-radius: 2px; background: transparent; cursor: pointer;
+  transition: transform .18s var(--ease), box-shadow .18s var(--ease), background-color .18s var(--ease), color .18s var(--ease); }
+.btn svg { width: 17px; height: 17px; flex: none; }
+.btn:hover { transform: translate(-2px, -2px); box-shadow: 3px 3px 0 var(--ink); background: var(--paper); }
+.btn:active { transform: translate(0, 0); box-shadow: 0 0 0 var(--ink); }
+.btn.ink { background: var(--ink); color: var(--paper); }
+.btn.ink:hover { background: var(--ink); box-shadow: 3px 3px 0 var(--contour); }
+.btn.sm { min-height: 38px; padding: 0 13px; font-size: 13.5px; }
+.btn .arr { transition: transform .18s var(--ease); }
+.btn:hover .arr { transform: translateX(3px); }
+
+/* ---------- shared section furniture */
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 40px; }
+.eyebrow { display: flex; align-items: center; gap: 12px; font: 600 11.5px/1.4 var(--font-data); letter-spacing: .17em; text-transform: uppercase; color: var(--muted); }
+.eyebrow::before { content: ""; width: 30px; height: 1px; background: currentColor; flex: none; }
+.sec { padding: 112px 0 0; }
+.sec-head { max-width: 780px; margin-bottom: 44px; }
+.sec-head h2 { font-size: clamp(34px, 4.4vw, 54px); line-height: 1.06; margin: 18px 0 18px; }
+.sec-head h2 em { font-weight: 400; }
+.lede { color: var(--muted); font-size: 18px; max-width: var(--measure); }
+.lede b, .lede strong { color: var(--ink); font-weight: 600; }
+.src { font: 400 11.5px/1.5 var(--font-data); color: var(--muted); letter-spacing: 0; }
+
+/* ---------- hero */
+.hero { position: relative; overflow: hidden; border-bottom: 3px double var(--rule); }
+.tex { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.tex .ring { fill: none; stroke: var(--contour); stroke-width: .8; opacity: .5; }
+.tex .ring.idx { stroke-width: 1.5; opacity: .62; }
+.tex .slip { transform: translate(26px, -38px); animation: slip 1.6s .35s var(--ease) both; }
+.tex .fault { fill: none; stroke: var(--after); stroke-width: 2.6; stroke-dasharray: 1; stroke-dashoffset: 0; animation: draw 1.1s .1s ease-out both; }
+.tex .ud { font: 600 15px/1 var(--font-data); fill: var(--after); }
+@keyframes slip { from { transform: translate(0, 0); } }
+@keyframes draw { from { stroke-dashoffset: 1; } }
+.hero-in { position: relative; max-width: 1240px; margin: 0 auto; padding: 60px 40px 56px; display: grid; grid-template-columns: minmax(0, 1.22fr) minmax(0, .78fr); gap: 64px; align-items: center; }
+.hero h1 { font-size: clamp(46px, 6.3vw, 90px); line-height: 1.01; letter-spacing: -.018em; margin: 24px 0 28px; max-width: 13ch; }
+.hero h1 em { font-weight: 400; color: var(--cleared); white-space: nowrap; }
+.hero .sub { color: var(--muted); font-size: 18.5px; line-height: 1.6; max-width: 58ch; }
+.hero .sub b { color: var(--ink); font-weight: 600; }
+.hero .sub code { color: var(--ink); }
+.ctas { display: flex; flex-wrap: wrap; gap: 12px; margin: 34px 0 18px; }
+.strip { font: 400 12.5px/1.6 var(--font-data); color: var(--muted); }
+.strip a { color: var(--muted); }
+.rise > * { animation: rise .95s var(--ease) both; }
+.rise > :nth-child(2) { animation-delay: .07s; } .rise > :nth-child(3) { animation-delay: .14s; }
+.rise > :nth-child(4) { animation-delay: .21s; } .rise > :nth-child(5) { animation-delay: .28s; }
+@keyframes rise { from { opacity: .001; transform: translateY(16px); } }
+
+/* ---------- plates (inset cards laid on the sheet) */
+.plate { position: relative; margin: 0; background: var(--paper); border: 1px solid var(--rule); box-shadow: 7px 7px 0 color-mix(in srgb, var(--rule) 85%, transparent); }
+.plate-label { font: 600 10.5px/1.4 var(--font-data); letter-spacing: .15em; text-transform: uppercase; color: var(--muted); padding: 16px 20px 0; }
+.column-plate { padding-bottom: 14px; animation: rise 1s .25s var(--ease) both; }
+.column-plate svg { display: block; width: 100%; height: auto; }
+.column-plate .key { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 4px 20px 0; font: 400 12px/1.4 var(--font-body); color: var(--muted); }
+.column-plate .key span { display: inline-flex; align-items: center; gap: 7px; }
+.column-plate .key i { width: 16px; height: 10px; border: 1px solid #B9A57E; display: inline-block; }
+.sw-a { background: radial-gradient(circle at 30% 30%, #B9A57E .7px, transparent 1px) 0 0/5px 5px, #E5D8BC; }
+.sw-b { background: linear-gradient(#B19C72, #B19C72) 2px 4px/7px 1px no-repeat, linear-gradient(#B19C72, #B19C72) 9px 7px/5px 1px no-repeat, #D6C49E; }
+.column-plate svg.col-narrow, .plates-fig .plates-narrow { display: none; }
+svg text { font-family: var(--font-body); }
+svg .m { font-family: var(--font-data); }
+
+/* ---------- receipts */
+.receipts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 0; border-bottom: 1px solid var(--rule); }
+.rc { padding: 40px 28px 34px; border-left: 1px solid var(--rule); }
+.rc:first-child { border-left: 0; padding-left: 0; }
+.rc .num { font: 700 clamp(40px, 4.3vw, 58px)/1 var(--font-display); letter-spacing: -.02em; font-variant-numeric: lining-nums tabular-nums; white-space: nowrap; }
+.rc .num .of { font-weight: 400; color: var(--muted); }
+.rc .lbl { margin: 12px 0 10px; font-size: 15px; line-height: 1.45; color: var(--ink); max-width: 24ch; }
+.tests { padding: 18px 0 0; font-size: 14.5px; color: var(--muted); }
+.tests code { color: var(--ink); }
+
+/* ---------- demo pair */
+.pair { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 28px; align-items: start; }
+.dark { margin: 0; background: var(--plate); color: #E9E2D0; border-radius: 3px; overflow: hidden; box-shadow: 8px 8px 0 color-mix(in srgb, var(--rule) 90%, transparent); }
+.bar { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid #3A3228; font: 400 12px/1.3 var(--font-data); color: #9C9282; }
+.dots { display: inline-flex; gap: 6px; flex: none; } .dots i { width: 9px; height: 9px; border-radius: 50%; background: #4A4136; }
+.term pre { margin: 0; padding: 16px 16px 18px; font: 400 12.2px/1.6 var(--font-data); white-space: pre-wrap; overflow-wrap: anywhere; }
+.term .p { color: #E3B45C; } .term .c { color: #9C9282; } .term .bad { color: #F08A6E; } .term .good { color: #7FB08F; } .term .w { color: #F8F4EA; font-weight: 600; }
+.term.typing .ln { visibility: hidden; } .term.typing .ln.on { visibility: visible; }
+.term .cur { display: inline-block; width: .6em; height: 1.05em; vertical-align: -.15em; background: #E3B45C; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.shot img { width: 100%; }
+.dark figcaption, .cap { padding: 13px 16px 15px; font: 400 13px/1.55 var(--font-body); color: #B8AE9C; border-top: 1px solid #3A3228; }
+.dark figcaption code { color: #E9E2D0; }
+.verdicts { margin: 34px 0 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--ink); }
+.verdicts > div { padding: 18px 22px 4px 0; }
+.verdicts > div + div { padding-left: 22px; border-left: 1px solid var(--rule); }
+.verdicts dt { font: 600 12px/1.4 var(--font-data); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); min-height: 2.8em; }
+.verdicts dd { margin: 8px 0 0; font-size: 14.5px; }
+.verdicts dd.score { font: 700 34px/1 var(--font-display); margin-top: 12px; }
+.verdicts dd.score.bad { color: var(--implicated); } .verdicts dd.score.ok { color: var(--cleared); }
+.verdicts .ours dt { color: var(--ink); }
+.note { margin-top: 22px; max-width: 78ch; color: var(--muted); font-size: 15.5px; }
+.note b { color: var(--ink); font-weight: 600; }
+
+/* ---------- section B–B′ plates */
+.plates-fig { margin: 0; padding: 26px 26px 18px; }
+.plates-fig svg { width: 100%; height: auto; display: block; }
+.plates-fig figcaption { margin-top: 10px; font-size: 14.5px; color: var(--muted); max-width: 90ch; }
+.pl .layer { stroke: #B9A57E; stroke-width: .6; opacity: .55; }
+.pl .lbl { font-size: 12.5px; fill: var(--ink); }
+.pl .sub2 { font-size: 11px; fill: var(--muted); }
+.pl .cap { font: 600 11.5px var(--font-data); letter-spacing: .12em; fill: var(--muted); }
+.pl .big { font: 700 19px var(--font-display); fill: var(--ink); }
+.pl .lead { stroke: var(--ink); stroke-width: .8; fill: none; stroke-dasharray: 3 3; }
+.pl .bracket { stroke: var(--ink); stroke-width: 1.6; fill: none; }
+.pl .elim { fill: var(--bg); opacity: .62; }
+.armed .r1, .armed .r2, .armed .r3, .armed .b1, .armed .b2, .armed .fl { opacity: 0; }
+.play .r1 { animation: pop .45s var(--ease) both; }
+.play .b1 { animation: fade .5s .45s both; }
+.play .r2 { animation: pop .45s .95s var(--ease) both; }
+.play .b2 { animation: fade .5s 1.4s both; }
+.play .r3 { animation: pop .45s 1.9s var(--ease) both; }
+.play .fl { animation: fade .6s 2.35s both; }
+@keyframes pop { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.pl .r1, .pl .r2, .pl .r3 { transform-box: fill-box; }
+
+/* ---------- explanation (legend bento) */
+.legend { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 20px; }
+.card { position: relative; padding: 26px 26px 24px; background: var(--paper); border: 1px solid var(--rule); transition: transform .22s var(--ease), box-shadow .22s var(--ease), border-color .22s var(--ease); }
+.card:hover { transform: translate(-3px, -3px); box-shadow: 6px 6px 0 var(--rule); border-color: #BFAF92; }
+.card h3 { font-size: 26px; line-height: 1.12; margin: 16px 0 10px; }
+.card p { color: var(--muted); font-size: 15.5px; line-height: 1.58; }
+.card p code { color: var(--ink); }
+.card .ico { width: 44px; height: 44px; }
+.card .ico * { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.chip { display: inline-block; margin-top: 16px; padding: 5px 10px; font: 500 12px/1.3 var(--font-data); color: var(--ink); border: 1px solid var(--rule); background: var(--bg); border-radius: 2px; }
+.s7 { grid-column: span 7; } .s5 { grid-column: span 5; } .s4 { grid-column: span 4; } .s12 { grid-column: span 12; }
+.card.wide { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 30px; align-items: center; }
+.card.wide .dark { box-shadow: none; }
+.card.lead-card h3 { font-size: 32px; }
+
+/* ---------- field notes */
+.notes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.notes blockquote { margin: 0; padding: 30px 28px 26px; background: var(--paper); border: 1px solid var(--rule); border-top: 3px solid var(--ink); }
+.notes blockquote p { font: 400 italic 23px/1.38 var(--font-display); color: var(--ink); }
+.notes cite { display: block; margin-top: 18px; font: 500 11.5px/1.4 var(--font-data); font-style: normal; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+
+/* ---------- FAQ */
+.faq { border-top: 2px solid var(--ink); max-width: 980px; }
+.faq details { border-bottom: 1px solid var(--rule); }
+.faq summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 18px; padding: 24px 6px 24px 0; font: 700 23px/1.25 var(--font-display); transition: color .18s var(--ease); }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary:hover { color: var(--cleared); }
+.faq summary .q { font: 600 12px/1 var(--font-data); color: var(--muted); letter-spacing: .1em; flex: none; width: 34px; }
+.faq summary::after { content: ""; margin-left: auto; flex: none; width: 13px; height: 13px; border-right: 1.6px solid var(--ink); border-bottom: 1.6px solid var(--ink); transform: rotate(45deg) translateY(-4px); transition: transform .25s var(--ease); }
+.faq details[open] summary::after { transform: rotate(225deg) translateY(-2px); }
+.faq .a { padding: 0 40px 26px 52px; color: var(--muted); font-size: 16.5px; max-width: 80ch; }
+.faq .a p + p { margin-top: 10px; }
+.faq .a b { color: var(--ink); font-weight: 600; }
+.faq .a code { color: var(--ink); }
+
+/* ---------- footer (bottom collar) */
+.foot { margin-top: 120px; border-top: 3px double var(--rule); }
+.foot-in { max-width: 1240px; margin: 0 auto; padding: 40px 40px 54px; display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 36px; align-items: start; }
+.foot h4 { margin: 0 0 12px; font: 600 11px/1 var(--font-data); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.foot ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.foot li a { display: inline-block; padding: 5px 0; font-size: 15px; }
+.foot p { font-size: 14px; color: var(--muted); }
+.scale { margin-top: 16px; }
+.scale svg { width: 100%; max-width: 360px; height: auto; display: block; }
+
+/* ---------- responsive */
+@media (max-width: 1100px) { .sheet { display: none; } }
+@media (max-width: 960px) {
+  .tex .ud { display: none; }
+  .collar { padding: 0 20px; gap: 10px; } .collar nav a.t { display: none; }
+  .wrap { padding: 0 22px; }
+  .hero-in { grid-template-columns: 1fr; gap: 44px; padding: 52px 22px 56px; }
+  .hero h1 { max-width: 16ch; }
+  .column-plate svg.col-wide, .plates-fig svg.plates-wide { display: none; } .column-plate svg.col-narrow, .plates-fig .plates-narrow { display: block; }
+  .receipts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rc { padding: 26px 18px 24px; } .rc:nth-child(3) { border-left: 0; padding-left: 0; } .rc:nth-child(n+3) { border-top: 1px solid var(--rule); }
+  .pair { grid-template-columns: 1fr; } .term pre { min-height: 0; }
+  .verdicts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .verdicts > div:nth-child(3) { padding-left: 0; border-left: 0; } .verdicts > div:nth-child(n+3) { border-top: 1px solid var(--rule); margin-top: 6px; }
+  .legend { grid-template-columns: 1fr; } .legend > * { grid-column: auto; } .card.wide { grid-template-columns: 1fr; }
+  .notes { grid-template-columns: 1fr; }
+  .foot-in { grid-template-columns: 1fr; padding: 34px 22px 44px; }
+  .sec { padding-top: 84px; }
+  .plates-fig { padding: 18px 14px 14px; }
+}
+@media (max-width: 560px) {
+  body { font-size: 16px; }
+  .hero .sub { font-size: 17px; }
+  .ctas .btn { flex: 1 1 auto; justify-content: center; }
+  .rc .num { font-size: 38px; }
+  .faq summary { font-size: 20px; gap: 12px; } .faq summary .q { width: 24px; } .faq .a { padding: 0 6px 22px 36px; }
+  .notes blockquote p { font-size: 20px; }
+  .card { padding: 22px 20px 20px; } .card h3 { font-size: 23px; } .card.lead-card h3 { font-size: 26px; }
+  .collar .btn.ghost { display: none; }
+}
+@media (max-width: 360px) { .collar { padding: 0 14px; } .brand { font-size: 17px; } .wrap, .hero-in { padding-left: 16px; padding-right: 16px; } }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .armed .r1, .armed .r2, .armed .r3, .armed .b1, .armed .b2, .armed .fl { opacity: 1; }
+}
+@media print {
+  body::after, .collar, .skip { display: none; }
+  *, *::before, *::after { animation: none !important; }
+  .armed .r1, .armed .r2, .armed .r3, .armed .b1, .armed .b2, .armed .fl, .term.typing .ln { opacity: 1 !important; visibility: visible !important; }
+  .sec, .hero-in { break-inside: avoid-page; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the sheet</a>
+<header class="collar">
+  <a class="brand" href="#top" aria-label="Faultline — back to the top"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect x="2" y="9" width="3.2" height="9" rx="1.2" fill="#2F6E4A"/><rect x="6.6" y="9" width="3.2" height="9" rx="1.2" fill="#2F6E4A"/><rect x="11.2" y="9" width="3.2" height="9" rx="1.2" fill="#2F6E4A"/><rect x="15.4" y="4" width="2.8" height="24" rx="1.2" fill="#B8321A"/><rect x="19.2" y="15" width="3.2" height="9" rx="1.2" fill="#9A4532"/><rect x="23.8" y="15" width="3.2" height="9" rx="1.2" fill="#9A4532"/><rect x="28.4" y="15" width="3.2" height="9" rx="1.2" fill="#9A4532"/></svg><span>Faultline</span></a>
+  <p class="sheet">Sheet <span class="id">827dfe7e</span> · surveyed 2026-10-13</p>
+  <nav aria-label="On this page">
+    <a class="t" href="#demo">Demo</a>
+    <a class="t" href="#section">Section</a>
+    <a class="t" href="#legend">Explanation</a>
+    <a class="t" href="#faq">Questions</a>
+    <a class="btn sm ghost" href="/pitch">Pitch deck</a>
+    <a class="btn sm ink" href="/">Live app <span class="arr" aria-hidden="true">→</span></a>
+  </nav>
+</header>
+
+<main id="main">
+<section class="hero" id="top" aria-labelledby="h1">
+  <svg class="tex" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false"><defs><g id="rings"><path class="ring" d="M1098 430L1099 433L1100 437L1100 440L1099 443L1097 446L1094 449L1091 451L1086 453L1082 454L1078 455L1074 456L1071 457L1067 457L1064 459L1061 460L1057 461L1054 462L1050 463L1046 464L1042 464L1038 463L1034 462L1030 461L1027 460L1023 458L1020 457L1016 455L1013 453L1010 451L1007 448L1005 446L1003 443L1003 439L1003 436L1004 433L1006 430L1008 427L1010 425L1011 422L1013 420L1014 418L1015 415L1015 412L1016 409L1017 406L1019 403L1022 400L1025 398L1029 396L1033 395L1037 394L1041 394L1046 395L1050 395L1054 396L1058 397L1062 397L1065 398L1069 400L1073 401L1076 403L1079 405L1081 407L1083 409L1085 412L1086 414L1088 417L1090 419L1091 422L1093 424L1096 427L1098 430Z"/><path class="ring" d="M1147 430L1149 436L1150 443L1149 450L1146 456L1142 462L1136 467L1128 471L1120 474L1112 476L1104 478L1097 479L1090 481L1084 483L1078 486L1071 489L1065 493L1058 496L1050 499L1042 500L1033 501L1024 501L1016 499L1008 496L1001 493L995 489L989 484L983 480L978 475L973 470L968 465L965 460L962 454L960 448L960 442L961 436L963 430L966 425L969 419L972 414L974 409L975 404L977 399L978 393L980 386L982 380L986 373L991 368L998 363L1006 360L1015 358L1024 358L1033 359L1042 360L1050 363L1058 365L1065 367L1072 369L1079 371L1086 373L1093 375L1100 377L1107 380L1113 384L1118 388L1123 392L1127 397L1131 402L1134 407L1138 413L1141 418L1144 424L1147 430Z"/><path class="ring" d="M1194 430L1195 439L1194 449L1192 458L1188 467L1181 475L1173 482L1163 488L1152 493L1140 497L1129 500L1119 503L1110 506L1101 510L1092 515L1083 521L1073 527L1062 532L1050 537L1037 540L1023 542L1010 541L997 537L986 532L976 525L967 518L959 510L953 502L947 494L941 487L935 479L930 471L925 464L922 455L919 447L918 439L919 430L921 422L923 413L926 405L929 397L932 389L934 380L937 371L941 362L946 353L952 344L961 336L972 330L984 326L998 324L1012 324L1025 326L1038 329L1050 333L1061 337L1071 341L1081 344L1091 346L1102 347L1113 349L1125 351L1136 354L1148 358L1158 363L1167 370L1174 377L1180 385L1184 394L1188 403L1191 412L1193 421L1194 430Z"/><path class="ring" d="M1236 430L1234 442L1231 454L1228 465L1222 476L1215 487L1206 497L1196 506L1184 513L1171 519L1158 525L1145 530L1133 536L1121 542L1108 549L1096 557L1082 564L1067 572L1050 577L1032 581L1014 582L996 580L979 574L964 566L952 556L942 544L934 533L927 521L920 511L914 501L907 491L899 482L891 473L883 463L877 453L872 442L869 430L868 418L870 406L873 395L877 383L882 372L888 361L895 350L902 338L911 327L922 317L934 308L949 300L965 296L983 293L1001 294L1018 296L1035 301L1050 305L1064 310L1078 314L1091 317L1105 319L1120 320L1136 320L1152 322L1170 324L1186 329L1201 336L1214 345L1225 355L1232 367L1236 380L1238 393L1238 405L1238 418L1236 430Z"/><path class="ring idx" d="M1271 430L1266 444L1262 458L1258 471L1253 485L1247 498L1240 511L1231 524L1219 535L1206 545L1191 555L1176 563L1160 571L1144 579L1127 587L1110 595L1091 603L1071 610L1050 616L1028 619L1005 618L983 614L963 606L946 595L931 582L920 568L910 553L903 539L895 526L887 515L877 504L866 494L853 483L841 472L829 459L819 445L812 430L809 414L810 399L814 383L822 368L831 354L842 341L855 329L868 317L881 305L896 294L913 285L931 277L950 271L970 268L991 267L1012 268L1031 272L1050 276L1068 280L1085 283L1102 286L1120 287L1140 287L1161 288L1183 289L1205 293L1227 299L1247 308L1263 320L1275 334L1282 350L1285 367L1284 384L1281 400L1276 415L1271 430Z"/><path class="ring" d="M1301 430L1295 446L1290 461L1287 477L1285 493L1282 510L1278 527L1271 545L1261 561L1247 576L1231 590L1212 601L1191 611L1169 620L1147 627L1124 634L1100 640L1075 645L1050 648L1024 649L998 647L974 641L951 632L930 620L913 606L899 590L887 574L877 558L867 544L855 531L842 519L827 507L809 495L791 481L774 466L760 449L750 430L746 410L748 391L755 371L767 354L783 338L801 323L820 311L839 299L858 288L877 277L896 267L916 258L937 250L959 244L981 240L1004 238L1027 238L1050 240L1072 243L1094 245L1116 247L1139 249L1163 250L1188 252L1215 256L1241 261L1266 270L1289 282L1307 297L1319 315L1326 335L1327 355L1323 376L1317 395L1309 413L1301 430Z"/><path class="ring" d="M1332 430L1326 448L1323 466L1322 484L1323 504L1324 525L1323 547L1318 569L1308 591L1294 611L1274 628L1250 642L1223 652L1195 660L1166 665L1136 669L1107 671L1079 672L1050 672L1022 671L993 668L966 662L940 654L916 643L895 629L876 614L860 598L845 582L831 566L815 552L798 538L779 524L758 509L736 492L716 474L700 453L690 430L686 406L690 383L702 361L719 341L742 323L766 309L792 296L816 285L839 274L861 263L882 252L902 240L923 229L946 218L970 209L996 202L1023 198L1050 196L1078 197L1105 199L1132 203L1160 207L1188 211L1216 217L1245 224L1273 233L1300 245L1323 260L1342 279L1354 300L1361 323L1361 346L1357 369L1349 391L1340 411L1332 430Z"/><path class="ring" d="M1372 430L1368 451L1367 471L1368 493L1371 517L1374 542L1374 569L1369 596L1358 622L1341 645L1316 665L1286 680L1253 690L1217 696L1181 698L1147 697L1113 695L1081 692L1050 690L1020 687L989 685L959 681L930 675L901 667L874 656L849 643L826 628L805 612L785 595L765 578L745 561L723 543L702 524L680 503L661 481L646 456L637 430L636 403L644 377L659 352L681 331L708 312L738 297L768 284L796 272L821 261L844 248L865 234L886 219L907 203L930 186L956 171L985 159L1017 150L1050 146L1084 145L1117 149L1149 155L1181 164L1211 174L1241 185L1270 197L1298 211L1324 227L1347 245L1367 266L1381 289L1389 313L1392 338L1390 363L1384 386L1378 409L1372 430Z"/><path class="ring" d="M1426 430L1424 454L1424 479L1426 505L1428 532L1429 561L1427 591L1419 621L1404 650L1382 676L1352 697L1317 712L1277 721L1235 724L1194 723L1154 719L1117 713L1083 708L1050 705L1018 703L985 702L952 702L917 700L882 697L848 690L814 679L784 665L756 648L730 629L708 608L687 585L667 562L648 538L630 513L616 487L605 459L599 430L601 401L611 373L628 346L652 323L680 302L711 285L742 270L771 257L798 243L821 228L843 211L864 191L886 170L911 148L941 127L974 111L1011 99L1050 93L1090 93L1129 99L1166 111L1200 125L1231 142L1261 160L1288 178L1315 196L1340 215L1363 235L1384 257L1402 279L1415 304L1424 329L1428 355L1429 380L1428 406L1426 430Z"/><path class="ring idx" d="M1494 430L1494 459L1493 488L1491 517L1488 548L1483 580L1474 612L1461 643L1441 673L1413 699L1379 720L1338 735L1294 743L1249 746L1204 743L1161 738L1122 732L1085 726L1050 724L1015 724L979 727L941 731L901 734L858 734L816 731L774 722L736 708L702 688L673 664L649 638L630 609L615 580L603 551L592 521L584 491L578 461L576 430L579 400L588 370L604 341L625 315L651 292L679 272L709 253L737 236L764 218L789 199L812 178L835 155L861 129L890 104L924 81L962 62L1005 49L1050 44L1095 47L1139 57L1179 74L1215 95L1246 118L1275 142L1301 165L1326 187L1351 207L1376 227L1401 248L1425 269L1447 293L1465 318L1479 345L1488 373L1493 401L1494 430Z"/><path class="ring" d="M1573 430L1571 464L1564 497L1555 530L1543 563L1528 595L1511 627L1490 658L1464 687L1432 713L1395 734L1353 750L1307 760L1260 764L1214 764L1170 760L1128 756L1088 754L1050 754L1011 757L971 762L927 769L880 775L831 778L781 776L732 766L688 750L650 726L620 697L598 665L583 630L574 594L569 560L567 526L565 493L564 462L563 430L565 399L570 367L579 337L594 307L613 279L636 253L663 229L690 206L718 184L746 161L773 137L802 112L834 86L869 61L908 38L952 20L1000 9L1050 6L1099 11L1146 26L1189 47L1226 72L1258 100L1286 128L1311 154L1337 177L1364 197L1393 217L1425 236L1458 256L1490 278L1518 304L1542 332L1559 363L1570 396L1573 430Z"/><path class="ring" d="M1652 430L1645 469L1630 506L1610 541L1586 574L1560 606L1533 637L1505 666L1475 694L1441 720L1404 743L1363 761L1319 776L1274 785L1227 791L1181 793L1137 794L1093 795L1050 797L1006 802L960 809L910 816L858 821L803 823L747 818L694 806L647 786L607 758L578 724L558 685L548 645L546 604L547 566L550 529L553 495L553 462L551 430L548 397L545 364L545 330L551 295L562 261L579 229L603 198L631 169L662 143L696 117L731 93L769 69L808 46L850 24L896 5L945 -10L997 -18L1050 -19L1102 -11L1151 5L1196 28L1235 54L1268 83L1298 112L1326 138L1355 161L1386 181L1422 199L1461 217L1502 237L1544 259L1582 286L1614 318L1637 353L1650 391L1652 430Z"/><path class="ring" d="M1721 430L1706 473L1681 512L1650 549L1615 582L1579 613L1544 641L1511 669L1479 697L1447 724L1413 751L1376 775L1336 797L1292 815L1246 829L1198 839L1149 845L1100 850L1050 854L999 858L947 861L893 864L836 865L778 862L721 853L666 836L618 811L579 779L550 741L532 698L525 655L525 611L529 571L534 532L536 497L534 463L527 430L517 395L506 359L497 320L493 280L498 239L511 199L534 162L565 129L603 99L646 73L692 51L739 31L788 14L838 -2L889 -15L942 -25L996 -31L1050 -30L1104 -23L1155 -9L1202 11L1244 35L1282 61L1317 87L1351 112L1385 134L1423 154L1464 173L1510 191L1558 213L1606 238L1650 268L1686 304L1711 344L1723 386L1721 430Z"/><path class="ring" d="M1770 430L1749 475L1716 517L1676 554L1633 587L1591 617L1553 645L1518 673L1487 702L1459 733L1429 765L1397 797L1360 828L1318 856L1271 879L1219 896L1164 908L1107 914L1050 917L993 916L935 913L877 908L819 900L761 889L704 874L651 852L603 824L564 790L534 750L515 707L505 663L503 619L504 577L505 538L504 501L497 466L485 430L468 392L450 352L435 308L426 262L427 215L440 169L465 127L503 90L550 59L603 36L660 17L718 4L775 -7L831 -16L886 -23L941 -30L995 -34L1050 -35L1105 -33L1158 -25L1210 -12L1259 6L1304 27L1347 49L1388 72L1430 95L1473 117L1519 139L1568 161L1618 187L1667 217L1712 252L1747 292L1769 336L1777 383L1770 430Z"/><path class="ring idx" d="M1798 430L1773 477L1738 520L1696 558L1651 592L1608 623L1569 652L1536 682L1508 715L1483 750L1457 789L1428 830L1393 870L1350 907L1299 937L1242 960L1179 974L1115 979L1050 976L986 968L925 955L866 940L808 922L752 903L698 881L647 856L600 828L558 794L524 757L498 716L481 674L469 631L462 588L456 548L448 509L437 470L421 430L401 388L382 343L365 294L357 243L360 192L376 142L408 97L453 59L509 29L572 8L638 -5L705 -13L768 -18L828 -21L885 -25L940 -30L995 -37L1050 -44L1106 -48L1164 -49L1222 -46L1279 -36L1334 -22L1387 -2L1437 21L1485 46L1532 73L1579 101L1626 131L1673 164L1717 200L1756 240L1786 284L1804 331L1808 381L1798 430Z"/><path class="ring" d="M1809 430L1788 478L1757 522L1719 563L1679 600L1639 634L1604 667L1573 701L1547 739L1523 780L1498 825L1468 872L1431 918L1384 961L1328 995L1263 1020L1194 1033L1121 1034L1050 1025L982 1007L918 984L859 958L804 931L751 906L699 880L648 855L599 828L552 799L510 766L472 730L442 690L417 649L398 606L383 562L370 519L356 475L341 430L325 383L310 333L300 281L299 227L308 174L332 123L370 77L421 39L484 11L553 -8L625 -19L696 -24L763 -25L825 -27L883 -31L938 -38L993 -50L1050 -63L1110 -77L1173 -88L1239 -93L1306 -91L1371 -81L1433 -62L1491 -36L1543 -5L1591 29L1635 67L1675 106L1714 146L1748 189L1779 234L1802 281L1816 330L1819 380L1809 430Z"/><path class="ring" d="M1817 430L1806 479L1786 526L1759 571L1727 613L1694 652L1662 692L1631 732L1603 774L1576 819L1546 868L1511 917L1467 965L1414 1009L1351 1043L1280 1066L1204 1076L1126 1072L1050 1056L979 1031L914 1000L856 967L802 934L751 905L700 879L647 856L593 834L537 810L482 783L430 751L384 715L345 673L315 628L292 580L276 531L265 481L257 430L251 378L249 325L251 271L261 217L280 164L310 114L353 69L408 31L472 2L543 -18L616 -30L687 -36L755 -39L818 -43L876 -50L933 -63L990 -80L1050 -100L1115 -121L1185 -139L1260 -150L1336 -152L1410 -143L1480 -122L1542 -91L1596 -52L1641 -8L1678 40L1709 88L1736 137L1760 185L1781 233L1800 281L1813 330L1819 380L1817 430Z"/><path class="ring" d="M1835 430L1839 481L1834 532L1821 583L1799 632L1772 679L1740 725L1707 771L1671 816L1634 863L1594 910L1549 958L1496 1002L1435 1042L1366 1073L1290 1092L1209 1099L1128 1091L1050 1072L978 1044L912 1010L853 974L799 941L746 912L693 888L635 869L573 851L507 832L439 810L372 782L312 746L261 703L222 653L196 600L182 543L178 486L183 430L193 374L207 320L225 266L247 213L274 162L309 113L353 69L406 29L466 -3L532 -27L601 -45L670 -58L737 -67L801 -77L862 -90L922 -107L984 -128L1050 -152L1122 -176L1199 -196L1281 -208L1364 -209L1445 -197L1519 -172L1583 -134L1635 -87L1675 -33L1704 23L1726 80L1743 134L1758 185L1774 235L1792 283L1809 331L1824 380L1835 430Z"/></g><clipPath id="west"><polygon points="-10,-20 968,-20 920,300 946,520 892,920 -10,920"/></clipPath><clipPath id="east"><polygon points="1610,-20 968,-20 920,300 946,520 892,920 1610,920"/></clipPath></defs><use href="#rings" clip-path="url(#west)"/><g clip-path="url(#east)"><use class="slip" href="#rings"/></g><polyline class="fault" pathLength="1" points="968,-20 920,300 946,520 892,920"/><text class="ud" x="896" y="676">D</text><text class="ud" x="956" y="652">U</text></svg>
+  <div class="hero-in">
+    <div class="rise">
+      <p class="eyebrow">Nebius Global AI Hackathon · Coding and Agentic Engineering</p>
+      <h1 id="h1">The bisect that refuses to blame <em>the innocent.</em></h1>
+      <p class="sub"><code>git bisect run</code> in one reused environment trusts that environment for every commit. On a 255-commit history whose dependency pin moves halfway, it convicted the wrong commit <b>10 times out of 10</b>. Faultline gives every suspect a fresh Nebius container with that commit’s own dependencies — and named the real culprit in <b>3 rounds</b>, for <b>$0.0948</b>.</p>
+      <div class="ctas">
+        <a class="btn" href="https://github.com/edycutjong/faultline"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>Source on GitHub</a>
+        <a class="btn" href="/pitch"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.5" d="M1.5 2.5h13v8.5h-13zM8 11v3M5 14.25h6"/></svg>Pitch deck</a>
+        <a class="btn ink" href="/">Open the live app <span class="arr" aria-hidden="true">→</span></a>
+      </div>
+      <p class="strip">recorded run 2026-10-13 · hunt 827dfe7e · 19 Nebius jobs · 4 regions · 957 s</p>
+    </div>
+    <figure class="plate column-plate" aria-labelledby="col-cap">
+      <figcaption class="plate-label" id="col-cap">Section A–A′ · 255 commits, oldest at the base</figcaption>
+      <svg class="col-wide" viewBox="0 0 470 566" role="img" aria-label="The 255 commits of hunt 827dfe7e as rock layers, oldest at the base. Layers 0 to 149 were installed with pytz 2022.1, 150 to 255 with pytz 2023.3. A reused environment built at v0.1.0 blames layer 150; one built at main blames layer 1; the fault, found by Faultline, is layer 173."><defs><pattern id="hcwA" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#E5D8BC"/><circle cx="1.5" cy="1.5" r=".75" fill="#B9A57E"/><circle cx="4.5" cy="4.5" r=".6" fill="#C7B58F"/></pattern><pattern id="hcwB" width="12" height="6" patternUnits="userSpaceOnUse"><rect width="12" height="6" fill="#D6C49E"/><path d="M1 2h5M7 5h4" stroke="#AE9870" stroke-width=".8"/></pattern><pattern id="hcwF" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#D6C49E"/><path d="M0 0v7" stroke="#B8321A" stroke-width="2.2" opacity=".55"/></pattern></defs><rect x="56" y="224.6" width="88" height="275.4" fill="url(#hcwA)"/><rect x="56" y="182.4" width="88" height="42.2" fill="url(#hcwB)"/><rect x="63" y="30" width="88" height="152.4" fill="url(#hcwB)"/><path class="layer" d="M56 498.2h88M56 496.3h88M56 494.5h88M56 492.7h88M56 490.8h88M56 489h88M56 487.1h88M56 485.3h88M56 483.5h88M56 481.6h88M56 479.8h88M56 478h88M56 476.1h88M56 474.3h88M56 472.5h88M56 470.6h88M56 468.8h88M56 467h88M56 465.1h88M56 463.3h88M56 461.4h88M56 459.6h88M56 457.8h88M56 455.9h88M56 454.1h88M56 452.3h88M56 450.4h88M56 448.6h88M56 446.8h88M56 444.9h88M56 443.1h88M56 441.2h88M56 439.4h88M56 437.6h88M56 435.7h88M56 433.9h88M56 432.1h88M56 430.2h88M56 428.4h88M56 426.6h88M56 424.7h88M56 422.9h88M56 421.1h88M56 419.2h88M56 417.4h88M56 415.5h88M56 413.7h88M56 411.9h88M56 410h88M56 408.2h88M56 406.4h88M56 404.5h88M56 402.7h88M56 400.9h88M56 399h88M56 397.2h88M56 395.4h88M56 393.5h88M56 391.7h88M56 389.8h88M56 388h88M56 386.2h88M56 384.3h88M56 382.5h88M56 380.7h88M56 378.8h88M56 377h88M56 375.2h88M56 373.3h88M56 371.5h88M56 369.6h88M56 367.8h88M56 366h88M56 364.1h88M56 362.3h88M56 360.5h88M56 358.6h88M56 356.8h88M56 355h88M56 353.1h88M56 351.3h88M56 349.5h88M56 347.6h88M56 345.8h88M56 343.9h88M56 342.1h88M56 340.3h88M56 338.4h88M56 336.6h88M56 334.8h88M56 332.9h88M56 331.1h88M56 329.3h88M56 327.4h88M56 325.6h88M56 323.8h88M56 321.9h88M56 320.1h88M56 318.2h88M56 316.4h88M56 314.6h88M56 312.7h88M56 310.9h88M56 309.1h88M56 307.2h88M56 305.4h88M56 303.6h88M56 301.7h88M56 299.9h88M56 298h88M56 296.2h88M56 294.4h88M56 292.5h88M56 290.7h88M56 288.9h88M56 287h88M56 285.2h88M56 283.4h88M56 281.5h88M56 279.7h88M56 277.9h88M56 276h88M56 274.2h88M56 272.3h88M56 270.5h88M56 268.7h88M56 266.8h88M56 265h88M56 263.2h88M56 261.3h88M56 259.5h88M56 257.7h88M56 255.8h88M56 254h88M56 252.1h88M56 250.3h88M56 248.5h88M56 246.6h88M56 244.8h88M56 243h88M56 241.1h88M56 239.3h88M56 237.5h88M56 235.6h88M56 233.8h88M56 232h88M56 230.1h88M56 228.3h88M56 226.4h88M56 224.6h88M56 222.8h88M56 220.9h88M56 219.1h88M56 217.3h88M56 215.4h88M56 213.6h88M56 211.8h88M56 209.9h88M56 208.1h88M56 206.2h88M56 204.4h88M56 202.6h88M56 200.7h88M56 198.9h88M56 197.1h88M56 195.2h88M56 193.4h88M56 191.6h88M56 189.7h88M56 187.9h88M56 186.1h88M56 184.2h88M63 182.4h88M63 180.5h88M63 178.7h88M63 176.9h88M63 175h88M63 173.2h88M63 171.4h88M63 169.5h88M63 167.7h88M63 165.9h88M63 164h88M63 162.2h88M63 160.4h88M63 158.5h88M63 156.7h88M63 154.8h88M63 153h88M63 151.2h88M63 149.3h88M63 147.5h88M63 145.7h88M63 143.8h88M63 142h88M63 140.2h88M63 138.3h88M63 136.5h88M63 134.6h88M63 132.8h88M63 131h88M63 129.1h88M63 127.3h88M63 125.5h88M63 123.6h88M63 121.8h88M63 120h88M63 118.1h88M63 116.3h88M63 114.5h88M63 112.6h88M63 110.8h88M63 108.9h88M63 107.1h88M63 105.3h88M63 103.4h88M63 101.6h88M63 99.8h88M63 97.9h88M63 96.1h88M63 94.3h88M63 92.4h88M63 90.6h88M63 88.8h88M63 86.9h88M63 85.1h88M63 83.2h88M63 81.4h88M63 79.6h88M63 77.7h88M63 75.9h88M63 74.1h88M63 72.2h88M63 70.4h88M63 68.6h88M63 66.7h88M63 64.9h88M63 63h88M63 61.2h88M63 59.4h88M63 57.5h88M63 55.7h88M63 53.9h88M63 52h88M63 50.2h88M63 48.4h88M63 46.5h88M63 44.7h88M63 42.9h88M63 41h88M63 39.2h88M63 37.3h88M63 35.5h88M63 33.7h88M63 31.8h88" opacity="0.42"/><path d="M56 500V182.4" stroke="#A8936B" stroke-width=".8" fill="none"/><line x1="50" x2="150" y1="224.6" y2="224.6" stroke="#8A6114" stroke-width="1.4" stroke-dasharray="5 3"/><path class="hfl" d="M44 186.4L163 178.4" stroke="#B8321A" stroke-width="2.6" fill="none"/><path d="M49 499.1h6" stroke="#5C5347" stroke-width="1"/><text class="m" x="45" y="502.6" text-anchor="end" font-size="10.5" fill="#5C5347">0</text><path d="M49 407.3h6" stroke="#5C5347" stroke-width="1"/><text class="m" x="45" y="410.8" text-anchor="end" font-size="10.5" fill="#5C5347">50</text><path d="M49 315.5h6" stroke="#5C5347" stroke-width="1"/><text class="m" x="45" y="319" text-anchor="end" font-size="10.5" fill="#5C5347">100</text><path d="M49 223.7h6" stroke="#5C5347" stroke-width="1"/><text class="m" x="45" y="227.2" text-anchor="end" font-size="10.5" fill="#5C5347">150</text><path d="M49 131.9h6" stroke="#5C5347" stroke-width="1"/><text class="m" x="45" y="135.4" text-anchor="end" font-size="10.5" fill="#5C5347">200</text><path d="M49 30.9h6" stroke="#5C5347" stroke-width="1"/><text class="m" x="45" y="34.4" text-anchor="end" font-size="10.5" fill="#5C5347">255</text><text class="m" x="100" y="362.3" text-anchor="middle" font-size="11" fill="#1F1A14" opacity=".55" letter-spacing=".08em" transform="rotate(-90 100 362.3)">pytz 2022.1</text><text class="m" x="107" y="106.2" text-anchor="middle" font-size="11" fill="#1F1A14" opacity=".55" letter-spacing=".08em" transform="rotate(-90 107 106.2)">pytz 2023.3</text><path d="M154 30.9H165L170 30.9H175" stroke="#1F1A14" stroke-width="1" fill="none"/><text class="m" x="178" y="34.9" font-size="12.5" font-weight="500" fill="#1F1A14">255 · main — fails</text><text x="178" y="50.9" font-size="12" fill="#5C5347">in a fresh container</text><path d="M154 181.5H165L170 153.5H175" stroke="#B8321A" stroke-width="1" fill="none"/><text class="m" x="178" y="157.5" font-size="12.5" font-weight="600" fill="#B8321A">173 · 4e133d6c · the fault</text><text x="178" y="173.5" font-size="12" fill="#5C5347">named by executed tests, in its own container</text><path d="M147 223.7H158L170 249.7H175" stroke="#8A6114" stroke-width="1" fill="none"/><text class="m" x="178" y="253.7" font-size="12.5" font-weight="500" fill="#8A6114">150 · e46e5342 · pytz 2022.1 → 2023.3</text><text x="178" y="269.7" font-size="12" fill="#5C5347">a reused env built at v0.1.0 blames it, 5 of 5</text><path d="M147 497.2H158L170 447.2H175" stroke="#5C5347" stroke-width="1" fill="none"/><text class="m" x="178" y="451.2" font-size="12.5" font-weight="500" fill="#5C5347">1 · acebfbfa · a changelog edit</text><text x="178" y="467.2" font-size="12" fill="#5C5347">a reused env built at main blames it, 5 of 5</text><path d="M147 499.1H158L170 501.1H175" stroke="#1F1A14" stroke-width="1" fill="none"/><text class="m" x="178" y="505.1" font-size="12.5" font-weight="500" fill="#1F1A14">0 · v0.1.0 — passes</text><text x="178" y="521.1" font-size="12" fill="#5C5347">in a fresh container</text></svg>
+      <svg class="col-narrow" viewBox="0 0 340 640" role="img" aria-label="The 255 commits of hunt 827dfe7e as rock layers, oldest at the base. Layers 0 to 149 were installed with pytz 2022.1, 150 to 255 with pytz 2023.3. A reused environment built at v0.1.0 blames layer 150; one built at main blames layer 1; the fault, found by Faultline, is layer 173."><defs><pattern id="hcnA" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#E5D8BC"/><circle cx="1.5" cy="1.5" r=".75" fill="#B9A57E"/><circle cx="4.5" cy="4.5" r=".6" fill="#C7B58F"/></pattern><pattern id="hcnB" width="12" height="6" patternUnits="userSpaceOnUse"><rect width="12" height="6" fill="#D6C49E"/><path d="M1 2h5M7 5h4" stroke="#AE9870" stroke-width=".8"/></pattern><pattern id="hcnF" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#D6C49E"/><path d="M0 0v7" stroke="#B8321A" stroke-width="2.2" opacity=".55"/></pattern></defs><rect x="44" y="253.6" width="66" height="316.4" fill="url(#hcnA)"/><rect x="44" y="205.1" width="66" height="48.5" fill="url(#hcnB)"/><rect x="51" y="30" width="66" height="175.1" fill="url(#hcnB)"/><path class="layer" d="M44 567.9h66M44 565.8h66M44 563.7h66M44 561.6h66M44 559.5h66M44 557.3h66M44 555.2h66M44 553.1h66M44 551h66M44 548.9h66M44 546.8h66M44 544.7h66M44 542.6h66M44 540.5h66M44 538.4h66M44 536.2h66M44 534.1h66M44 532h66M44 529.9h66M44 527.8h66M44 525.7h66M44 523.6h66M44 521.5h66M44 519.4h66M44 517.3h66M44 515.2h66M44 513h66M44 510.9h66M44 508.8h66M44 506.7h66M44 504.6h66M44 502.5h66M44 500.4h66M44 498.3h66M44 496.2h66M44 494.1h66M44 492h66M44 489.8h66M44 487.7h66M44 485.6h66M44 483.5h66M44 481.4h66M44 479.3h66M44 477.2h66M44 475.1h66M44 473h66M44 470.9h66M44 468.8h66M44 466.6h66M44 464.5h66M44 462.4h66M44 460.3h66M44 458.2h66M44 456.1h66M44 454h66M44 451.9h66M44 449.8h66M44 447.7h66M44 445.5h66M44 443.4h66M44 441.3h66M44 439.2h66M44 437.1h66M44 435h66M44 432.9h66M44 430.8h66M44 428.7h66M44 426.6h66M44 424.5h66M44 422.3h66M44 420.2h66M44 418.1h66M44 416h66M44 413.9h66M44 411.8h66M44 409.7h66M44 407.6h66M44 405.5h66M44 403.4h66M44 401.2h66M44 399.1h66M44 397h66M44 394.9h66M44 392.8h66M44 390.7h66M44 388.6h66M44 386.5h66M44 384.4h66M44 382.3h66M44 380.2h66M44 378h66M44 375.9h66M44 373.8h66M44 371.7h66M44 369.6h66M44 367.5h66M44 365.4h66M44 363.3h66M44 361.2h66M44 359.1h66M44 357h66M44 354.8h66M44 352.7h66M44 350.6h66M44 348.5h66M44 346.4h66M44 344.3h66M44 342.2h66M44 340.1h66M44 338h66M44 335.9h66M44 333.8h66M44 331.6h66M44 329.5h66M44 327.4h66M44 325.3h66M44 323.2h66M44 321.1h66M44 319h66M44 316.9h66M44 314.8h66M44 312.7h66M44 310.5h66M44 308.4h66M44 306.3h66M44 304.2h66M44 302.1h66M44 300h66M44 297.9h66M44 295.8h66M44 293.7h66M44 291.6h66M44 289.5h66M44 287.3h66M44 285.2h66M44 283.1h66M44 281h66M44 278.9h66M44 276.8h66M44 274.7h66M44 272.6h66M44 270.5h66M44 268.4h66M44 266.2h66M44 264.1h66M44 262h66M44 259.9h66M44 257.8h66M44 255.7h66M44 253.6h66M44 251.5h66M44 249.4h66M44 247.3h66M44 245.2h66M44 243h66M44 240.9h66M44 238.8h66M44 236.7h66M44 234.6h66M44 232.5h66M44 230.4h66M44 228.3h66M44 226.2h66M44 224.1h66M44 222h66M44 219.8h66M44 217.7h66M44 215.6h66M44 213.5h66M44 211.4h66M44 209.3h66M44 207.2h66M51 205.1h66M51 203h66M51 200.9h66M51 198.8h66M51 196.6h66M51 194.5h66M51 192.4h66M51 190.3h66M51 188.2h66M51 186.1h66M51 184h66M51 181.9h66M51 179.8h66M51 177.7h66M51 175.5h66M51 173.4h66M51 171.3h66M51 169.2h66M51 167.1h66M51 165h66M51 162.9h66M51 160.8h66M51 158.7h66M51 156.6h66M51 154.5h66M51 152.3h66M51 150.2h66M51 148.1h66M51 146h66M51 143.9h66M51 141.8h66M51 139.7h66M51 137.6h66M51 135.5h66M51 133.4h66M51 131.2h66M51 129.1h66M51 127h66M51 124.9h66M51 122.8h66M51 120.7h66M51 118.6h66M51 116.5h66M51 114.4h66M51 112.3h66M51 110.2h66M51 108h66M51 105.9h66M51 103.8h66M51 101.7h66M51 99.6h66M51 97.5h66M51 95.4h66M51 93.3h66M51 91.2h66M51 89.1h66M51 87h66M51 84.8h66M51 82.7h66M51 80.6h66M51 78.5h66M51 76.4h66M51 74.3h66M51 72.2h66M51 70.1h66M51 68h66M51 65.9h66M51 63.8h66M51 61.6h66M51 59.5h66M51 57.4h66M51 55.3h66M51 53.2h66M51 51.1h66M51 49h66M51 46.9h66M51 44.8h66M51 42.7h66M51 40.5h66M51 38.4h66M51 36.3h66M51 34.2h66M51 32.1h66" opacity="0.42"/><path d="M44 570V205.1" stroke="#A8936B" stroke-width=".8" fill="none"/><line x1="38" x2="116" y1="253.6" y2="253.6" stroke="#8A6114" stroke-width="1.4" stroke-dasharray="5 3"/><path class="hfl" d="M32 209.1L129 201.1" stroke="#B8321A" stroke-width="2.6" fill="none"/><path d="M37 568.9h6" stroke="#5C5347" stroke-width="1"/><text class="m" x="33" y="572.4" text-anchor="end" font-size="10.5" fill="#5C5347">0</text><path d="M37 463.5h6" stroke="#5C5347" stroke-width="1"/><text class="m" x="33" y="467" text-anchor="end" font-size="10.5" fill="#5C5347">50</text><path d="M37 358h6" stroke="#5C5347" stroke-width="1"/><text class="m" x="33" y="361.5" text-anchor="end" font-size="10.5" fill="#5C5347">100</text><path d="M37 252.5h6" stroke="#5C5347" stroke-width="1"/><text class="m" x="33" y="256" text-anchor="end" font-size="10.5" fill="#5C5347">150</text><path d="M37 147.1h6" stroke="#5C5347" stroke-width="1"/><text class="m" x="33" y="150.6" text-anchor="end" font-size="10.5" fill="#5C5347">200</text><path d="M37 31.1h6" stroke="#5C5347" stroke-width="1"/><text class="m" x="33" y="34.6" text-anchor="end" font-size="10.5" fill="#5C5347">255</text><text class="m" x="77" y="411.8" text-anchor="middle" font-size="11" fill="#1F1A14" opacity=".55" letter-spacing=".08em" transform="rotate(-90 77 411.8)">pytz 2022.1</text><text class="m" x="84" y="117.5" text-anchor="middle" font-size="11" fill="#1F1A14" opacity=".55" letter-spacing=".08em" transform="rotate(-90 84 117.5)">pytz 2023.3</text><path d="M120 31.1H131L120 31.1H125" stroke="#1F1A14" stroke-width="1" fill="none"/><text class="m" x="128" y="35.1" font-size="13.5" font-weight="500" fill="#1F1A14">255 · main</text><text x="128" y="51.6" font-size="12.5" fill="#5C5347">fails in a fresh container</text><path d="M120 204H131L120 178H125" stroke="#B8321A" stroke-width="1" fill="none"/><text class="m" x="128" y="182" font-size="13.5" font-weight="600" fill="#B8321A">173 · 4e133d6c</text><text x="128" y="198.5" font-size="12.5" fill="#5C5347">the fault — Faultline</text><path d="M113 252.5H124L120 278.5H125" stroke="#8A6114" stroke-width="1" fill="none"/><text class="m" x="128" y="282.5" font-size="13.5" font-weight="500" fill="#8A6114">150 · e46e5342</text><text x="128" y="299" font-size="12.5" fill="#5C5347">pin bump — blamed 5 of 5</text><path d="M113 566.8H124L120 518.8H125" stroke="#5C5347" stroke-width="1" fill="none"/><text class="m" x="128" y="522.8" font-size="13.5" font-weight="500" fill="#5C5347">1 · acebfbfa</text><text x="128" y="539.3" font-size="12.5" fill="#5C5347">changelog — blamed 5 of 5</text><path d="M113 568.9H124L120 570.9H125" stroke="#1F1A14" stroke-width="1" fill="none"/><text class="m" x="128" y="574.9" font-size="13.5" font-weight="500" fill="#1F1A14">0 · v0.1.0</text><text x="128" y="591.4" font-size="12.5" fill="#5C5347">passes in a fresh container</text></svg>
+      <p class="key"><span><i class="sw-a"></i>installed with pytz 2022.1</span><span><i class="sw-b"></i>installed with pytz 2023.3</span><span>1 layer = 1 commit</span></p>
+    </figure>
+  </div>
+</section>
+
+<div class="wrap">
+  <section class="receipts" aria-label="Survey totals for hunt 827dfe7e">
+    <div class="rc"><p class="num" data-seq="255,36,4,1"><span>255</span> <span class="of">→</span> <span class="v">1</span></p><p class="lbl">commits narrowed to one, in 3 rounds</p><p class="src">data/recorded-hunt.json</p></div>
+    <div class="rc"><p class="num" data-count="19">19</p><p class="lbl">Nebius Serverless AI Jobs, across 4 regions</p><p class="src">data/recorded-hunt.json</p></div>
+    <div class="rc"><p class="num" data-count="0.0948" data-prefix="$" data-dec="4">$0.0948</p><p class="lbl">of VM time for the whole hunt, at list price</p><p class="src">evidence/bench/hero-faultline-1.json</p></div>
+    <div class="rc"><p class="num"><span data-count="20">20</span> <span class="of">/ 20</span></p><p class="lbl">write races on the real bucket, exactly one winner each</p><p class="src">evidence/g5-conditional-writes.json</p></div>
+  </section>
+  <p class="tests">283 unit and integration tests · 7 probe tests · 50 end-to-end checks — <code>npm test</code> needs no credentials.</p>
+
+  <section class="sec" id="demo" aria-labelledby="demo-h">
+    <header class="sec-head">
+      <p class="eyebrow">Plate I · the same 255 commits, bisected twice</p>
+      <h2 id="demo-h">One environment named the bump. <em>A clean room named the bug.</em></h2>
+      <p class="lede">On the left, <code>git bisect run</code> with the environment built once at <code>v0.1.0</code> and reused for every step — its real output, trial 1 of 5. On the right, the same range in Faultline: hunt 827dfe7e, every probe a fresh Nebius container.</p>
+    </header>
+    <div class="pair">
+      <figure class="dark term" id="term" aria-label="Terminal: git bisect run in one reused environment names commit e46e5342">
+        <div class="bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>faultbench-tzdata-pipeline · one reused env</span></div>
+<pre><span class="ln c"># bench.py local · naive baseline: one venv, built at v0.1.0</span>
+<span class="ln p" data-cmd="1">$ git bisect start 43f3528c 0260b672    # main, v0.1.0</span>
+<span class="ln p" data-cmd="1">$ git bisect run …/env-0260b672/bin/python -m pytest -q -p no:cacheprovider tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone</span>
+<span class="ln c"># … 8 bisect steps in 1.45 s; the evidence keeps the last 600 characters</span>
+<span class="ln">FAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone</span>
+<span class="ln">1 failed in 0.04s</span>
+<span class="ln bad">e46e534219b7d051e003508c88b5bfe621536349 is the first bad commit</span>
+<span class="ln">commit e46e534219b7d051e003508c88b5bfe621536349</span>
+<span class="ln">Author: Faultbench Bot &lt;faultbench@example.invalid&gt;</span>
+<span class="ln">Date:   Thu Jan 11 12:00:00 2024 +0000</span>
+<span class="ln"> </span>
+<span class="ln w">    build(deps): bump pytz to 2023.3 — Mexico abolished DST, update golden values</span>
+<span class="ln"> </span>
+<span class="ln"> CHANGELOG.md            | 1 +</span>
+<span class="ln"> pyproject.toml          | 2 +-</span>
+<span class="ln"> tests/test_normalize.py | 6 +++---</span>
+<span class="ln"> 3 files changed, 5 insertions(+), 4 deletions(-)</span>
+<span class="ln bad">bisect found first bad commit</span>
+<span class="ln" data-pause="700"> </span>
+<span class="ln good"># 5 of 5 trials named this commit. It is innocent:</span>
+<span class="ln good"># in its own environment it passes — hunt 827dfe7e,</span>
+<span class="ln good"># round 2, job aijob-e05znvkzda9m84f4re.</span></pre>
+        <figcaption>Real output, trial 1 of 5 — the five trials all named <code>e46e5342</code>. Source: <code>evidence/bench/hero-local.json</code>.</figcaption>
+      </figure>
+      <figure class="dark shot">
+        <div class="bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>faultline-edy-cus-projects.vercel.app · hunt 827dfe7e</span></div>
+        <img src="/landing/media/report-culprit.webp" width="1360" height="1232" loading="lazy" decoding="async" alt="Faultline — the Fault Report for hunt 827dfe7e: commit 4e133d6c, labelled verified by executed tests, with the diff that replaces localize() with replace(tzinfo=…)">
+        <figcaption>The live app’s Fault Report, recorded 2026-10-13. The culprit is labelled <em>verified by executed tests</em>; the explanation under it is labelled generated.</figcaption>
+      </figure>
+    </div>
+    <dl class="verdicts">
+      <div><dt>env built once at v0.1.0</dt><dd><code>e46e5342</code> — the pin bump</dd><dd class="score bad">0 / 5</dd><dd class="src">1.43 s p50</dd></div>
+      <div><dt>env built once at main</dt><dd><code>acebfbfa</code> — a changelog edit</dd><dd class="score bad">0 / 5</dd><dd class="src">1.49 s p50</dd></div>
+      <div><dt>fresh venv at every step</dt><dd><code>4e133d6c</code></dd><dd class="score ok">5 / 5</dd><dd class="src">57.4 s p50</dd></div>
+      <div class="ours"><dt>Faultline · 8 slots, 4 regions</dt><dd><code>4e133d6c</code></dd><dd class="score ok">1 / 1</dd><dd class="src">957 s · 19 jobs · $0.0948</dd></div>
+    </dl>
+    <p class="note"><b>Faultline is the slowest row, and we say so.</b> A probe’s VM takes about 4 minutes 20 seconds to start for about 5 seconds of work, and Nebius throttled job creation during these runs. A careful local bisect with a fresh venv per step gets the right answer too — if you know the pins drift, and write that harness yourself. Faultline is that harness, run on someone else’s machines, with both ends proven and the culprit explained.</p>
+  </section>
+
+  <section class="sec" id="section" aria-labelledby="section-h">
+    <header class="sec-head">
+      <p class="eyebrow">Section B–B′ · hunt 827dfe7e, round by round</p>
+      <h2 id="section-h">The pin moved at layer 150. <em>The fault is at 173.</em></h2>
+      <p class="lede">Round 1 tests both ends and six suspects at once — eight fresh containers in four regions. N probes cut the range into N+1 segments, and each round goes out by itself as the verdicts land: <b>255 → 36 → 4 → 1</b>.</p>
+    </header>
+    <figure class="plate plates-fig" id="plates">
+      <svg class="pl plates-wide" viewBox="0 0 1240 612" role="img" aria-labelledby="pl-t"><title id="pl-t">Hunt 827dfe7e round by round: round 1 tests 8 commits across all 255 and leaves 147 to 182; round 2 tests 8 of those and leaves 171 to 174; round 3 tests 171, 172 and 173 — 173, commit 4e133d6c, is the first to fail.</title><defs><pattern id="pwA" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#E5D8BC"/><circle cx="1.5" cy="1.5" r=".75" fill="#B9A57E"/><circle cx="4.5" cy="4.5" r=".6" fill="#C7B58F"/></pattern><pattern id="pwB" width="12" height="6" patternUnits="userSpaceOnUse"><rect width="12" height="6" fill="#D6C49E"/><path d="M1 2h5M7 5h4" stroke="#AE9870" stroke-width=".8"/></pattern><pattern id="pwF" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#D6C49E"/><path d="M0 0v7" stroke="#B8321A" stroke-width="2.2" opacity=".55"/></pattern></defs><rect x="24" y="237.2" width="54" height="284.8" fill="url(#pwA)"/><rect x="24" y="193.6" width="54" height="43.7" fill="url(#pwB)"/><rect x="28" y="36" width="54" height="157.6" fill="url(#pwB)"/><path class="layer" d="M24 520.1h54M24 518.2h54M24 516.3h54M24 514.4h54M24 512.5h54M24 510.6h54M24 508.7h54M24 506.8h54M24 504.9h54M24 503h54M24 501.1h54M24 499.2h54M24 497.3h54M24 495.4h54M24 493.5h54M24 491.6h54M24 489.7h54M24 487.8h54M24 485.9h54M24 484h54M24 482.1h54M24 480.2h54M24 478.3h54M24 476.4h54M24 474.5h54M24 472.6h54M24 470.7h54M24 468.8h54M24 466.9h54M24 465h54M24 463.1h54M24 461.2h54M24 459.4h54M24 457.5h54M24 455.6h54M24 453.7h54M24 451.8h54M24 449.9h54M24 448h54M24 446.1h54M24 444.2h54M24 442.3h54M24 440.4h54M24 438.5h54M24 436.6h54M24 434.7h54M24 432.8h54M24 430.9h54M24 429h54M24 427.1h54M24 425.2h54M24 423.3h54M24 421.4h54M24 419.5h54M24 417.6h54M24 415.7h54M24 413.8h54M24 411.9h54M24 410h54M24 408.1h54M24 406.2h54M24 404.3h54M24 402.4h54M24 400.5h54M24 398.6h54M24 396.7h54M24 394.8h54M24 392.9h54M24 391h54M24 389.1h54M24 387.2h54M24 385.3h54M24 383.4h54M24 381.5h54M24 379.6h54M24 377.7h54M24 375.8h54M24 373.9h54M24 372h54M24 370.1h54M24 368.2h54M24 366.3h54M24 364.4h54M24 362.5h54M24 360.6h54M24 358.7h54M24 356.8h54M24 354.9h54M24 353h54M24 351.1h54M24 349.2h54M24 347.3h54M24 345.4h54M24 343.5h54M24 341.6h54M24 339.8h54M24 337.9h54M24 336h54M24 334.1h54M24 332.2h54M24 330.3h54M24 328.4h54M24 326.5h54M24 324.6h54M24 322.7h54M24 320.8h54M24 318.9h54M24 317h54M24 315.1h54M24 313.2h54M24 311.3h54M24 309.4h54M24 307.5h54M24 305.6h54M24 303.7h54M24 301.8h54M24 299.9h54M24 298h54M24 296.1h54M24 294.2h54M24 292.3h54M24 290.4h54M24 288.5h54M24 286.6h54M24 284.7h54M24 282.8h54M24 280.9h54M24 279h54M24 277.1h54M24 275.2h54M24 273.3h54M24 271.4h54M24 269.5h54M24 267.6h54M24 265.7h54M24 263.8h54M24 261.9h54M24 260h54M24 258.1h54M24 256.2h54M24 254.3h54M24 252.4h54M24 250.5h54M24 248.6h54M24 246.7h54M24 244.8h54M24 242.9h54M24 241h54M24 239.1h54M24 237.2h54M24 235.3h54M24 233.4h54M24 231.5h54M24 229.6h54M24 227.7h54M24 225.8h54M24 223.9h54M24 222h54M24 220.1h54M24 218.2h54M24 216.4h54M24 214.5h54M24 212.6h54M24 210.7h54M24 208.8h54M24 206.9h54M24 205h54M24 203.1h54M24 201.2h54M24 199.3h54M24 197.4h54M24 195.5h54M28 193.6h54M28 191.7h54M28 189.8h54M28 187.9h54M28 186h54M28 184.1h54M28 182.2h54M28 180.3h54M28 178.4h54M28 176.5h54M28 174.6h54M28 172.7h54M28 170.8h54M28 168.9h54M28 167h54M28 165.1h54M28 163.2h54M28 161.3h54M28 159.4h54M28 157.5h54M28 155.6h54M28 153.7h54M28 151.8h54M28 149.9h54M28 148h54M28 146.1h54M28 144.2h54M28 142.3h54M28 140.4h54M28 138.5h54M28 136.6h54M28 134.7h54M28 132.8h54M28 130.9h54M28 129h54M28 127.1h54M28 125.2h54M28 123.3h54M28 121.4h54M28 119.5h54M28 117.6h54M28 115.7h54M28 113.8h54M28 111.9h54M28 110h54M28 108.1h54M28 106.2h54M28 104.3h54M28 102.4h54M28 100.5h54M28 98.6h54M28 96.8h54M28 94.9h54M28 93h54M28 91.1h54M28 89.2h54M28 87.3h54M28 85.4h54M28 83.5h54M28 81.6h54M28 79.7h54M28 77.8h54M28 75.9h54M28 74h54M28 72.1h54M28 70.2h54M28 68.3h54M28 66.4h54M28 64.5h54M28 62.6h54M28 60.7h54M28 58.8h54M28 56.9h54M28 55h54M28 53.1h54M28 51.2h54M28 49.3h54M28 47.4h54M28 45.5h54M28 43.6h54M28 41.7h54M28 39.8h54M28 37.9h54" opacity="0.3"/><path d="M24 522V193.6" stroke="#A8936B" stroke-width=".8" fill="none"/><line x1="18" x2="84" y1="237.2" y2="237.2" stroke="#8A6114" stroke-width="1.4" stroke-dasharray="5 3"/><path class="fl" d="M12 197.6L94 189.6" stroke="#B8321A" stroke-width="2.6" fill="none"/><g class="b1"><rect class="elim" x="23" y="242.9" width="56" height="279.1"/></g><g class="b1"><rect class="elim" x="23" y="36" width="60" height="138.6"/></g><g class="r1"><path d="M78 521.1h9" stroke="#1F1A14" stroke-width="1"/><circle cx="87" cy="521.1" r="5" fill="#2F6E4A"/><text class="m lbl" x="104" y="520.1">0 · v0.1.0 · pass</text><text class="m sub2" x="104" y="534.1">aijob-e01exfzvaek2xbsh24 · eu-west1</text></g><g class="r1"><path d="M78 452.7h9" stroke="#1F1A14" stroke-width="1"/><circle cx="87" cy="452.7" r="5" fill="#2F6E4A"/><text class="m lbl" x="104" y="451.7">36 · 12cd715d · pass</text><text class="m sub2" x="104" y="465.7">aijob-e01nvefvndgf2pmzad · eu-west1</text></g><g class="r1"><path d="M78 382.5h9" stroke="#1F1A14" stroke-width="1"/><circle cx="87" cy="382.5" r="5" fill="#2F6E4A"/><text class="m lbl" x="104" y="381.5">73 · 60a2b905 · pass</text><text class="m sub2" x="104" y="395.5">aijob-e03zjk9mdwtj47jyt1 · uk-south1</text></g><g class="r1"><path d="M78 314.1h9" stroke="#1F1A14" stroke-width="1"/><circle cx="87" cy="314.1" r="5" fill="#2F6E4A"/><text class="m lbl" x="104" y="313.1">109 · a85ea36f · pass</text><text class="m sub2" x="104" y="327.1">aijob-e03q20n9n8xg30bzp8 · uk-south1</text></g><g class="r1"><path d="M78 243.9h9" stroke="#1F1A14" stroke-width="1"/><circle cx="87" cy="243.9" r="5" fill="#2F6E4A"/><text class="m lbl" x="104" y="242.9">146 · 7087b18a · pass</text><text class="m sub2" x="104" y="256.9">aijob-e05prrbehe0asth7qp · uk-south2</text></g><g class="r1"><path d="M82 175.5h9" stroke="#1F1A14" stroke-width="1"/><circle cx="91" cy="175.5" r="5" fill="#9A4532"/><text class="m lbl" x="104" y="174.5">182 · 3142c561 · fail</text><text class="m sub2" x="104" y="188.5">aijob-e05mzheae46trefcmn · uk-south2</text></g><g class="r1"><path d="M82 105.3h9" stroke="#1F1A14" stroke-width="1"/><circle cx="91" cy="105.3" r="5" fill="#9A4532"/><text class="m lbl" x="104" y="104.3">219 · b23425e3 · fail</text><text class="m sub2" x="104" y="118.3">aijob-i00cjjfqz6599jy6wf · me-west1</text></g><g class="r1"><path d="M82 36.9h9" stroke="#1F1A14" stroke-width="1"/><circle cx="91" cy="36.9" r="5" fill="#9A4532"/><text class="m lbl" x="104" y="35.9">255 · main · fail</text><text class="m sub2" x="104" y="49.9">aijob-i00vh22768ry2e534m · me-west1</text></g><text class="cap" x="24" y="562">ROUND 1 · 8 PROBES AT ONCE · 318.5 S</text><text class="big" x="24" y="592">255 → 36</text><rect x="452" y="469.5" width="54" height="52.5" fill="url(#pwA)"/><rect x="452" y="167.4" width="54" height="302.1" fill="url(#pwB)"/><rect x="458" y="36" width="54" height="131.4" fill="url(#pwB)"/><path class="layer" d="M452 508.9h54M452 495.7h54M452 482.6h54M452 469.5h54M452 456.3h54M452 443.2h54M452 430.1h54M452 416.9h54M452 403.8h54M452 390.6h54M452 377.5h54M452 364.4h54M452 351.2h54M452 338.1h54M452 325h54M452 311.8h54M452 298.7h54M452 285.6h54M452 272.4h54M452 259.3h54M452 246.2h54M452 233h54M452 219.9h54M452 206.8h54M452 193.6h54M452 180.5h54M458 167.4h54M458 154.2h54M458 141.1h54M458 127.9h54M458 114.8h54M458 101.7h54M458 88.5h54M458 75.4h54M458 62.3h54M458 49.1h54" opacity="0.5"/><path d="M452 522V167.4" stroke="#A8936B" stroke-width=".8" fill="none"/><line x1="446" x2="512" y1="469.5" y2="469.5" stroke="#8A6114" stroke-width="1.4" stroke-dasharray="5 3"/><path class="fl" d="M440 171.4L524 163.4" stroke="#B8321A" stroke-width="2.6" fill="none"/><g class="b2"><rect class="elim" x="451" y="193.6" width="56" height="328.4"/></g><g class="b2"><rect class="elim" x="451" y="36" width="62" height="105.1"/></g><circle cx="515" cy="515.4" r="4.2" fill="#F8F4EA" stroke="#2F6E4A" stroke-width="1.6"/><text class="m sub2" x="532" y="519.4">146 · pass · round 1</text><circle cx="521" cy="42.6" r="4.2" fill="#F8F4EA" stroke="#9A4532" stroke-width="1.6"/><text class="m sub2" x="532" y="46.6">182 · fail · round 1</text><g class="r2"><path d="M506 462.9h9" stroke="#1F1A14" stroke-width="1"/><circle cx="515" cy="462.9" r="5" fill="#2F6E4A"/><text class="m lbl" x="532" y="461.9">150 · e46e5342 · pass</text><text class="m sub2" x="532" y="475.9">aijob-e05znvkzda9m84f4re · uk-south2</text></g><g class="r2"><path d="M506 410.4h9" stroke="#1F1A14" stroke-width="1"/><circle cx="515" cy="410.4" r="5" fill="#2F6E4A"/><text class="m lbl" x="532" y="409.4">154 · cd3d9695 · pass</text><text class="m sub2" x="532" y="423.4">aijob-e05aaertd19ftx67fg · uk-south2</text></g><g class="r2"><path d="M506 357.8h9" stroke="#1F1A14" stroke-width="1"/><circle cx="515" cy="357.8" r="5" fill="#2F6E4A"/><text class="m lbl" x="532" y="356.8">158 · 928c65fc · pass</text><text class="m sub2" x="532" y="370.8">aijob-e03y4h0srcjj77m8h7 · uk-south1</text></g><g class="r2"><path d="M506 305.3h9" stroke="#1F1A14" stroke-width="1"/><circle cx="515" cy="305.3" r="5" fill="#2F6E4A"/><text class="m lbl" x="532" y="304.3">162 · 4d7485a1 · pass</text><text class="m sub2" x="532" y="318.3">aijob-e03n2gaa22fx12223p · uk-south1</text></g><g class="r2"><path d="M506 252.7h9" stroke="#1F1A14" stroke-width="1"/><circle cx="515" cy="252.7" r="5" fill="#2F6E4A"/><text class="m lbl" x="532" y="251.7">166 · df3a9334 · pass</text><text class="m sub2" x="532" y="265.7">aijob-e01e2xcy2bs3hwvr9v · eu-west1</text></g><g class="r2"><path d="M506 200.2h9" stroke="#1F1A14" stroke-width="1"/><circle cx="515" cy="200.2" r="5" fill="#2F6E4A"/><text class="m lbl" x="532" y="199.2">170 · bb576e64 · pass</text><text class="m sub2" x="532" y="213.2">aijob-e01ktmzck79h68frz3 · eu-west1</text></g><g class="r2"><path d="M512 147.6h9" stroke="#1F1A14" stroke-width="1"/><circle cx="521" cy="147.6" r="5" fill="#9A4532"/><text class="m lbl" x="532" y="146.6">174 · 69a9040f · fail</text><text class="m sub2" x="532" y="160.6">aijob-i00vhfvhsgw3xg58s6 · me-west1</text></g><g class="r2"><path d="M512 95.1h9" stroke="#1F1A14" stroke-width="1"/><circle cx="521" cy="95.1" r="5" fill="#9A4532"/><text class="m lbl" x="532" y="94.1">178 · 19ce7291 · fail</text><text class="m sub2" x="532" y="108.1">aijob-i00enwrjf347v2bfzm · me-west1</text></g><text class="cap" x="452" y="562">ROUND 2 · 8 PROBES · 374.3 S</text><text class="big" x="452" y="592">36 → 4</text><rect x="880" y="230.4" width="54" height="291.6" fill="url(#pwB)"/><rect x="890" y="36" width="54" height="194.4" fill="url(#pwB)"/><rect x="890" y="133.2" width="54" height="97.2" fill="url(#pwF)"/><path class="layer" d="M880 424.8h54M880 327.6h54M890 230.4h54M890 133.2h54" opacity="0.5"/><path d="M880 522V230.4" stroke="#A8936B" stroke-width=".8" fill="none"/><path class="fl" d="M868 234.4L956 226.4" stroke="#B8321A" stroke-width="2.6" fill="none"/><circle cx="943" cy="473.4" r="4.2" fill="#F8F4EA" stroke="#2F6E4A" stroke-width="1.6"/><text class="m sub2" x="960" y="477.4">170 · pass · round 2</text><circle cx="953" cy="84.6" r="4.2" fill="#F8F4EA" stroke="#9A4532" stroke-width="1.6"/><text class="m sub2" x="960" y="88.6">174 · fail · round 2</text><g class="r3"><path d="M934 376.2h9" stroke="#1F1A14" stroke-width="1"/><circle cx="943" cy="376.2" r="5" fill="#2F6E4A"/><text class="m lbl" x="960" y="375.2">171 · ab7e2244 · pass</text><text class="m sub2" x="960" y="389.2">aijob-e01q9hzzckgggr66yq · eu-west1</text></g><g class="r3"><path d="M934 279h9" stroke="#1F1A14" stroke-width="1"/><circle cx="943" cy="279" r="5" fill="#2F6E4A"/><text class="m lbl" x="960" y="278">172 · bd522cc7 · pass</text><text class="m sub2" x="960" y="292">aijob-e01bestdhtwea4tjzb · eu-west1</text></g><g class="r3"><path d="M944 181.8h9" stroke="#1F1A14" stroke-width="1"/><circle cx="953" cy="181.8" r="5" fill="#B8321A"/><text class="m lbl" x="960" y="180.8" fill="#B8321A" font-weight="600">173 · 4e133d6c · fail</text><text class="m sub2" x="960" y="194.8">aijob-e03jkfmxg9fcfdczhv · uk-south1</text></g><text class="cap" x="880" y="562">ROUND 3 · 3 PROBES · 268.6 S</text><text class="big" x="880" y="592">4 → 1</text><g class="b1"><path class="bracket" d="M408 174.6h6V242.9h-6"/><path class="lead" d="M414 174.6L449 36M414 242.9L449 522"/></g><g class="b2"><path class="bracket" d="M836 141.1h6V193.6h-6"/><path class="lead" d="M842 141.1L877 36M842 193.6L877 522"/></g></svg>
+      <div class="plates-narrow"><svg class="pl" viewBox="0 0 360 520" role="img" aria-label="Round 1: 255 → 36 suspects"><defs><pattern id="pn1A" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#E5D8BC"/><circle cx="1.5" cy="1.5" r=".75" fill="#B9A57E"/><circle cx="4.5" cy="4.5" r=".6" fill="#C7B58F"/></pattern><pattern id="pn1B" width="12" height="6" patternUnits="userSpaceOnUse"><rect width="12" height="6" fill="#D6C49E"/><path d="M1 2h5M7 5h4" stroke="#AE9870" stroke-width=".8"/></pattern><pattern id="pn1F" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#D6C49E"/><path d="M0 0v7" stroke="#B8321A" stroke-width="2.2" opacity=".55"/></pattern></defs><rect x="12" y="200.2" width="40" height="257.8" fill="url(#pn1A)"/><rect x="12" y="160.7" width="40" height="39.5" fill="url(#pn1B)"/><rect x="16" y="18" width="40" height="142.7" fill="url(#pn1B)"/><path class="layer" d="M12 456.3h40M12 454.6h40M12 452.8h40M12 451.1h40M12 449.4h40M12 447.7h40M12 446h40M12 444.2h40M12 442.5h40M12 440.8h40M12 439.1h40M12 437.4h40M12 435.7h40M12 433.9h40M12 432.2h40M12 430.5h40M12 428.8h40M12 427.1h40M12 425.3h40M12 423.6h40M12 421.9h40M12 420.2h40M12 418.5h40M12 416.8h40M12 415h40M12 413.3h40M12 411.6h40M12 409.9h40M12 408.2h40M12 406.4h40M12 404.7h40M12 403h40M12 401.3h40M12 399.6h40M12 397.8h40M12 396.1h40M12 394.4h40M12 392.7h40M12 391h40M12 389.2h40M12 387.5h40M12 385.8h40M12 384.1h40M12 382.4h40M12 380.7h40M12 378.9h40M12 377.2h40M12 375.5h40M12 373.8h40M12 372.1h40M12 370.3h40M12 368.6h40M12 366.9h40M12 365.2h40M12 363.5h40M12 361.8h40M12 360h40M12 358.3h40M12 356.6h40M12 354.9h40M12 353.2h40M12 351.4h40M12 349.7h40M12 348h40M12 346.3h40M12 344.6h40M12 342.8h40M12 341.1h40M12 339.4h40M12 337.7h40M12 336h40M12 334.2h40M12 332.5h40M12 330.8h40M12 329.1h40M12 327.4h40M12 325.7h40M12 323.9h40M12 322.2h40M12 320.5h40M12 318.8h40M12 317.1h40M12 315.3h40M12 313.6h40M12 311.9h40M12 310.2h40M12 308.5h40M12 306.8h40M12 305h40M12 303.3h40M12 301.6h40M12 299.9h40M12 298.2h40M12 296.4h40M12 294.7h40M12 293h40M12 291.3h40M12 289.6h40M12 287.8h40M12 286.1h40M12 284.4h40M12 282.7h40M12 281h40M12 279.2h40M12 277.5h40M12 275.8h40M12 274.1h40M12 272.4h40M12 270.7h40M12 268.9h40M12 267.2h40M12 265.5h40M12 263.8h40M12 262.1h40M12 260.3h40M12 258.6h40M12 256.9h40M12 255.2h40M12 253.5h40M12 251.8h40M12 250h40M12 248.3h40M12 246.6h40M12 244.9h40M12 243.2h40M12 241.4h40M12 239.7h40M12 238h40M12 236.3h40M12 234.6h40M12 232.8h40M12 231.1h40M12 229.4h40M12 227.7h40M12 226h40M12 224.2h40M12 222.5h40M12 220.8h40M12 219.1h40M12 217.4h40M12 215.7h40M12 213.9h40M12 212.2h40M12 210.5h40M12 208.8h40M12 207.1h40M12 205.3h40M12 203.6h40M12 201.9h40M12 200.2h40M12 198.5h40M12 196.8h40M12 195h40M12 193.3h40M12 191.6h40M12 189.9h40M12 188.2h40M12 186.4h40M12 184.7h40M12 183h40M12 181.3h40M12 179.6h40M12 177.8h40M12 176.1h40M12 174.4h40M12 172.7h40M12 171h40M12 169.2h40M12 167.5h40M12 165.8h40M12 164.1h40M12 162.4h40M16 160.7h40M16 158.9h40M16 157.2h40M16 155.5h40M16 153.8h40M16 152.1h40M16 150.3h40M16 148.6h40M16 146.9h40M16 145.2h40M16 143.5h40M16 141.8h40M16 140h40M16 138.3h40M16 136.6h40M16 134.9h40M16 133.2h40M16 131.4h40M16 129.7h40M16 128h40M16 126.3h40M16 124.6h40M16 122.8h40M16 121.1h40M16 119.4h40M16 117.7h40M16 116h40M16 114.2h40M16 112.5h40M16 110.8h40M16 109.1h40M16 107.4h40M16 105.7h40M16 103.9h40M16 102.2h40M16 100.5h40M16 98.8h40M16 97.1h40M16 95.3h40M16 93.6h40M16 91.9h40M16 90.2h40M16 88.5h40M16 86.8h40M16 85h40M16 83.3h40M16 81.6h40M16 79.9h40M16 78.2h40M16 76.4h40M16 74.7h40M16 73h40M16 71.3h40M16 69.6h40M16 67.8h40M16 66.1h40M16 64.4h40M16 62.7h40M16 61h40M16 59.2h40M16 57.5h40M16 55.8h40M16 54.1h40M16 52.4h40M16 50.7h40M16 48.9h40M16 47.2h40M16 45.5h40M16 43.8h40M16 42.1h40M16 40.3h40M16 38.6h40M16 36.9h40M16 35.2h40M16 33.5h40M16 31.8h40M16 30h40M16 28.3h40M16 26.6h40M16 24.9h40M16 23.2h40M16 21.4h40M16 19.7h40" opacity="0.3"/><path d="M12 458V160.7" stroke="#A8936B" stroke-width=".8" fill="none"/><line x1="6" x2="58" y1="200.2" y2="200.2" stroke="#8A6114" stroke-width="1.4" stroke-dasharray="5 3"/><path class="fl" d="M0 164.7L68 156.7" stroke="#B8321A" stroke-width="2.6" fill="none"/><g class="b1"><rect class="elim" x="11" y="205.3" width="42" height="252.7"/></g><g class="b1"><rect class="elim" x="11" y="18" width="46" height="125.5"/></g><g class="r1"><path d="M52 457.1h9" stroke="#1F1A14" stroke-width="1"/><circle cx="61" cy="457.1" r="5" fill="#2F6E4A"/><text class="m lbl" x="76" y="456.1">0 · v0.1.0 · pass</text><text class="m sub2" x="76" y="470.1">aijob-e01exfzvaek2xbsh24 · eu-west1</text></g><g class="r1"><path d="M52 395.3h9" stroke="#1F1A14" stroke-width="1"/><circle cx="61" cy="395.3" r="5" fill="#2F6E4A"/><text class="m lbl" x="76" y="394.3">36 · 12cd715d · pass</text><text class="m sub2" x="76" y="408.3">aijob-e01nvefvndgf2pmzad · eu-west1</text></g><g class="r1"><path d="M52 331.7h9" stroke="#1F1A14" stroke-width="1"/><circle cx="61" cy="331.7" r="5" fill="#2F6E4A"/><text class="m lbl" x="76" y="330.7">73 · 60a2b905 · pass</text><text class="m sub2" x="76" y="344.7">aijob-e03zjk9mdwtj47jyt1 · uk-south1</text></g><g class="r1"><path d="M52 269.8h9" stroke="#1F1A14" stroke-width="1"/><circle cx="61" cy="269.8" r="5" fill="#2F6E4A"/><text class="m lbl" x="76" y="268.8">109 · a85ea36f · pass</text><text class="m sub2" x="76" y="282.8">aijob-e03q20n9n8xg30bzp8 · uk-south1</text></g><g class="r1"><path d="M52 206.2h9" stroke="#1F1A14" stroke-width="1"/><circle cx="61" cy="206.2" r="5" fill="#2F6E4A"/><text class="m lbl" x="76" y="205.2">146 · 7087b18a · pass</text><text class="m sub2" x="76" y="219.2">aijob-e05prrbehe0asth7qp · uk-south2</text></g><g class="r1"><path d="M56 144.3h9" stroke="#1F1A14" stroke-width="1"/><circle cx="65" cy="144.3" r="5" fill="#9A4532"/><text class="m lbl" x="76" y="143.3">182 · 3142c561 · fail</text><text class="m sub2" x="76" y="157.3">aijob-e05mzheae46trefcmn · uk-south2</text></g><g class="r1"><path d="M56 80.7h9" stroke="#1F1A14" stroke-width="1"/><circle cx="65" cy="80.7" r="5" fill="#9A4532"/><text class="m lbl" x="76" y="79.7">219 · b23425e3 · fail</text><text class="m sub2" x="76" y="93.7">aijob-i00cjjfqz6599jy6wf · me-west1</text></g><g class="r1"><path d="M56 18.9h9" stroke="#1F1A14" stroke-width="1"/><circle cx="65" cy="18.9" r="5" fill="#9A4532"/><text class="m lbl" x="76" y="17.9">255 · main · fail</text><text class="m sub2" x="76" y="31.9">aijob-i00vh22768ry2e534m · me-west1</text></g><path class="bracket b1" d="M8 143.5h-5V205.3h5"/><text class="cap" x="12" y="492">ROUND 1 · 8 PROBES · 318.5 S</text><text class="big" x="12" y="520">255 → 36</text></svg><svg class="pl" viewBox="0 0 360 520" role="img" aria-label="Round 2: 36 → 4 suspects"><defs><pattern id="pn2A" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#E5D8BC"/><circle cx="1.5" cy="1.5" r=".75" fill="#B9A57E"/><circle cx="4.5" cy="4.5" r=".6" fill="#C7B58F"/></pattern><pattern id="pn2B" width="12" height="6" patternUnits="userSpaceOnUse"><rect width="12" height="6" fill="#D6C49E"/><path d="M1 2h5M7 5h4" stroke="#AE9870" stroke-width=".8"/></pattern><pattern id="pn2F" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#D6C49E"/><path d="M0 0v7" stroke="#B8321A" stroke-width="2.2" opacity=".55"/></pattern></defs><rect x="12" y="410.4" width="40" height="47.6" fill="url(#pn2A)"/><rect x="12" y="136.9" width="40" height="273.5" fill="url(#pn2B)"/><rect x="18" y="18" width="40" height="118.9" fill="url(#pn2B)"/><path class="layer" d="M12 446.1h40M12 434.2h40M12 422.3h40M12 410.4h40M12 398.5h40M12 386.6h40M12 374.8h40M12 362.9h40M12 351h40M12 339.1h40M12 327.2h40M12 315.3h40M12 303.4h40M12 291.5h40M12 279.6h40M12 267.7h40M12 255.8h40M12 243.9h40M12 232.1h40M12 220.2h40M12 208.3h40M12 196.4h40M12 184.5h40M12 172.6h40M12 160.7h40M12 148.8h40M18 136.9h40M18 125h40M18 113.1h40M18 101.2h40M18 89.4h40M18 77.5h40M18 65.6h40M18 53.7h40M18 41.8h40M18 29.9h40" opacity="0.5"/><path d="M12 458V136.9" stroke="#A8936B" stroke-width=".8" fill="none"/><line x1="6" x2="58" y1="410.4" y2="410.4" stroke="#8A6114" stroke-width="1.4" stroke-dasharray="5 3"/><path class="fl" d="M0 140.9L70 132.9" stroke="#B8321A" stroke-width="2.6" fill="none"/><g class="b2"><rect class="elim" x="11" y="160.7" width="42" height="297.3"/></g><g class="b2"><rect class="elim" x="11" y="18" width="48" height="95.1"/></g><circle cx="61" cy="452.1" r="4.2" fill="#F8F4EA" stroke="#2F6E4A" stroke-width="1.6"/><text class="m sub2" x="76" y="456.1">146 · pass · round 1</text><circle cx="67" cy="23.9" r="4.2" fill="#F8F4EA" stroke="#9A4532" stroke-width="1.6"/><text class="m sub2" x="76" y="27.9">182 · fail · round 1</text><g class="r2"><path d="M52 404.5h9" stroke="#1F1A14" stroke-width="1"/><circle cx="61" cy="404.5" r="5" fill="#2F6E4A"/><text class="m lbl" x="76" y="403.5">150 · e46e5342 · pass</text><text class="m sub2" x="76" y="417.5">aijob-e05znvkzda9m84f4re · uk-south2</text></g><g class="r2"><path d="M52 356.9h9" stroke="#1F1A14" stroke-width="1"/><circle cx="61" cy="356.9" r="5" fill="#2F6E4A"/><text class="m lbl" x="76" y="355.9">154 · cd3d9695 · pass</text><text class="m sub2" x="76" y="369.9">aijob-e05aaertd19ftx67fg · uk-south2</text></g><g class="r2"><path d="M52 309.4h9" stroke="#1F1A14" stroke-width="1"/><circle cx="61" cy="309.4" r="5" fill="#2F6E4A"/><text class="m lbl" x="76" y="308.4">158 · 928c65fc · pass</text><text class="m sub2" x="76" y="322.4">aijob-e03y4h0srcjj77m8h7 · uk-south1</text></g><g class="r2"><path d="M52 261.8h9" stroke="#1F1A14" stroke-width="1"/><circle cx="61" cy="261.8" r="5" fill="#2F6E4A"/><text class="m lbl" x="76" y="260.8">162 · 4d7485a1 · pass</text><text class="m sub2" x="76" y="274.8">aijob-e03n2gaa22fx12223p · uk-south1</text></g><g class="r2"><path d="M52 214.2h9" stroke="#1F1A14" stroke-width="1"/><circle cx="61" cy="214.2" r="5" fill="#2F6E4A"/><text class="m lbl" x="76" y="213.2">166 · df3a9334 · pass</text><text class="m sub2" x="76" y="227.2">aijob-e01e2xcy2bs3hwvr9v · eu-west1</text></g><g class="r2"><path d="M52 166.6h9" stroke="#1F1A14" stroke-width="1"/><circle cx="61" cy="166.6" r="5" fill="#2F6E4A"/><text class="m lbl" x="76" y="165.6">170 · bb576e64 · pass</text><text class="m sub2" x="76" y="179.6">aijob-e01ktmzck79h68frz3 · eu-west1</text></g><g class="r2"><path d="M58 119.1h9" stroke="#1F1A14" stroke-width="1"/><circle cx="67" cy="119.1" r="5" fill="#9A4532"/><text class="m lbl" x="76" y="118.1">174 · 69a9040f · fail</text><text class="m sub2" x="76" y="132.1">aijob-i00vhfvhsgw3xg58s6 · me-west1</text></g><g class="r2"><path d="M58 71.5h9" stroke="#1F1A14" stroke-width="1"/><circle cx="67" cy="71.5" r="5" fill="#9A4532"/><text class="m lbl" x="76" y="70.5">178 · 19ce7291 · fail</text><text class="m sub2" x="76" y="84.5">aijob-i00enwrjf347v2bfzm · me-west1</text></g><path class="bracket b2" d="M8 113.1h-5V160.7h5"/><text class="cap" x="12" y="492">ROUND 2 · 8 PROBES · 374.3 S</text><text class="big" x="12" y="520">36 → 4</text></svg><svg class="pl" viewBox="0 0 360 420" role="img" aria-label="Round 3: 4 → 1 suspects"><defs><pattern id="pn3A" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#E5D8BC"/><circle cx="1.5" cy="1.5" r=".75" fill="#B9A57E"/><circle cx="4.5" cy="4.5" r=".6" fill="#C7B58F"/></pattern><pattern id="pn3B" width="12" height="6" patternUnits="userSpaceOnUse"><rect width="12" height="6" fill="#D6C49E"/><path d="M1 2h5M7 5h4" stroke="#AE9870" stroke-width=".8"/></pattern><pattern id="pn3F" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#D6C49E"/><path d="M0 0v7" stroke="#B8321A" stroke-width="2.2" opacity=".55"/></pattern></defs><rect x="12" y="154" width="40" height="204" fill="url(#pn3B)"/><rect x="22" y="18" width="40" height="136" fill="url(#pn3B)"/><rect x="22" y="86" width="40" height="68" fill="url(#pn3F)"/><path class="layer" d="M12 290h40M12 222h40M22 154h40M22 86h40" opacity="0.5"/><path d="M12 358V154" stroke="#A8936B" stroke-width=".8" fill="none"/><path class="fl" d="M0 158L74 150" stroke="#B8321A" stroke-width="2.6" fill="none"/><circle cx="61" cy="324" r="4.2" fill="#F8F4EA" stroke="#2F6E4A" stroke-width="1.6"/><text class="m sub2" x="76" y="328">170 · pass · round 2</text><circle cx="71" cy="52" r="4.2" fill="#F8F4EA" stroke="#9A4532" stroke-width="1.6"/><text class="m sub2" x="76" y="56">174 · fail · round 2</text><g class="r3"><path d="M52 256h9" stroke="#1F1A14" stroke-width="1"/><circle cx="61" cy="256" r="5" fill="#2F6E4A"/><text class="m lbl" x="76" y="255">171 · ab7e2244 · pass</text><text class="m sub2" x="76" y="269">aijob-e01q9hzzckgggr66yq · eu-west1</text></g><g class="r3"><path d="M52 188h9" stroke="#1F1A14" stroke-width="1"/><circle cx="61" cy="188" r="5" fill="#2F6E4A"/><text class="m lbl" x="76" y="187">172 · bd522cc7 · pass</text><text class="m sub2" x="76" y="201">aijob-e01bestdhtwea4tjzb · eu-west1</text></g><g class="r3"><path d="M62 120h9" stroke="#1F1A14" stroke-width="1"/><circle cx="71" cy="120" r="5" fill="#B8321A"/><text class="m lbl" x="76" y="119" fill="#B8321A" font-weight="600">173 · 4e133d6c · fail</text><text class="m sub2" x="76" y="133">aijob-e03jkfmxg9fcfdczhv · uk-south1</text></g><text class="cap" x="12" y="392">ROUND 3 · 3 PROBES · 268.6 S</text><text class="big" x="12" y="420">4 → 1</text></svg></div>
+      <figcaption>Every mark is a real probe from the recorded hunt: commit, verdict, Nebius job ID, region. Round 2 drilled the pin bump itself, <code>e46e5342</code> — it passed in a container built from its own dependencies. Source: <code>data/recorded-hunt.json</code>, <code>evidence/bench/hero-faultline-1.json</code>.</figcaption>
+    </figure>
+  </section>
+
+  <section class="sec" id="legend" aria-labelledby="legend-h">
+    <header class="sec-head">
+      <p class="eyebrow">Explanation · what keeps the answer honest</p>
+      <h2 id="legend-h">Nothing in a hunt is allowed <em>to guess.</em></h2>
+      <p class="lede">Each rule is pinned by tests — <code>tests/engine.test.ts</code> drives them through the real tick, and <code>tests/hunt.integration.test.ts</code> runs a whole hunt with Nebius simulated at the HTTP boundary.</p>
+    </header>
+    <div class="legend">
+      <article class="card s7 lead-card"><svg class="ico" viewBox="0 0 44 44" aria-hidden="true" focusable="false"><path d="M10 40h24L22 25z"/><circle cx="22" cy="35" r="1.4"/><path d="M10 19h24L22 4z"/><path d="M19.5 13.5l5 0"/><path d="M22 25v-4" stroke-dasharray="2 2"/></svg><h3>Both ends, proven first</h3><p>Round 1 runs your known-good ref and your failing ref in fresh containers, beside the first suspects. If the failing ref passes there, the break is in your environment, not in a commit — and Faultline says so instead of naming one.</p><span class="chip">round 1 · v0.1.0 + main</span></article>
+      <article class="card s5"><svg class="ico" viewBox="0 0 44 44" aria-hidden="true" focusable="false"><rect x="5" y="15" width="25" height="23" rx="1.5"/><path d="M5 22h25" stroke-dasharray="2.5 2.5"/><path d="M23 13L37 3M30 3h7v7"/></svg><h3>A probe holds nothing</h3><p>Any public repository’s <code>conftest.py</code> is arbitrary code. A probe gets one presigned URL for its own verdict object and the app’s public tick URL — no key, no bucket mount.</p><span class="chip">presigned PUT · Object Storage</span></article>
+      <article class="card s4"><svg class="ico" viewBox="0 0 44 44" aria-hidden="true" focusable="false"><path d="M12 41V5"/><path d="M12 7h21l-5.5 7 5.5 7H12"/><path d="M7 41h10"/></svg><h3>No daemon, no database</h3><p>Every dispatch is claimed with <code>If-None-Match: "*"</code>; the hunt record is only replaced with <code>If-Match</code>. On the real bucket, 20 races of 2–8 writers: one winner every time.</p><span class="chip">If-None-Match: "*"</span></article>
+      <article class="card s4"><svg class="ico" viewBox="0 0 44 44" aria-hidden="true" focusable="false"><circle cx="22" cy="22" r="16"/><path d="M18 15.5v13M26 15.5v13"/></svg><h3>Infrastructure is never evidence</h3><p>A probe that dies without reporting is retried, then the hunt pauses and says which probe and why. A throttled create waits out its backoff. Neither becomes a verdict.</p><span class="chip">429 → backoff · retry → pause</span></article>
+      <article class="card s4"><svg class="ico" viewBox="0 0 44 44" aria-hidden="true" focusable="false"><path d="M22 4l9 17-9 19-9-19z"/><path d="M22 40V24"/><circle cx="22" cy="20.5" r="2.6"/></svg><h3>The model explains; it never decides</h3><p>After the tests name the culprit, one Token Factory call gives NVIDIA Nemotron 3 Super the diff and the failing output. Its paragraph is labelled generated.</p><span class="chip">nemotron-3-super-120b-a12b</span></article>
+      <article class="card s12 wide">
+        <div><svg class="ico" viewBox="0 0 44 44" aria-hidden="true" focusable="false"><path d="M5 19c5 8 11.5 11 17 11s12-3 17-11"/><path d="M11.5 26.5L8 31.5M22 30v6.5M32.5 26.5l3.5 5"/></svg><h3>It finishes with nobody watching</h3><p>Each probe pings the hunt when its verdict is written, so the next round goes out by itself — close the tab and come back to a report. What Nebius ran is listed live: the app reads its latest probe jobs from <code>GET /ai/v1/jobs</code> in all four regions.</p><span class="chip">POST /api/hunts/{id}/tick</span></div>
+        <figure class="dark"><img src="/landing/media/integration.webp" width="1400" height="763" loading="lazy" decoding="async" alt="Faultline — the live integration panel: Serverless AI Jobs, Object Storage, Token Factory and IAM token exchange, with the latest probe jobs read from the Nebius Jobs API"><figcaption>The live app’s integration panel, captured 2026-10-14.</figcaption></figure>
+      </article>
+    </div>
+  </section>
+
+  <section class="sec" id="honest" aria-labelledby="honest-h">
+    <header class="sec-head">
+      <p class="eyebrow">Field notes · honest by design</p>
+      <h2 id="honest-h">What the README admits, <em>quoted.</em></h2>
+    </header>
+    <div class="notes">
+      <blockquote><p>“Read the wall-clock column honestly: Faultline is slower on both.”</p><cite>— README · Engineering Rigor</cite></blockquote>
+      <blockquote><p>“That fixture was built to drift, so the reused-environment failures are by construction; what it shows is the mechanism.”</p><cite>— README · Engineering Rigor</cite></blockquote>
+      <blockquote><p>“The root-cause paragraph is generated and can be wrong; the culprit is not.”</p><cite>— README · Honest limits</cite></blockquote>
+    </div>
+  </section>
+
+  <section class="sec" id="faq" aria-labelledby="faq-h">
+    <header class="sec-head">
+      <p class="eyebrow">Questions a judge would ask</p>
+      <h2 id="faq-h">Asked before you <em>have to.</em></h2>
+    </header>
+    <div class="faq">
+      <details><summary><span class="q">Q1</span>Is it faster than git bisect?</summary><div class="a"><p><b>No.</b> A fresh-venv <code>git bisect run</code> finished the drift fixture in 57.4 s (p50, N=5) and the attrs regression in 43.8 s (p50, N=3); Faultline took 957 s and 919 s. A probe’s VM takes about 4 min 20 s to start for about 5 s of work, and Nebius throttled job creation.</p><p>What it saves is knowing about the drift, writing the fresh-environment harness, and running it on your own machine. <span class="src">README · Engineering Rigor; DEMO.md §5</span></p></div></details>
+      <details><summary><span class="q">Q2</span>Wasn’t the fixture built to make git bisect fail?</summary><div class="a"><p><b>Yes.</b> <code>faultbench-tzdata-pipeline</code> moves its pytz pin at commit 150 on purpose, so the reused-environment failures are by construction. It shows the mechanism, not a rate.</p><p>On a real regression with no drift — attrs 22.1.0 → 22.2.0, 135 commits — every method, Faultline included, named <code>89a890a3</code>, the commit the fix (#1085) cites. <span class="src">evidence/bench/attrs-*.json</span></p></div></details>
+      <details><summary><span class="q">Q3</span>What is recorded, and what is live?</summary><div class="a"><p>The run drawn on this page and replayed on the app’s home is hunt 827dfe7e, recorded 2026-10-13, labelled as a recording, with its real job IDs. <b>Run a live hunt</b> in the app dispatches real Nebius jobs — one hunt at a time, with a visible daily cap so judge traffic cannot drain the credit. <span class="src">DEMO.md §6</span></p></div></details>
+      <details><summary><span class="q">Q4</span>What does NVIDIA Nemotron do — and what if it is wrong?</summary><div class="a"><p>One Token Factory call per hunt, after the tests have named the culprit, with the diff and the failing output. It writes the paragraph a maintainer reads first.</p><p>It was partly wrong on both benchmark hunts — a DST label on one, an “empty dict” on attrs. The culprit was not, because it came from running the test. The report labels the paragraph and keeps the request ID. <span class="src">DEMO.md §5</span></p></div></details>
+      <details><summary><span class="q">Q5</span>What can a malicious repository do?</summary><div class="a"><p>Its <code>conftest.py</code> runs inside a probe, and a probe holds only a presigned URL for its own verdict object and the app’s public tick URL — no key, no bucket mount. It can lie about its own commit’s verdict; it cannot touch another hunt or the daily counter. <span class="src">tests/hunt.integration.test.ts</span></p></div></details>
+      <details><summary><span class="q">Q6</span>Why Serverless AI Jobs and not Sandboxes?</summary><div class="a"><p>Sandboxes would fit better, but <code>GET /sandboxes/v1/whoami</code> reports every permission false while beta access is pending. The engine talks to a four-verb <code>ProbeBackend</code> — dispatch, status, find, cancel — and a Sandboxes backend would implement the same four. We have not been able to try one. <span class="src">evidence/sandboxes-whoami.json</span></p></div></details>
+    </div>
+  </section>
+</div>
+</main>
+
+<footer class="foot">
+  <div class="foot-in">
+    <div>
+      <a class="brand" href="#top"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect x="2" y="9" width="3.2" height="9" rx="1.2" fill="#2F6E4A"/><rect x="6.6" y="9" width="3.2" height="9" rx="1.2" fill="#2F6E4A"/><rect x="11.2" y="9" width="3.2" height="9" rx="1.2" fill="#2F6E4A"/><rect x="15.4" y="4" width="2.8" height="24" rx="1.2" fill="#B8321A"/><rect x="19.2" y="15" width="3.2" height="9" rx="1.2" fill="#9A4532"/><rect x="23.8" y="15" width="3.2" height="9" rx="1.2" fill="#9A4532"/><rect x="28.4" y="15" width="3.2" height="9" rx="1.2" fill="#9A4532"/></svg><span>Faultline</span></a>
+      <p style="margin-top:12px">Python test suites in public GitHub repositories. MIT licence · v0.2.0.<br>Built for the Nebius Global AI Hackathon, Coding and Agentic Engineering track.</p>
+      <div class="scale" aria-hidden="true"><svg viewBox="0 0 360 40"><text class="m" x="10" y="9" font-size="9.5" letter-spacing="1.2" fill="#5C5347">SCALE · 1 LAYER = 1 COMMIT</text><rect x="10" y="14" width="65" height="6" fill="#1F1A14" stroke="#1F1A14" stroke-width=".8"/><rect x="75" y="14" width="65" height="6" fill="#F8F4EA" stroke="#1F1A14" stroke-width=".8"/><rect x="140" y="14" width="65" height="6" fill="#1F1A14" stroke="#1F1A14" stroke-width=".8"/><rect x="205" y="14" width="65" height="6" fill="#F8F4EA" stroke="#1F1A14" stroke-width=".8"/><rect x="270" y="14" width="71.5" height="6" fill="#1F1A14" stroke="#1F1A14" stroke-width=".8"/><text class="m" x="10" y="34" font-size="10" text-anchor="middle" fill="#5C5347">0</text><text class="m" x="75" y="34" font-size="10" text-anchor="middle" fill="#5C5347">50</text><text class="m" x="140" y="34" font-size="10" text-anchor="middle" fill="#5C5347">100</text><text class="m" x="205" y="34" font-size="10" text-anchor="middle" fill="#5C5347">150</text><text class="m" x="270" y="34" font-size="10" text-anchor="middle" fill="#5C5347">200</text><text class="m" x="341.5" y="34" font-size="10" text-anchor="middle" fill="#5C5347">255</text></svg></div>
+    </div>
+    <div>
+      <h4>The product</h4>
+      <ul>
+        <li><a href="/">Open the live app</a></li>
+        <li><a href="/pitch">Pitch deck</a></li>
+        <li><a href="/api/integrations/verify">Integration proof (JSON)</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>The evidence</h4>
+      <ul>
+        <li><a href="https://github.com/edycutjong/faultline">Source on GitHub</a></li>
+        <li><a href="https://github.com/edycutjong/faultline/blob/main/DEMO.md">DEMO.md — every number, reproduced</a></li>
+        <li><a href="https://github.com/edycutjong/faultline/blob/main/FEEDBACK.md">FEEDBACK.md — building on Nebius</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const below = el => el.getBoundingClientRect().top > innerHeight * 0.92;
+  const io = (el, fn, t = 0.35) => {
+    if (!("IntersectionObserver" in window)) return fn();
+    const o = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { o.disconnect(); fn(); } }), { threshold: t });
+    o.observe(el);
+  };
+  if (reduce) return;
+  // receipts: count up / count down the real suspect sequence
+  document.querySelectorAll(".rc .num").forEach(n => {
+    if (!below(n)) return;
+    const seq = n.dataset.seq, tgt = n.querySelector("[data-count]") || (n.dataset.count ? n : null);
+    if (seq) {
+      const v = n.querySelector(".v"), steps = seq.split(",");
+      v.textContent = steps[0];
+      io(n, () => steps.forEach((s, i) => setTimeout(() => (v.textContent = s), 420 * i)));
+    } else if (tgt) {
+      const end = parseFloat(tgt.dataset.count), dec = +(tgt.dataset.dec || 0), pre = tgt.dataset.prefix || "", fin = tgt.textContent;
+      tgt.textContent = pre + (0).toFixed(dec);
+      io(n, () => { const t0 = performance.now(), d = 1300;
+        const f = t => { const k = Math.min(1, (t - t0) / d), e = 1 - Math.pow(1 - k, 3);
+          tgt.textContent = k < 1 ? pre + (end * e).toFixed(dec) : fin; if (k < 1) requestAnimationFrame(f); };
+        requestAnimationFrame(f); });
+    }
+  });
+  // terminal: replay the real output line by line, commands typed
+  const term = document.getElementById("term");
+  if (term && below(term)) {
+    const lines = [...term.querySelectorAll(".ln")];
+    term.classList.add("typing");
+    io(term, () => {
+      let i = 0;
+      const next = () => {
+        if (i >= lines.length) return;
+        const ln = lines[i++], cmd = ln.dataset.cmd;
+        ln.classList.add("on");
+        if (cmd) {
+          const full = ln.textContent; ln.textContent = "";
+          let k = 0; const ty = () => { ln.textContent = full.slice(0, ++k); k < full.length ? setTimeout(ty, 9) : setTimeout(next, 260); };
+          ty();
+        } else setTimeout(next, ln.dataset.pause ? +ln.dataset.pause : 45);
+      };
+      next();
+    }, 0.25);
+  }
+  // section B–B′: the rounds land in order, each round's probes together
+  const plates = document.getElementById("plates");
+  if (plates && below(plates)) { plates.classList.add("armed"); io(plates, () => plates.classList.add("play"), 0.18); }
+})();
+</script>
+</body>
+</html>

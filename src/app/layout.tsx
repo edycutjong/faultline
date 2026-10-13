@@ -97,6 +97,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               Desktop-first by design. Below 768px the timeline stacks vertically with identical
               colour semantics — legible, not optimised.
             </p>
+            <p className="flex flex-wrap items-center gap-x-1">
+              <a className="link-quiet inline-flex min-h-[40px] items-center underline decoration-line underline-offset-4 hover:text-text" href="/about">
+                The story, with every number sourced
+              </a>
+              {" · "}
+              <a className="link-quiet inline-flex min-h-[40px] items-center underline decoration-line underline-offset-4 hover:text-text" href="/pitch">
+                Pitch deck
+              </a>
+            </p>
           </div>
         </footer>
       </body>
