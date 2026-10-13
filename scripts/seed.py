@@ -192,6 +192,11 @@ README = '''# {dist}
 
 {description}
 
+> **This is a FAULTBENCH fixture.** Its whole history is generated, deterministically, by
+> `scripts/seed.py` in [Faultline](https://github.com/edycutjong/faultline) so that a
+> bisection tool can be checked against a known answer. The answer key is not in this
+> repository.
+
 ## Install
 
     pip install -e .[test]
@@ -237,49 +242,53 @@ Two upstream feeds reach this pipeline. The legacy CSV exporter emits *naive* lo
 timestamps and states the zone out of band; the newer webhook emits offset-aware ISO
 strings. Both shapes funnel through `to_utc`, which is the only place in the package
 allowed to attach a tzinfo.
+
+Zone rules come from pytz, pinned in pyproject.toml. When the IANA database changes a
+zone's rules the pin moves, and the golden values in the tests move with it.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
-#: Minutes east of UTC. Deliberately a fixed table rather than a tz database lookup:
-#: the feeds only ever quote these five zones and a table is testable offline.
-OFFSETS = {
-    "UTC": 0,
-    "Europe/Amsterdam": 60,
-    "Asia/Jakarta": 420,
-    "Asia/Tokyo": 540,
-    "America/New_York": -300,
-}
+import pytz
 
-
-def offset_for(zone):
-    """Minutes east of UTC for a supported zone name."""
-    try:
-        return OFFSETS[zone]
-    except KeyError:
-        raise ValueError("unsupported zone: %s" % zone)
+#: The zones the feeds are allowed to quote.
+ZONES = (
+    "UTC",
+    "Europe/Amsterdam",
+    "Asia/Jakarta",
+    "Asia/Tokyo",
+    "America/New_York",
+    "America/Mexico_City",
+)
 
 
-def tzinfo_for(zone):
-    """A fixed-offset tzinfo for a supported zone name."""
-    return timezone(timedelta(minutes=offset_for(zone)))
+def zone_for(name):
+    """The pytz zone for a supported zone name."""
+    if name not in ZONES:
+        raise ValueError("unsupported zone: %s" % name)
+    return pytz.timezone(name)
 
 
 def to_utc(moment, zone):
     """Convert `moment` to UTC.
 
-    A naive `moment` is *local wall-clock time in `zone`*, so it has to be given that
-    zone's tzinfo before conversion. An aware `moment` already carries its own offset
-    and `zone` is ignored.
+    A naive `moment` is *local wall-clock time in `zone`*, so it has to be localised in
+    that zone, with the zone's rules for that date, before conversion. An aware `moment`
+    already carries its own offset and `zone` is ignored.
     """
     if moment.tzinfo is None:
-        moment = moment.replace(tzinfo=tzinfo_for(zone))
+        moment = zone_for(zone).localize(moment)
     return moment.astimezone(timezone.utc)
+
+
+def offset_minutes(moment, zone):
+    """Minutes east of UTC that `zone` observes at naive local time `moment`."""
+    return int(zone_for(zone).localize(moment).utcoffset().total_seconds() // 60)
 
 
 def day_bucket(moment, zone):
     """The local calendar date `moment` falls on in `zone`, as an ISO date string."""
-    local = to_utc(moment, zone).astimezone(tzinfo_for(zone))
+    local = to_utc(moment, zone).astimezone(zone_for(zone))
     return local.date().isoformat()
 
 
@@ -290,23 +299,26 @@ def parse_iso(text):
     return datetime.fromisoformat(text)
 '''
 
-# The regression: the naive branch stops consulting the zone table and stamps UTC on
-# local wall-clock time. Aware input is unaffected, which is why most of the suite
-# stays green and only the naive-input test turns red. Expressed as a patch, not a
-# whole-file swap, so the planted commit's diff is exactly this hunk and nothing else.
+# The regression: the classic pytz pitfall. `localize()` looks like a legacy idiom, so it
+# is "modernised" to `replace(tzinfo=...)` — which silently attaches the zone's first
+# historical offset (local mean time: -6:36:36 for Mexico City, +7:07:12 for Jakarta)
+# instead of the offset in force on that date. Aware input is unaffected, which is why
+# most of the suite stays green. Expressed as a patch, not a whole-file swap, so the
+# planted commit's diff is exactly this hunk and nothing else.
 TZ_PATCH = [
     (
-        '''    A naive `moment` is *local wall-clock time in `zone`*, so it has to be given that
-    zone's tzinfo before conversion. An aware `moment` already carries its own offset
+        '''    A naive `moment` is *local wall-clock time in `zone`*, so it has to be localised in
+    that zone, with the zone's rules for that date, before conversion. An aware `moment`
+    already carries its own offset and `zone` is ignored.
+    """
+    if moment.tzinfo is None:
+        moment = zone_for(zone).localize(moment)''',
+        '''    A naive `moment` is *local wall-clock time in `zone`*, so it is given that zone's
+    tzinfo directly before conversion. An aware `moment` already carries its own offset
     and `zone` is ignored.
     """
     if moment.tzinfo is None:
-        moment = moment.replace(tzinfo=tzinfo_for(zone))''',
-        '''Inputs are normalised to UTC exactly once, at the edge, so the rest of the
-    pipeline never has to branch on tzinfo again.
-    """
-    if moment.tzinfo is None:
-        moment = moment.replace(tzinfo=timezone.utc)''',
+        moment = moment.replace(tzinfo=zone_for(zone))''',
     ),
 ]
 
@@ -314,7 +326,7 @@ TZ_WINDOWS = '''"""Fixed-width windowing over already-normalised UTC instants.""
 
 from datetime import timedelta
 
-from .normalize import to_utc, tzinfo_for
+from .normalize import to_utc, zone_for
 
 
 def floor_to(moment, minutes):
@@ -327,36 +339,38 @@ def floor_to(moment, minutes):
 
 def window_key(moment, zone, minutes):
     """Stable string key for the window `moment` belongs to, in local time."""
-    local = to_utc(moment, zone).astimezone(tzinfo_for(zone))
+    local = to_utc(moment, zone).astimezone(zone_for(zone))
     return floor_to(local, minutes).strftime("%Y-%m-%dT%H:%M%z")
 '''
 
 TZ_TEST_NORMALIZE = '''"""Tests for offset normalisation.
 
 `test_naive_local_midnight_is_interpreted_in_zone` is the one that pins the contract
-for the legacy CSV feed: naive input means local wall-clock, not UTC.
+for the legacy CSV feed: naive input means local wall-clock in that zone, under the
+zone rules of the pinned tz database (see pyproject.toml).
 """
 
 from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from tzdata_pipeline.normalize import OFFSETS, day_bucket, offset_for, parse_iso, to_utc
+from tzdata_pipeline.normalize import ZONES, day_bucket, offset_minutes, parse_iso, to_utc, zone_for
 
 
-def test_offset_table_covers_the_documented_zones():
-    assert set(OFFSETS) == {
+def test_zone_table_covers_the_documented_zones():
+    assert set(ZONES) == {
         "UTC",
         "Europe/Amsterdam",
         "Asia/Jakarta",
         "Asia/Tokyo",
         "America/New_York",
+        "America/Mexico_City",
     }
 
 
-def test_offset_for_rejects_an_unknown_zone():
+def test_zone_for_rejects_an_unknown_zone():
     with pytest.raises(ValueError):
-        offset_for("Mars/Olympus")
+        zone_for("Mars/Olympus")
 
 
 def test_aware_input_keeps_its_own_offset():
@@ -365,8 +379,14 @@ def test_aware_input_keeps_its_own_offset():
 
 
 def test_naive_local_midnight_is_interpreted_in_zone():
-    naive = datetime(2024, 3, 1, 0, 0)
-    assert to_utc(naive, "Asia/Jakarta") == datetime(2024, 2, 29, 17, 0, tzinfo=timezone.utc)
+    # Golden value for the pinned tz database: Mexico City observes daylight saving
+    # time in July 2023, so local midnight is 05:00 UTC.
+    naive = datetime(2023, 7, 1, 0, 0)
+    assert to_utc(naive, "America/Mexico_City") == datetime(2023, 7, 1, 5, 0, tzinfo=timezone.utc)
+
+
+def test_jakarta_has_no_daylight_saving():
+    assert offset_minutes(datetime(2024, 7, 1, 12, 0), "Asia/Jakarta") == 420
 
 
 def test_day_bucket_uses_the_local_calendar_date():
@@ -812,13 +832,15 @@ def tz_scaffold():
     pkg = "tzdata_pipeline"
     desc = "Normalise event timestamps arriving from mixed-offset feeds."
     return {
-        "pyproject.toml": PYPROJECT.format(dist="tzdata-pipeline", version="0.1.0", description=desc, pkg=pkg),
+        "pyproject.toml": PYPROJECT.format(dist="tzdata-pipeline", version="0.1.0", description=desc, pkg=pkg).replace(
+            "dependencies = []", 'dependencies = ["pytz==2022.1"]', 1
+        ),
         "README.md": README.format(dist="tzdata-pipeline", description=desc, pkg=pkg),
         "CHANGELOG.md": CHANGELOG,
         "LICENSE": MIT_LICENSE,
         ".gitignore": "__pycache__/\n*.egg-info/\n.pytest_cache/\n",
         "%s/__init__.py" % pkg: '"""tzdata-pipeline — one UTC representation for every feed."""\n\n'
-        'from .normalize import OFFSETS, day_bucket, offset_for, to_utc  # noqa: F401\n'
+        'from .normalize import ZONES, day_bucket, offset_minutes, to_utc, zone_for  # noqa: F401\n'
         'from .windows import floor_to, window_key  # noqa: F401\n\n'
         '__version__ = "0.1.0"\n',
         "%s/normalize.py" % pkg: TZ_NORMALIZE_GOOD,
@@ -879,6 +901,46 @@ def mint_scaffold():
     }
 
 
+
+
+# Dependency drift — the property that makes an unattended `git bisect run` in one reused
+# environment unsafe on this history. The tz database pin moves at index 150 (Mexico
+# abolished daylight saving time from 2022-10-30, tzdata 2022f), and the golden values
+# move with it. A commit's own test is right under its own pin and wrong under the other:
+# in an environment built at HEAD every commit before 150 fails; in one built at the
+# known-good ref every commit from 150 on fails. The two test-tooling bumps are realistic
+# churn that changes no verdict.
+def tz_bump_pytest_74(files):
+    files["pyproject.toml"] = files["pyproject.toml"].replace('test = ["pytest>=7"]', 'test = ["pytest>=7.4"]', 1)
+    return "build(deps): require pytest>=7.4 for the test extra"
+
+
+def tz_bump_pytz(files):
+    files["pyproject.toml"] = files["pyproject.toml"].replace('"pytz==2022.1"', '"pytz==2023.3"', 1)
+    test = files["tests/test_normalize.py"]
+    old = (
+        "    # Golden value for the pinned tz database: Mexico City observes daylight saving\n"
+        "    # time in July 2023, so local midnight is 05:00 UTC.\n"
+        "    naive = datetime(2023, 7, 1, 0, 0)\n"
+        "    assert to_utc(naive, \"America/Mexico_City\") == datetime(2023, 7, 1, 5, 0, tzinfo=timezone.utc)\n"
+    )
+    new = (
+        "    # Golden value for the pinned tz database: Mexico abolished daylight saving time\n"
+        "    # from 2022-10-30 (tzdata 2022f), so in July 2023 local midnight is 06:00 UTC.\n"
+        "    naive = datetime(2023, 7, 1, 0, 0)\n"
+        "    assert to_utc(naive, \"America/Mexico_City\") == datetime(2023, 7, 1, 6, 0, tzinfo=timezone.utc)\n"
+    )
+    if old not in test:
+        raise RuntimeError("tzdata-pipeline: golden-value anchor not found")
+    files["tests/test_normalize.py"] = test.replace(old, new, 1)
+    files["CHANGELOG.md"] += "- deps: pytz 2022.1 -> 2023.3; Mexico no longer observes DST (tzdata 2022f), golden values updated\n"
+    return "build(deps): bump pytz to 2023.3 — Mexico abolished DST, update golden values"
+
+
+def tz_bump_pytest_8(files):
+    files["pyproject.toml"] = files["pyproject.toml"].replace('test = ["pytest>=7.4"]', 'test = ["pytest>=8"]', 1)
+    return "build(deps): move the test extra to pytest 8"
+
 REPOS = {
     "tzdata-pipeline": {
         "package": "tzdata_pipeline",
@@ -887,11 +949,15 @@ REPOS = {
         "scaffold": tz_scaffold,
         "target": "tzdata_pipeline/normalize.py",
         "patch": TZ_PATCH,
-        "plant_message": "normalize: normalise to UTC once at the edge",
+        "plant_message": "normalize: attach the zone directly instead of localize()",
         "failing_test": "tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone",
-        "bug": "to_utc() stamps timezone.utc on naive input instead of the zone's own "
-               "offset, so every timestamp from the legacy CSV feed lands off by that "
-               "offset. Offset-aware input is unaffected, so the rest of the suite stays green.",
+        "bug": "to_utc() attaches the pytz zone with replace(tzinfo=...) instead of "
+               "localize(), so naive input gets the zone's local-mean-time offset "
+               "(-6:36:36 for Mexico City) rather than the offset in force on that date. "
+               "Offset-aware input is unaffected, so most of the suite stays green.",
+        "scripted": {40: tz_bump_pytest_74, 150: tz_bump_pytz, 210: tz_bump_pytest_8},
+        "drift": {"index": 150, "package": "pytz", "from": "2022.1", "to": "2023.3"},
+        "installCommand": "pip install -e .[test]",
         "docs": ["tzdata_pipeline/normalize.py", "tzdata_pipeline/windows.py", "tzdata_pipeline/util.py"],
     },
     "retry-lib": {
@@ -1150,11 +1216,14 @@ def build_repo(name, spec, root):
     if not 1 <= planted < total:
         raise ValueError("planted_index out of range for %s" % name)
 
+    scripted = spec.get("scripted", {})
     commit(root, files, "chore: initial package scaffold with tests", 0)
     for index in range(1, total):
         if index == planted:
             files[spec["target"]] = apply_patch(files[spec["target"]], spec["patch"], name)
             message = spec["plant_message"]
+        elif index in scripted:
+            message = scripted[index](files)
         else:
             message = filler.apply(files)
         commit(root, files, message, index)
@@ -1190,6 +1259,10 @@ def repo_record(name, spec, path, shas):
         "suiteCommand": "python -m pytest -q",
         "bug": spec["bug"],
         "plantMessage": spec["plant_message"],
+        "installCommand": spec.get("installCommand", "pip install -e .[test]"),
+        "drift": (
+            dict(spec["drift"], sha=shas[spec["drift"]["index"]]) if spec.get("drift") else None
+        ),
     }
 
 
