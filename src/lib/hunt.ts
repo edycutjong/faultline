@@ -275,9 +275,8 @@ export async function tick(ctx: StoreContext, huntId: string): Promise<Hunt | nu
     const read = await readHuntVersioned(ctx, huntId);
     if (!read) return null;
     const hunt = read.value;
-    if (isFinal(hunt.status) || hunt.recorded) return hunt;
-
-    const next = await advance(ctx, hunt);
+    if (hunt.recorded) return hunt;
+    const next = isFinal(hunt.status) ? await settleBill(ctx, hunt) : await advance(ctx, hunt);
     if (JSON.stringify(next) === JSON.stringify(hunt)) return hunt;
 
     const written = await replaceHunt(ctx, next, read.etag);
@@ -682,10 +681,53 @@ async function dispatchOne(
   }
 }
 
+/**
+ * VM time a probe could bill: Nebius's own create→finish once the job has ended, otherwise
+ * the time from dispatch until its verdict landed — the job is still exiting then, so this is
+ * a few seconds short, and later reads of the hunt replace it with the job's own figure.
+ */
+export function billedMs(probe: Probe): number | null {
+  if (probe.vmMs !== null) return probe.vmMs;
+  if (probe.phase === "done" && probe.dispatchedAt && probe.finishedAt) {
+    return Math.max(0, new Date(probe.finishedAt).getTime() - new Date(probe.dispatchedAt).getTime());
+  }
+  return null;
+}
+
 function totalCost(probes: readonly Probe[]): number | null {
-  const measured = probes.filter((p) => p.vmMs !== null);
+  const measured = probes.map(billedMs).filter((ms): ms is number => ms !== null);
   if (measured.length === 0) return null;
-  return measured.reduce((sum, p) => sum + probeCostUsd(p.vmMs ?? 0), 0);
+  return measured.reduce((sum, ms) => sum + probeCostUsd(ms), 0);
+}
+
+/** Probes whose jobs had not ended when the hunt did; their VM time is still provisional. */
+function unsettled(hunt: Hunt, now: Date): Probe[] {
+  return hunt.probes.filter(
+    (p) =>
+      p.phase === "done" &&
+      p.jobId !== null &&
+      !(p.jobState && isJobFinal(p.jobState)) &&
+      p.finishedAt !== null &&
+      now.getTime() - new Date(p.finishedAt).getTime() < 60 * 60_000,
+  );
+}
+
+/**
+ * After the answer: read the last round's jobs once more so the hunt's cost uses Nebius's own
+ * VM times. Touches nothing but job state, VM time and cost.
+ */
+async function settleBill(ctx: StoreContext, hunt: Hunt): Promise<Hunt> {
+  const backend = ctx.backend;
+  const now = ctx.now();
+  if (!backend || unsettled(hunt, now).length === 0) return hunt;
+  const probes = await Promise.all(
+    hunt.probes.map(async (p) =>
+      unsettled({ ...hunt, probes: [p] }, now).length === 0 || !p.jobId
+        ? p
+        : withRunStatus(p, await backend.status(p.jobId).catch(() => null)),
+    ),
+  );
+  return { ...hunt, probes, costUsd: totalCost(probes) };
 }
 
 // ---------------------------------------------------------------------------------------------

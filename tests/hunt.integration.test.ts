@@ -305,9 +305,15 @@ describe("a full hunt against a simulated Nebius", () => {
     const nebius = fakeNebius((sha) => (indexOf(sha) >= 10 ? "fail" : "pass"));
     globalThis.fetch = nebius.impl as typeof fetch;
 
-    const settled = await runToCompletion((await startLive(64)).id);
+    const id = (await startLive(64)).id;
+    await runToCompletion(id);
+    // The last round's jobs were still exiting when the culprit was named; one more read of
+    // the finished hunt settles their VM time from the job records.
+    vi.setSystemTime(Date.now() + 60_000);
+    const settled = must(await tick(storeContext(), id));
     // Every simulated job lived 265 s (create → finish). The pricing constants stay the
     // single source of truth; this asserts the cost scales with the probes that ran.
+    expect(settled.probes.every((p) => p.vmMs === 265_000)).toBe(true);
     expect(settled.costUsd).toBeCloseTo(settled.probes.length * probeCostUsd(265_000), 10);
   });
 
