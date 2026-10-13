@@ -16,14 +16,18 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 const SITE = "https://faultline-edy-cus-projects.vercel.app";
+// Search and link previews clip long descriptions: meta ≤ 160 characters, og/twitter ≤ 125.
 const DESCRIPTION =
-  "Faultline finds the commit that broke your test by running each suspect in a fresh Nebius container built from that commit's own dependencies — both ends proven, contradictions refused, the culprit explained by NVIDIA Nemotron.";
+  "Faultline finds the commit that broke a test: each probe is a fresh Nebius container with that commit's own dependencies. Both ends proven, culprit explained.";
+const SHARE_DESCRIPTION =
+  "Finds the commit that broke your test: each probe a fresh Nebius container, both ends proven, the culprit explained.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: "Faultline — find the commit that broke it, in a clean room",
   description: DESCRIPTION,
   applicationName: "Faultline",
+  authors: [{ name: "Edy Cu" }],
   icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }] },
   // Without these the deploy unfurls as a bare link. Slack, X and LinkedIn centre-crop the
   // card to 2:1, so og-image.png is composed to survive that crop — verified in
@@ -33,13 +37,13 @@ export const metadata: Metadata = {
     siteName: "Faultline",
     url: SITE,
     title: "Faultline — find the commit that broke it, in a clean room",
-    description: DESCRIPTION,
+    description: SHARE_DESCRIPTION,
     images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Faultline — the commit that broke it, found in clean environments" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Faultline — find the commit that broke it, in a clean room",
-    description: DESCRIPTION,
+    description: SHARE_DESCRIPTION,
     images: ["/og-image.png"],
   },
 };

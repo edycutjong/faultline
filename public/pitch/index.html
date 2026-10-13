@@ -14,6 +14,7 @@
 <title>Faultline — pitch deck</title>
 <meta name="description" content="git bisect in a reused environment named the wrong commit 10 times out of 10. Faultline named the right one in 3 rounds.">
 <meta name="theme-color" content="#F2EDE0">
+<meta name="author" content="Edy Cu">
 <link rel="canonical" href="https://faultline-edy-cus-projects.vercel.app/pitch">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <meta property="og:type" content="website">
@@ -26,9 +27,23 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://faultline-edy-cus-projects.vercel.app/landing/media/og-about.png?v=020">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Overpass+Mono:wght@400;500;600&display=swap">
+<link rel="preload" href="/landing/fonts/oldstandard-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/landing/fonts/oldstandard-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/landing/fonts/librefranklin.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face { font-family: "Old Standard TT"; font-weight: 400; font-style: normal; font-display: swap; src: url("/landing/fonts/oldstandard-400.woff2") format("woff2"); }
+@font-face { font-family: "Old Standard TT"; font-weight: 700; font-style: normal; font-display: swap; src: url("/landing/fonts/oldstandard-700.woff2") format("woff2"); }
+@font-face { font-family: "Old Standard TT"; font-weight: 400; font-style: italic; font-display: swap; src: url("/landing/fonts/oldstandard-italic.woff2") format("woff2"); }
+@font-face { font-family: "Libre Franklin"; font-weight: 400 700; font-style: normal; font-display: swap; src: url("/landing/fonts/librefranklin.woff2") format("woff2"); }
+@font-face { font-family: "Libre Franklin"; font-weight: 400; font-style: italic; font-display: swap; src: url("/landing/fonts/librefranklin-italic.woff2") format("woff2"); }
+@font-face { font-family: "Overpass Mono"; font-weight: 400 600; font-style: normal; font-display: swap; src: url("/landing/fonts/overpassmono.woff2") format("woff2"); }
+@font-face { font-family: "Old Standard TT Fallback"; font-weight: 700; font-style: normal; src: local("Georgia Bold"), local("Georgia-Bold"); size-adjust: 86.49%; ascent-override: 88.10%; descent-override: 27.52%; line-gap-override: 27.29%; }
+@font-face { font-family: "Old Standard TT Fallback"; font-weight: 400; font-style: normal; src: local("Georgia"); size-adjust: 98.10%; ascent-override: 77.67%; descent-override: 24.26%; line-gap-override: 24.06%; }
+@font-face { font-family: "Old Standard TT Fallback"; font-weight: 400; font-style: italic; src: local("Georgia Italic"), local("Georgia-Italic"); size-adjust: 95.60%; ascent-override: 79.70%; descent-override: 24.89%; line-gap-override: 24.69%; }
+@font-face { font-family: "Libre Franklin Fallback"; font-weight: 400; font-style: normal; src: local("Arial"), local("ArialMT"); size-adjust: 103.09%; ascent-override: 93.70%; descent-override: 23.86%; line-gap-override: 0%; }
+@font-face { font-family: "Libre Franklin Fallback"; font-weight: 500 700; font-style: normal; src: local("Arial Bold"), local("Arial-BoldMT"); size-adjust: 103.09%; ascent-override: 93.70%; descent-override: 23.86%; line-gap-override: 0%; }
+@font-face { font-family: "Overpass Mono Fallback"; font-weight: 400 600; font-style: normal; src: local("Courier New"), local("CourierNewPSMT"); size-adjust: 102.65%; ascent-override: 86.02%; descent-override: 37.31%; line-gap-override: 0%; }
+</style>
 <style>
 :root {
   --bg:      #F2EDE0;  /* survey paper — warm, unbleached; the sheet the section is printed on */
@@ -43,9 +58,9 @@
   --after:   #B8321A;  /* state: the fault, named — fires only on the culprit layer and the fault line */
   --drift:   #8A6114;  /* the formation contact — where the dependency pin moves (pytz 2022.1 → 2023.3) */
   --plate:   #1F1A14;  /* the one dark material: terminal plates and framed product screenshots */
-  --font-display: "Old Standard TT", "Iowan Old Style", Georgia, serif;  /* the Scotch Roman of 19th-c. survey bulletins */
-  --font-body:    "Libre Franklin", "Franklin Gothic Medium", "Helvetica Neue", Arial, sans-serif;  /* American gothic of map legends */
-  --font-data:    "Overpass Mono", ui-monospace, Menlo, monospace;  /* ONLY SHAs, job IDs, commands, measurements */
+  --font-display: "Old Standard TT", "Old Standard TT Fallback", Georgia, serif;  /* the Scotch Roman of 19th-c. survey bulletins */
+  --font-body:    "Libre Franklin", "Libre Franklin Fallback", "Helvetica Neue", Arial, sans-serif;  /* American gothic of map legends */
+  --font-data:    "Overpass Mono", "Overpass Mono Fallback", ui-monospace, Menlo, monospace;  /* ONLY SHAs, job IDs, commands, measurements */
   --ease: cubic-bezier(.2, .75, .15, 1);
   --s: 1;
 }
