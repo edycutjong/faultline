@@ -11,12 +11,16 @@ import { describe, it, expect } from "vitest";
 import {
   StorageError,
   getJson,
+  getJsonVersioned,
   getObject,
+  getObjectVersioned,
   headObject,
   keys,
   listObjects,
+  presignPut,
   putJson,
   putObject,
+  putObjectConditional,
 } from "@/lib/nebius/storage";
 import { loadConfig, type NebiusConfig } from "@/lib/nebius/config";
 
@@ -119,7 +123,7 @@ describe("getObject", () => {
     expect(await getObject(CONFIG, "hunts/abc.json", net.impl)).toBe("hello");
 
     const call = net.calls[0];
-    expect(call?.url).toBe("https://storage.eu-north1.nebius.cloud/faultline-test/hunts/abc.json");
+    expect(call?.url).toBe("https://storage.eu-west1.nebius.cloud/faultline-test/hunts/abc.json");
     expect(call?.headers.authorization).toContain("AWS4-HMAC-SHA256");
     expect(call?.headers.authorization).toContain("Credential=test-access-key/");
     expect(call?.headers["x-amz-content-sha256"]).toBeTruthy();
@@ -177,7 +181,7 @@ describe("putJson", () => {
     const call = net.calls[0];
     expect(call?.method).toBe("PUT");
     expect(call?.url).toBe(
-      "https://storage.eu-north1.nebius.cloud/faultline-test/hunts/hunt-1.json",
+      "https://storage.eu-west1.nebius.cloud/faultline-test/hunts/hunt-1.json",
     );
     expect(call?.body).toBe(JSON.stringify({ id: "hunt-1", status: "running" }, null, 2));
     // The payload hash is part of the signature, so a body swapped after signing is rejected.
@@ -292,11 +296,71 @@ describe("listObjects", () => {
 });
 
 describe("keys", () => {
-  it("lays out hunts, probe verdicts and counters so the container cannot drift", () => {
-    // The probe image writes `${FAULTLINE_OUTPUT_PATH}/${huntId}/probes/${sha}.json`; these
-    // must stay byte-identical to that path or every verdict reads as absent.
+  it("lays out hunts, verdicts, claims, the lock and counters under separate prefixes", () => {
     expect(keys.hunt("hunt-1")).toBe("hunts/hunt-1.json");
-    expect(keys.probeVerdict("hunt-1", "c0ffee")).toBe("hunt-1/probes/c0ffee.json");
+    expect(keys.probeVerdict("hunt-1", "r1-i7-c0ffee-a1")).toBe("hunts/hunt-1/verdicts/r1-i7-c0ffee-a1.json");
+    expect(keys.dispatchClaim("hunt-1", "r1-i7-c0ffee-a1")).toBe("hunts/hunt-1/claims/r1-i7-c0ffee-a1.json");
+    expect(keys.narrationClaim("hunt-1", 2)).toBe("hunts/hunt-1/claims/narration-a2.json");
+    expect(keys.liveLock()).toBe("locks/live-hunt.json");
     expect(keys.dailyCounter("2026-09-04")).toBe("counters/2026-09-04.json");
+  });
+});
+
+describe("getObjectVersioned", () => {
+  it("returns the body with the ETag a conditional replace must quote back", async () => {
+    const net = recorder([() => new Response("{}", { status: 200, headers: { ETag: '"abc"' } })]);
+    expect(await getObjectVersioned(CONFIG, "hunts/h.json", net.impl)).toEqual({ value: "{}", etag: '"abc"' });
+  });
+
+  it("returns null for a missing key", async () => {
+    const net = recorder([status(404, "Not Found")]);
+    expect(await getObjectVersioned(CONFIG, "hunts/h.json", net.impl)).toBeNull();
+  });
+
+  it("throws on corruption in a record the app wrote itself", async () => {
+    const net = recorder([ok("{not json")]);
+    const error = await caughtAsync(() => getJsonVersioned(CONFIG, "hunts/h.json", net.impl));
+    expect(error.message).toContain("not JSON");
+  });
+});
+
+describe("putObjectConditional", () => {
+  it("signs If-None-Match into the request, so it cannot be stripped in transit", async () => {
+    const net = recorder([() => new Response("", { status: 200, headers: { ETag: '"e1"' } })]);
+    const result = await putObjectConditional(CONFIG, "hunts/h/claims/k.json", "{}", { ifNoneMatch: "*" }, net.impl);
+    expect(result).toEqual({ ok: true, etag: '"e1"' });
+    expect(net.calls[0]?.headers["if-none-match"]).toBe("*");
+    expect(net.calls[0]?.headers.authorization).toContain("if-none-match");
+  });
+
+  it("sends If-Match with the ETag for a compare-and-swap", async () => {
+    const net = recorder([ok("")]);
+    await putObjectConditional(CONFIG, "hunts/h.json", "{}", { ifMatch: '"e1"' }, net.impl);
+    expect(net.calls[0]?.headers["if-match"]).toBe('"e1"');
+  });
+
+  it.each([412, 409])("reports a lost condition (%i) as an outcome, not an error", async (code) => {
+    const net = recorder([status(code, "Precondition Failed")]);
+    expect(await putObjectConditional(CONFIG, "k", "{}", { ifNoneMatch: "*" }, net.impl)).toEqual({ ok: false, status: code });
+  });
+
+  it("throws on any other failure", async () => {
+    const net = recorder([status(403, "Forbidden")]);
+    const error = await caughtAsync(() => putObjectConditional(CONFIG, "k", "{}", { ifNoneMatch: "*" }, net.impl));
+    expect(error.status).toBe(403);
+  });
+});
+
+describe("presignPut", () => {
+  it("produces a path-style URL for exactly the one key, signed for the bucket's region", () => {
+    const url = new URL(presignPut(CONFIG, "hunts/h/verdicts/r1-i7-c0ffee-a1.json", 7200, new Date("2026-10-13T00:00:00Z")));
+    expect(url.origin).toBe("https://storage.eu-west1.nebius.cloud");
+    expect(url.pathname).toBe("/faultline-test/hunts/h/verdicts/r1-i7-c0ffee-a1.json");
+    expect(url.searchParams.get("X-Amz-Credential")).toBe("test-access-key/20261013/eu-west1/s3/aws4_request");
+    expect(url.searchParams.get("X-Amz-Expires")).toBe("7200");
+    expect(url.searchParams.get("X-Amz-SignedHeaders")).toBe("host");
+    expect(url.searchParams.get("X-Amz-Signature")).toMatch(/^[0-9a-f]{64}$/);
+    // The secret never appears in the URL — only a signature derived from it.
+    expect(url.href).not.toContain("test-secret-key");
   });
 });

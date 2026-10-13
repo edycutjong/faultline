@@ -1,0 +1,264 @@
+{
+  "check": "G5 conditional writes",
+  "bucket": "faultline-edycu-ew1",
+  "region": "eu-west1",
+  "endpoint": "https://storage.eu-west1.nebius.cloud",
+  "ranAt": "2026-10-13T15:06:06.255Z",
+  "runId": "c2b90e5b-e0a4-45c8-b595-a340dfd70e4f",
+  "createRace": {
+    "trials": 20,
+    "trialsWithExactlyOneWinner": 20,
+    "detail": [
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-0.json",
+        "writers": 2,
+        "winners": 1,
+        "statuses": [
+          "412",
+          "2xx"
+        ],
+        "winnerBody": "{\"writer\":1}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-1.json",
+        "writers": 2,
+        "winners": 1,
+        "statuses": [
+          "2xx",
+          "412"
+        ],
+        "winnerBody": "{\"writer\":0}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-2.json",
+        "writers": 2,
+        "winners": 1,
+        "statuses": [
+          "2xx",
+          "412"
+        ],
+        "winnerBody": "{\"writer\":0}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-3.json",
+        "writers": 2,
+        "winners": 1,
+        "statuses": [
+          "2xx",
+          "412"
+        ],
+        "winnerBody": "{\"writer\":0}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-4.json",
+        "writers": 2,
+        "winners": 1,
+        "statuses": [
+          "412",
+          "2xx"
+        ],
+        "winnerBody": "{\"writer\":1}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-5.json",
+        "writers": 5,
+        "winners": 1,
+        "statuses": [
+          "2xx",
+          "412",
+          "412",
+          "412",
+          "412"
+        ],
+        "winnerBody": "{\"writer\":0}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-6.json",
+        "writers": 5,
+        "winners": 1,
+        "statuses": [
+          "412",
+          "2xx",
+          "412",
+          "412",
+          "412"
+        ],
+        "winnerBody": "{\"writer\":1}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-7.json",
+        "writers": 5,
+        "winners": 1,
+        "statuses": [
+          "2xx",
+          "412",
+          "412",
+          "412",
+          "412"
+        ],
+        "winnerBody": "{\"writer\":0}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-8.json",
+        "writers": 8,
+        "winners": 1,
+        "statuses": [
+          "412",
+          "2xx",
+          "412",
+          "412",
+          "412",
+          "412",
+          "412",
+          "412"
+        ],
+        "winnerBody": "{\"writer\":1}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-9.json",
+        "writers": 8,
+        "winners": 1,
+        "statuses": [
+          "412",
+          "412",
+          "412",
+          "412",
+          "412",
+          "2xx",
+          "412",
+          "412"
+        ],
+        "winnerBody": "{\"writer\":5}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-10.json",
+        "writers": 2,
+        "winners": 1,
+        "statuses": [
+          "412",
+          "2xx"
+        ],
+        "winnerBody": "{\"writer\":1}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-11.json",
+        "writers": 2,
+        "winners": 1,
+        "statuses": [
+          "412",
+          "2xx"
+        ],
+        "winnerBody": "{\"writer\":1}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-12.json",
+        "writers": 2,
+        "winners": 1,
+        "statuses": [
+          "2xx",
+          "412"
+        ],
+        "winnerBody": "{\"writer\":0}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-13.json",
+        "writers": 2,
+        "winners": 1,
+        "statuses": [
+          "2xx",
+          "412"
+        ],
+        "winnerBody": "{\"writer\":0}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-14.json",
+        "writers": 2,
+        "winners": 1,
+        "statuses": [
+          "412",
+          "2xx"
+        ],
+        "winnerBody": "{\"writer\":1}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-15.json",
+        "writers": 5,
+        "winners": 1,
+        "statuses": [
+          "412",
+          "412",
+          "412",
+          "2xx",
+          "412"
+        ],
+        "winnerBody": "{\"writer\":3}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-16.json",
+        "writers": 5,
+        "winners": 1,
+        "statuses": [
+          "412",
+          "412",
+          "412",
+          "412",
+          "2xx"
+        ],
+        "winnerBody": "{\"writer\":4}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-17.json",
+        "writers": 5,
+        "winners": 1,
+        "statuses": [
+          "412",
+          "412",
+          "412",
+          "2xx",
+          "412"
+        ],
+        "winnerBody": "{\"writer\":3}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-18.json",
+        "writers": 8,
+        "winners": 1,
+        "statuses": [
+          "412",
+          "412",
+          "412",
+          "412",
+          "412",
+          "412",
+          "2xx",
+          "412"
+        ],
+        "winnerBody": "{\"writer\":6}"
+      },
+      {
+        "key": "g5/c2b90e5b-e0a4-45c8-b595-a340dfd70e4f/claim-19.json",
+        "writers": 8,
+        "winners": 1,
+        "statuses": [
+          "412",
+          "412",
+          "412",
+          "412",
+          "412",
+          "2xx",
+          "412",
+          "412"
+        ],
+        "winnerBody": "{\"writer\":5}"
+      }
+    ]
+  },
+  "compareAndSwap": {
+    "createdOk": true,
+    "createEtagReturned": true,
+    "readEtag": "\"a191475ae2bf7db9c7e320f7da455bbb\"",
+    "replaceWithFreshEtag": "2xx",
+    "replaceWithStaleEtag": "412",
+    "finalBody": "{\"v\":2}"
+  }
+}

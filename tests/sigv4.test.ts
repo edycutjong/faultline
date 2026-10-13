@@ -9,6 +9,7 @@
 import { describe, it, expect } from "vitest";
 import {
   signRequest,
+  presignUrl,
   canonicalUri,
   canonicalQueryString,
   uriEncode,
@@ -209,5 +210,73 @@ describe("SigV4 — canonicalisation helpers", () => {
     expect(sha256Hex("")).toBe(
       "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     );
+  });
+});
+
+describe("SigV4 — AWS S3 query-string (presigned URL) example", () => {
+  // AWS "Authenticating Requests: Using Query Parameters", the worked GET example: same
+  // credentials as the header examples, 24-hour expiry, virtual-hosted bucket.
+  it("matches AWS's published presigned-URL signature", () => {
+    const presigned = presignUrl({
+      method: "GET",
+      origin: "https://examplebucket.s3.amazonaws.com",
+      path: "/test.txt",
+      region: "us-east-1",
+      service: "s3",
+      accessKeyId: S3_KEY,
+      secretAccessKey: S3_SECRET,
+      expiresSeconds: 86400,
+      date: S3_DATE,
+    });
+
+    expect(presigned.canonicalRequest).toBe(
+      [
+        "GET",
+        "/test.txt",
+        "X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F20130524%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20130524T000000Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host",
+        "host:examplebucket.s3.amazonaws.com",
+        "",
+        "host",
+        "UNSIGNED-PAYLOAD",
+      ].join("\n"),
+    );
+    expect(presigned.signature).toBe(
+      "aeeed9bbccd4d02ee5c0109b86d86835f995330da4c265957d157751f604d404",
+    );
+    expect(presigned.url).toBe(
+      "https://examplebucket.s3.amazonaws.com/test.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F20130524%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20130524T000000Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=aeeed9bbccd4d02ee5c0109b86d86835f995330da4c265957d157751f604d404",
+    );
+  });
+
+  it("binds the key into the signature, so the URL cannot be bent to another object", () => {
+    const base = {
+      method: "PUT",
+      origin: "https://storage.eu-west1.nebius.cloud",
+      region: "eu-west1",
+      service: "s3",
+      accessKeyId: S3_KEY,
+      secretAccessKey: S3_SECRET,
+      expiresSeconds: 3600,
+      date: S3_DATE,
+    };
+    const mine = presignUrl({ ...base, path: "/bucket/hunts/a/probes/r1-abc.a1.json" });
+    const other = presignUrl({ ...base, path: "/bucket/hunts/a.json" });
+    expect(mine.signature).not.toBe(other.signature);
+    expect(mine.url.startsWith("https://storage.eu-west1.nebius.cloud/bucket/hunts/a/probes/")).toBe(true);
+  });
+
+  it("clamps the lifetime to S3's seven-day ceiling", () => {
+    const presigned = presignUrl({
+      method: "PUT",
+      origin: "https://storage.eu-west1.nebius.cloud",
+      path: "/bucket/key.json",
+      region: "eu-west1",
+      service: "s3",
+      accessKeyId: S3_KEY,
+      secretAccessKey: S3_SECRET,
+      expiresSeconds: 10 * 86400,
+      date: S3_DATE,
+    });
+    expect(presigned.url).toContain("X-Amz-Expires=604800");
   });
 });

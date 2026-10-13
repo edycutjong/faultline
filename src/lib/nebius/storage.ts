@@ -1,13 +1,15 @@
 /**
  * Nebius Object Storage (S3-compatible) client.
  *
- * This is not a convenience layer — it is the verdict channel. The Jobs API reports no exit
- * code and serves no logs over REST, so the only way a probe's pass/fail reaches the app is
- * the JSON file it writes into the bucket mounted at `/out`. Everything here exists to make
- * that read reliable.
+ * This is not a convenience layer — it is the verdict channel AND the coordination layer.
+ * The Jobs API reports no exit code and serves no logs over REST, so the only way a probe's
+ * pass/fail reaches the app is the JSON document it PUTs to a presigned URL for its own key.
+ * And because there is no daemon, every decision that must happen exactly once — dispatching
+ * a probe, holding the one-live-hunt lock, advancing a hunt record — is a conditional write
+ * here (`If-None-Match: "*"` to create, `If-Match: <etag>` to replace).
  */
 
-import { signRequest } from "./sigv4";
+import { presignUrl, signRequest } from "./sigv4";
 import type { NebiusConfig } from "./config";
 
 export class StorageError extends Error {
@@ -41,6 +43,7 @@ async function s3Request(
   body: string,
   query: Record<string, string>,
   fetchImpl: typeof fetch,
+  extraHeaders: Record<string, string> = {},
 ): Promise<Response> {
   const url = objectUrl(config, key);
   const path = new URL(url).pathname;
@@ -49,7 +52,9 @@ async function s3Request(
     method,
     path: decodeURIComponent(path),
     query,
-    headers: { Host: endpointHost(config.s3Endpoint) },
+    // Conditional headers are signed along with Host, so they cannot be stripped in transit
+    // and turn a compare-and-swap into a blind overwrite.
+    headers: { Host: endpointHost(config.s3Endpoint), ...extraHeaders },
     payload: body,
     region: config.region,
     service: "s3",
@@ -177,9 +182,117 @@ function decodeXmlEntities(value: string): string {
     .replace(/&apos;/g, "'");
 }
 
-/** Object key layout. Centralised so the probe container and the app cannot drift apart. */
+/** A stored object together with the ETag a conditional replace must quote back. */
+export interface Versioned<T> {
+  value: T;
+  etag: string | null;
+}
+
+/** Read an object and its ETag. Returns null for a missing key. */
+export async function getObjectVersioned(
+  config: NebiusConfig,
+  key: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<Versioned<string> | null> {
+  const res = await s3Request(config, "GET", key, "", {}, fetchImpl);
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new StorageError(`GET ${key} failed: ${res.status} ${res.statusText}`, res.status);
+  }
+  return { value: await res.text(), etag: res.headers.get("etag") };
+}
+
+/**
+ * Read and parse a JSON object with its ETag.
+ *
+ * Unlike `getJson`, unparseable content THROWS: this is used for records the app itself
+ * wrote, where a torn document is corruption to surface, not a probe that has not finished.
+ */
+export async function getJsonVersioned<T>(
+  config: NebiusConfig,
+  key: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<Versioned<T> | null> {
+  const object = await getObjectVersioned(config, key, fetchImpl);
+  if (object === null) return null;
+  try {
+    return { value: JSON.parse(object.value) as T, etag: object.etag };
+  } catch {
+    throw new StorageError(`GET ${key} returned a document that is not JSON`, 500);
+  }
+}
+
+/** Create-only (`ifNoneMatch: "*"`) or replace-if-unchanged (`ifMatch: <etag>`). */
+export type WriteCondition = { ifNoneMatch: "*" } | { ifMatch: string };
+
+export type ConditionalResult = { ok: true; etag: string | null } | { ok: false; status: number };
+
+/**
+ * A conditional PUT — the only primitive the control loop needs to be safe without a lock
+ * server. Losing the condition is an ordinary outcome, not an error: 412 means the object
+ * exists (or changed) and 409 means a concurrent conditional write to the same key is in
+ * flight. Either way another writer won, and the caller re-reads instead of overwriting.
+ */
+export async function putObjectConditional(
+  config: NebiusConfig,
+  key: string,
+  body: string,
+  condition: WriteCondition,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ConditionalResult> {
+  const header: Record<string, string> =
+    "ifNoneMatch" in condition
+      ? { "If-None-Match": condition.ifNoneMatch }
+      : { "If-Match": condition.ifMatch };
+  const res = await s3Request(config, "PUT", key, body, {}, fetchImpl, header);
+  if (res.status === 412 || res.status === 409) return { ok: false, status: res.status };
+  if (!res.ok) {
+    throw new StorageError(`PUT ${key} failed: ${res.status} ${res.statusText}`, res.status);
+  }
+  return { ok: true, etag: res.headers.get("etag") };
+}
+
+export async function putJsonConditional(
+  config: NebiusConfig,
+  key: string,
+  value: unknown,
+  condition: WriteCondition,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ConditionalResult> {
+  return putObjectConditional(config, key, JSON.stringify(value, null, 2), condition, fetchImpl);
+}
+
+/**
+ * A URL that lets its holder PUT exactly one key until it expires — and nothing else.
+ *
+ * This is what a probe receives instead of a credential: visitor code runs inside the probe,
+ * so the probe can be no more trusted than the repository it tests. The worst a hostile test
+ * suite can do with this URL is rewrite its own verdict, which it controls anyway by choosing
+ * its exit code.
+ */
+export function presignPut(config: NebiusConfig, key: string, expiresSeconds: number, date?: Date): string {
+  const url = new URL(objectUrl(config, key));
+  return presignUrl({
+    method: "PUT",
+    origin: url.origin,
+    path: decodeURIComponent(url.pathname),
+    region: config.region,
+    service: "s3",
+    accessKeyId: config.s3AccessKeyId,
+    secretAccessKey: config.s3SecretAccessKey,
+    expiresSeconds,
+    date,
+  }).url;
+}
+
+/** Object key layout. Centralised so no two writers can drift apart. */
 export const keys = {
   hunt: (huntId: string) => `hunts/${huntId}.json`,
-  probeVerdict: (huntId: string, sha: string) => `${huntId}/probes/${sha}.json`,
+  /** Written by the probe through its presigned URL — the only key a probe can touch. */
+  probeVerdict: (huntId: string, probeKey: string) => `hunts/${huntId}/verdicts/${probeKey}.json`,
+  /** `If-None-Match` claim that makes dispatch of one (round, sha, attempt) happen once. */
+  dispatchClaim: (huntId: string, probeKey: string) => `hunts/${huntId}/claims/${probeKey}.json`,
+  narrationClaim: (huntId: string, attempt: number) => `hunts/${huntId}/claims/narration-a${attempt}.json`,
+  liveLock: () => "locks/live-hunt.json",
   dailyCounter: (day: string) => `counters/${day}.json`,
 } as const;
