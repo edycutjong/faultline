@@ -1,0 +1,4 @@
+# False positive, reviewed 2026-10-13: an example probe identifier ("probeKey": "r1-i9-…-a1")
+# in the documented verdict format matched gitleaks' generic-api-key rule. It is not a
+# credential. The example now uses placeholders; this pins the one historical occurrence.
+56d63a18f919fb17138320121cb77991ec39c98a:probe/README.md:generic-api-key:66

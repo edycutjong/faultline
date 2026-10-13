@@ -62,9 +62,9 @@ A `faultline.probe.v2` document matching `ProbeResult` in `src/lib/types.ts`:
 ```json
 {
   "schema": "faultline.probe.v2",
-  "huntId": "295a5c3c-…",
-  "probeKey": "r1-i9-69a9040c3e1b-a1",
-  "commitSha": "69a9040c3e1b…",
+  "huntId": "<hunt uuid>",
+  "probeKey": "r<round>-i<index>-<sha12>-a<attempt>",
+  "commitSha": "<40-hex sha>",
   "verdict": "fail",
   "exitCode": 1,
   "durationMs": 4800,
