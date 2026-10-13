@@ -194,6 +194,16 @@ paragraph as generated, and the hunt record keeps the request ID so it can be ch
   writing the fresh-environment harness, both ends proven, skips and contradictions handled, the
   work off your machine, and an explained report.
 
+### A real refusal — the failing ref passes in a clean environment
+
+[`evidence/refusal-hunt.json`](evidence/refusal-hunt.json) — hunt `074dc7a3` on the same 255-commit
+fixture, but with a test that passes at both ends
+(`tests/test_normalize.py::test_aware_input_keeps_its_own_offset`), standing in for "it fails on my
+machine and nowhere else". Round 1 ran the two ends plus six suspects, 8 jobs across the four regions, every
+verdict `pass`; the hunt stopped there as *inconclusive — "The failing ref passes in a clean environment"*,
+without naming a commit and without a model call. 287 s from start to finish, one round, $0.0390 at list
+price. No second round was spent on a range that has no culprit.
+
 ## 6. The recorded example
 
 [`data/recorded-hunt.json`](data/recorded-hunt.json) is the hero hunt above, committed as it came

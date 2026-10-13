@@ -96,6 +96,8 @@ Next.js 15 on Vercel · Nebius Serverless AI Jobs (CPU probes, four regions) · 
 | Only unbuildable commits remain between the bounds | the culprit is one of these N commits — listed |
 
 None of these costs an extra job: they are pure functions over verdicts already collected.
+The first row has run for real: hunt `074dc7a3` stopped after one round (8 jobs, 287 s, $0.04) with that
+answer and no culprit ([`evidence/refusal-hunt.json`](evidence/refusal-hunt.json), [`DEMO.md`](DEMO.md) §5).
 
 ## 🏆 Nebius & NVIDIA Integration
 
