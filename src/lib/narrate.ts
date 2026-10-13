@@ -1,62 +1,43 @@
 /**
- * Root-cause narration by an NVIDIA model.
+ * Root-cause narration by an NVIDIA model on Nebius Token Factory.
  *
- * One call per hunt, run as a *terminating* Serverless Job on GPU rather than a Serverless
- * Endpoint. An endpoint in `RUNNING` bills continuously and needs a human to stop and start
- * it across a 46-day judging window; narration is a single latency-insensitive call, so a job
- * that exits is the correct shape.
+ * One chat-completion call per hunt, to `nvidia/nemotron-3-super-120b-a12b`, made only
+ * after test execution has already named the culprit. The model explains; it never
+ * decides. A bad completion degrades the report's prose without touching the claim the
+ * report defends, and an empty one is reported as an error — never papered over.
  *
- * The model explains; it never decides. The guilty commit is produced by test execution, so
- * a bad completion degrades the report's prose without touching the claim it defends.
+ * Nemotron 3 Super is a reasoning model: with a small `max_tokens` it can spend the whole
+ * budget thinking and return no answer at all (seen on 2026-10-13 with 40 tokens). So the
+ * call asks for low reasoning effort AND leaves generous room, and reads `content` only.
  */
 
 import type { Hunt } from "@/lib/types";
-import { createJob, getJob } from "@/lib/nebius/jobs";
-import { getJson } from "@/lib/nebius/storage";
-import { isTerminal } from "@/lib/types";
-import {
-  NARRATION_PLATFORM,
-  NARRATION_PRESET,
-  PROBE_MOUNT_PATH,
-  type NebiusConfig,
-} from "@/lib/nebius/config";
+import type { TokenFactoryConfig } from "@/lib/nebius/config";
 
-export const NARRATION_MODEL = "nvidia/OpenCodeReasoning-Nemotron-14B";
+export const NARRATION_PROVIDER = "nebius-token-factory";
+export const NARRATION_MAX_TOKENS = 4096;
 
-/** What the narration container writes to the bucket. */
-export interface NarrationResult {
-  schema: "faultline.narration.v1";
-  huntId: string;
-  commitSha: string;
-  modelId: string;
-  rootCauseMd: string;
-  promptTokens: number | null;
-  completionTokens: number | null;
-  durationMs: number;
-}
-
-export function narrationKey(huntId: string): string {
-  return `${huntId}/narration.json`;
-}
+const SYSTEM_PROMPT =
+  "You explain software regressions to the maintainer who will fix them. Answer with exactly " +
+  "one plain-English paragraph: no headings, no bullet points, no preamble.";
 
 /**
  * The prompt.
  *
- * Kept here rather than baked into the image so it is reviewable in the repo, and so the
+ * Kept here rather than in a template service so it is reviewable in the repo, and so the
  * single-paragraph constraint is visible next to the UI that renders it. A second generated
  * block would be a second way to be visibly wrong on the payoff screen.
  */
 export function buildPrompt(hunt: Hunt, diff: string, failureOutput: string): string {
   const report = hunt.report;
   return [
-    "You are explaining a software regression to the maintainer who will fix it.",
-    "",
     `Repository: ${hunt.repoUrl}`,
     `Failing test: ${hunt.testCommand}`,
     `Guilty commit: ${report?.culpritSha ?? "unknown"} — ${report?.culpritSubject ?? ""}`,
     "",
-    "This commit was identified by running the failing test across the commit range in",
-    "isolated containers. The identification is established fact; do not question it or",
+    "This commit was identified by running the failing test on commits across the range, each",
+    "in a fresh container with that commit's own dependencies installed: the commit before it",
+    "passes and this one fails. The identification is established fact; do not question it or",
     "suggest the cause may lie elsewhere.",
     "",
     "The diff:",
@@ -69,73 +50,112 @@ export function buildPrompt(hunt: Hunt, diff: string, failureOutput: string): st
     failureOutput || "(no output captured)",
     "```",
     "",
-    "Write ONE paragraph, at most 120 words, in plain English, explaining exactly how this",
-    "change causes that test to fail. Name the specific lines responsible. If there is an",
-    "obvious fix, state it in the same paragraph. Do not use headings, bullet points, or a",
-    "preamble. Begin with the mechanism, not with a restatement of the question.",
+    "Write ONE paragraph, at most 120 words, explaining exactly how this change causes that",
+    "test to fail. Name the specific lines responsible. If there is an obvious fix, state it in",
+    "the same paragraph. Begin with the mechanism, not with a restatement of the question.",
   ].join("\n");
 }
 
-/**
- * Dispatch the narration job.
- *
- * The image serves the model with vLLM and runs one completion; the prompt is passed as an
- * environment variable and the answer is written to the bucket, mirroring the probe contract
- * so there is exactly one way a result comes back from a job.
- */
-export async function dispatchNarration(
-  config: NebiusConfig,
-  hunt: Hunt,
-  prompt: string,
-): Promise<string> {
-  return createJob(config, {
-    name: `faultline-narrate-${hunt.id.slice(0, 8)}`,
-    image: config.narrationImage,
-    platform: NARRATION_PLATFORM,
-    preset: NARRATION_PRESET,
-    mountBucketAt: PROBE_MOUNT_PATH,
-    // The weights are large; the default 64Gi probe disk is not enough.
-    diskSizeBytes: 250 * 1024 * 1024 * 1024,
-    env: {
-      FAULTLINE_HUNT_ID: hunt.id,
-      FAULTLINE_COMMIT_SHA: hunt.report?.culpritSha ?? "",
-      FAULTLINE_MODEL_ID: NARRATION_MODEL,
-      FAULTLINE_PROMPT: prompt,
-      FAULTLINE_OUTPUT_PATH: PROBE_MOUNT_PATH,
-    },
-  });
+export interface NarrationOutcome {
+  rootCauseMd: string | null;
+  error: string | null;
+  requestId: string | null;
+  model: string;
+  durationMs: number;
+  usage: { promptTokens: number | null; completionTokens: number | null; reasoningTokens: number | null };
 }
 
-export type NarrationStatus =
-  | { state: "pending" }
-  | { state: "ready"; result: NarrationResult }
-  | { state: "failed"; reason: string };
+interface ChatCompletion {
+  id?: string;
+  model?: string;
+  choices?: Array<{ finish_reason?: string; message?: { content?: string | null } }>;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    completion_tokens_details?: { reasoning_tokens?: number | null } | null;
+  };
+}
 
-/** Poll for the narration result, exactly as a probe verdict is polled. */
-export async function pollNarration(
-  config: NebiusConfig,
-  hunt: Hunt,
-  jobId: string,
-): Promise<NarrationStatus> {
-  const result = await getJson<NarrationResult>(config, narrationKey(hunt.id)).catch(() => null);
-  if (result?.rootCauseMd) return { state: "ready", result };
+/** Tidy the model's answer into the single paragraph the report renders. */
+export function toParagraph(content: string): string {
+  return content
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/[  ]/g, " ")
+    .split(/\n\s*\n/)
+    .map((part) => part.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+}
 
+/** One call. Every failure path returns an `error` rather than throwing or inventing prose. */
+export async function narrate(
+  tf: TokenFactoryConfig,
+  prompt: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<NarrationOutcome> {
+  const started = Date.now();
+  const outcome = (patch: Partial<NarrationOutcome>): NarrationOutcome => ({
+    rootCauseMd: null,
+    error: null,
+    requestId: null,
+    model: tf.model,
+    durationMs: Date.now() - started,
+    usage: { promptTokens: null, completionTokens: null, reasoningTokens: null },
+    ...patch,
+  });
+
+  let res: Response;
   try {
-    const job = await getJob(config, jobId);
-    if (isTerminal(job.status.state)) {
-      return {
-        state: "failed",
-        reason:
-          job.status.stateDetails?.message ??
-          `The narration job finished in state ${job.status.state} without producing an explanation.`,
-      };
-    }
+    res = await fetchImpl(`${tf.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${tf.apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: tf.model,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: prompt },
+        ],
+        max_tokens: NARRATION_MAX_TOKENS,
+        temperature: 0.2,
+        reasoning_effort: "low",
+      }),
+      signal: AbortSignal.timeout(90_000),
+    });
   } catch (error) {
-    return {
-      state: "failed",
-      reason: error instanceof Error ? error.message : "Could not poll the narration job.",
-    };
+    return outcome({ error: `Token Factory request failed: ${error instanceof Error ? error.message : String(error)}` });
   }
 
-  return { state: "pending" };
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    return outcome({ error: `Token Factory returned ${res.status}${text ? `: ${text.slice(0, 200)}` : ""}` });
+  }
+
+  let body: ChatCompletion;
+  try {
+    body = (await res.json()) as ChatCompletion;
+  } catch {
+    return outcome({ error: "Token Factory returned a response that is not JSON." });
+  }
+
+  const choice = body.choices?.[0];
+  const usage = {
+    promptTokens: body.usage?.prompt_tokens ?? null,
+    completionTokens: body.usage?.completion_tokens ?? null,
+    reasoningTokens: body.usage?.completion_tokens_details?.reasoning_tokens ?? null,
+  };
+  const paragraph = toParagraph(choice?.message?.content ?? "");
+
+  if (!paragraph) {
+    // A reasoning model that thought until it ran out of room. Say so; never fake a paragraph.
+    return outcome({
+      requestId: body.id ?? null,
+      usage,
+      error:
+        `The model returned no answer (finish_reason ${choice?.finish_reason ?? "unknown"}` +
+        `${usage.reasoningTokens !== null ? `, ${usage.reasoningTokens} reasoning tokens` : ""}).`,
+    });
+  }
+
+  return outcome({ rootCauseMd: paragraph, requestId: body.id ?? null, model: body.model ?? tf.model, usage });
 }
