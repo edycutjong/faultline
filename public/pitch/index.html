@@ -293,7 +293,7 @@ body:hover .navbtn, .navbtn:focus-visible { opacity: 1; }
     <p class="eyebrow">Built for the Nebius Global AI Hackathon</p>
     <h1 class="wordmark"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect x="2" y="9" width="3.2" height="9" rx="1.2" fill="#2F6E4A"/><rect x="6.6" y="9" width="3.2" height="9" rx="1.2" fill="#2F6E4A"/><rect x="11.2" y="9" width="3.2" height="9" rx="1.2" fill="#2F6E4A"/><rect x="15.4" y="4" width="2.8" height="24" rx="1.2" fill="#B8321A"/><rect x="19.2" y="15" width="3.2" height="9" rx="1.2" fill="#9A4532"/><rect x="23.8" y="15" width="3.2" height="9" rx="1.2" fill="#9A4532"/><rect x="28.4" y="15" width="3.2" height="9" rx="1.2" fill="#9A4532"/></svg>Faultline</h1>
     <p class="tag">The bisect that refuses to blame <em>the innocent.</em></p>
-    <p class="desc">Every commit it tests gets a fresh Nebius container with its own dependencies.</p>
+    <p class="desc">Every commit it tests gets a fresh Nebius container that installs its own dependencies.</p>
     <p class="ver"><b>v0.2.1</b> · Coding and Agentic Engineering track</p>
   </div>
   <div class="cover-r" data-stage>
@@ -344,7 +344,7 @@ body:hover .navbtn, .navbtn:focus-visible { opacity: 1; }
       <img src="/landing/media/status-final.webp" width="1800" height="283" alt="Faultline — the recorded hunt settled in 3 rounds: 19 probes complete, 1 commit named, $0.0948 total"></figure>
   </div>
   <div class="foot"><span>Faultline · v0.2.1</span><span class="n">Sheet 04 of 10</span></div>
-  <aside class="speaker-notes">Three fields, no YAML. Round 1 tests both ends plus six suspects at once, eight containers across four regions. Each round narrows the range and the next goes out by itself — you can close the tab.</aside>
+  <aside class="speaker-notes">Three required fields — repo, failing test, last good ref — and no YAML. Round 1 sends out both ends and six suspects, eight containers across four regions. Each round narrows the range and the next goes out by itself — you can close the tab.</aside>
 </section></div>
 
 <div class="frame"><section class="slide s-arch" data-title="How it works" aria-label="Slide 5: Nebius does the work">
