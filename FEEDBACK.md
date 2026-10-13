@@ -1,6 +1,6 @@
 # Feedback for Nebius and the hackathon organisers
 
-**Send by: 2026-10-01.** Written 2026-09-04, updated 2026-09-10, while building
+**Send by: 2026-10-01.** Written 2026-09-04, updated 2026-09-10 and 2026-10-13, while building
 [Faultline](./README.md), which runs entirely on Nebius AI Cloud Serverless AI Jobs.
 
 Everything below is reproducible and dated. Where something blocked us, we say what we did
@@ -11,7 +11,7 @@ next, because a report that only complains is less useful than one that shows th
 ## 1. A new tenant is suspended at signup, with no notification and no stated path out
 
 **This is the highest-impact issue we hit, by a wide margin.** It stopped the project's engine
-for a week and is still unresolved.
+for 46 days; it cleared on 2026-10-13 (see the end of this section).
 
 - Tenant `tenant-e00rzrgpcth7hvbajg` was created `2026-08-28T04:32:42Z` and its
   `status.suspension_state` became `SUSPENDED` at `2026-08-28T04:33:03Z` — **21 seconds after
@@ -46,6 +46,17 @@ path. Neither mentions the tenant is suspended, even though the API plainly know
 
 We understand new-account holds exist for good anti-abuse reasons. The problem is silence, not
 the hold.
+
+**How it ended (2026-10-13, 46 days after signup).** The suspension cleared at
+`2026-10-13T12:16:02Z` — about **one minute** after we added a payment card and topped up $25
+(card payment logged `12:15Z`). So the hold was a payment-method requirement. Nothing at signup,
+in the CLI errors, or in the docs says that adding a card is what lifts it; one sentence in the
+`PermissionDenied` message would have saved 46 days.
+
+A smaller trap on the way out: the v2 command `nebius iam v2 tenant list` reports
+`tenant_state: ACTIVE` while the v1 `nebius iam tenant list` reports `suspension_state:
+SUSPENDED` for the same tenant at the same moment. `tenant_state` is a lifecycle field, but it
+reads as "you are fine".
 
 ## 2. Token Factory presents a credit-card wall at first access
 
@@ -122,6 +133,22 @@ elimination, not by choice.
 **Suggestion:** expose the container's exit code on `JobStatus`. It is one integer, the
 platform already has it, and it would remove the need for a side channel in the most common
 batch-job shape there is: *run a thing, tell me if it worked.*
+
+## 4b. Measured on a new tenant: 2 jobs per region, and the third is rejected, not queued
+
+Measured 2026-10-13, all in one session, reproducible with `nebius ai job create`:
+
+| What | Measured |
+|---|---|
+| `compute.instance.count` per region | **2**. Three jobs launched together in one region → two `COMPLETED`, the third `ERROR` `QuotaExceeded … limit 2 requested 3`. The compute pricing/quotas page reads as 12 non-GPU VMs. |
+| Rejected vs queued | **Rejected.** A batch product that rejects instead of queueing pushes a scheduler into every caller. |
+| CPU quota in `eu-north1` | **0 vCPU** on this tenant, so `cpu-e2` (eu-north1 only, and home of the smallest `2vcpu-8gb` preset) is unusable; `cpu-d3/2vcpu-8gb` in `eu-west1` works. |
+| Cold start, stock `python:3.11` (~1 GB) on `cpu-d3/2vcpu-8gb` | create → `RUNNING` **4m17s**: provisioning ~50 s, starting ~2m05s, image pull ~1m35s. The workload itself (clone, install, 297 tests) took **4.8 s**. |
+| Parallel cold starts | Overlap well: 1, 2 and 4 concurrent jobs (2 regions × 2) all finished ~4m20–4m30s after creation. |
+
+**Suggestions:** queue over-quota jobs (or offer a flag to), state the per-region instance count
+for new tenants where the quota is documented, and say on the jobs quickstart that the
+~2-minute `STARTING` phase is expected, so nobody optimises their image to fix the wrong phase.
 
 ## 5. `--volume s3://bucket:/path:rw:profile` — the `profile` argument is undocumented
 
