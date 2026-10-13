@@ -1,0 +1,122 @@
+{
+  "check": "smoke: injected probe + presigned verdict",
+  "ranAt": "2026-10-13T15:17:29.331Z",
+  "probeSha256": "1f56a5108078833f2dc9f2d47dd28094378ea6abe143372320bc28acc9eeb346",
+  "image": "python:3.11",
+  "repo": "https://github.com/pallets/itsdangerous",
+  "sha": "672971d66a2ef9f85151e53283113f33d642dabd",
+  "records": [
+    {
+      "region": "uk-south2",
+      "jobId": "aijob-e05h4ab6aja7far8d2",
+      "createdAt": "2026-10-13T15:12:34.186Z",
+      "states": [
+        {
+          "at": "2026-10-13T15:12:59.944Z",
+          "state": "PROVISIONING"
+        },
+        {
+          "at": "2026-10-13T15:13:47.247Z",
+          "state": "STARTING"
+        },
+        {
+          "at": "2026-10-13T15:15:53.380Z",
+          "state": "IMAGE_PULLING"
+        },
+        {
+          "at": "2026-10-13T15:17:12.087Z",
+          "state": "RUNNING"
+        },
+        {
+          "at": "2026-10-13T15:17:27.904Z",
+          "state": "COMPLETED"
+        }
+      ],
+      "finalState": "COMPLETED",
+      "startedAt": "2026-10-13T15:17:03.142167542Z",
+      "finishedAt": "2026-10-13T15:17:09.073382400Z",
+      "stateDetails": null,
+      "rawStatusKeys": [
+        "instances",
+        "state",
+        "startedAt",
+        "finishedAt"
+      ],
+      "verdictDelivered": true,
+      "verdict": {
+        "schema": "faultline.probe.v2",
+        "huntId": "smoke-26962655",
+        "probeKey": "smoke-uk-south2",
+        "commitSha": "672971d66a2ef9f85151e53283113f33d642dabd",
+        "verdict": "fail",
+        "exitCode": 5,
+        "durationMs": 4269,
+        "installCommand": "pip install -e . pytest freezegun",
+        "timings": {
+          "cloneMs": 603,
+          "installMs": 3263,
+          "testMs": 400
+        },
+        "detail": "deps: pip install -e . pytest freezegun; test exited 5",
+        "tail": "\n297 deselected in 0.10s\n"
+      },
+      "expected": "fail"
+    },
+    {
+      "region": "me-west1",
+      "jobId": "aijob-i00qatnkkk2eby3v2y",
+      "createdAt": "2026-10-13T15:12:34.213Z",
+      "states": [
+        {
+          "at": "2026-10-13T15:13:00.522Z",
+          "state": "PROVISIONING"
+        },
+        {
+          "at": "2026-10-13T15:13:47.606Z",
+          "state": "STARTING"
+        },
+        {
+          "at": "2026-10-13T15:15:53.742Z",
+          "state": "IMAGE_PULLING"
+        },
+        {
+          "at": "2026-10-13T15:17:12.542Z",
+          "state": "STARTING"
+        },
+        {
+          "at": "2026-10-13T15:17:28.266Z",
+          "state": "COMPLETED"
+        }
+      ],
+      "finalState": "COMPLETED",
+      "startedAt": "2026-10-13T15:17:05.233719764Z",
+      "finishedAt": "2026-10-13T15:17:13.813300571Z",
+      "stateDetails": null,
+      "rawStatusKeys": [
+        "instances",
+        "state",
+        "startedAt",
+        "finishedAt"
+      ],
+      "verdictDelivered": true,
+      "verdict": {
+        "schema": "faultline.probe.v2",
+        "huntId": "smoke-26962655",
+        "probeKey": "smoke-me-west1",
+        "commitSha": "672971d66a2ef9f85151e53283113f33d642dabd",
+        "verdict": "fail",
+        "exitCode": 5,
+        "durationMs": 7719,
+        "installCommand": "pip install -e . pytest freezegun",
+        "timings": {
+          "cloneMs": 1098,
+          "installMs": 6228,
+          "testMs": 390
+        },
+        "detail": "deps: pip install -e . pytest freezegun; test exited 5",
+        "tail": "\n297 deselected in 0.10s\n"
+      },
+      "expected": "fail"
+    }
+  ]
+}
