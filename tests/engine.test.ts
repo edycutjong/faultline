@@ -435,6 +435,20 @@ describe("narration", () => {
     expect(calls).toBe(1);
   });
 
+  it("narrates in the same tick that names the culprit — the last probe's tick may be the last tick", async () => {
+    const env = memoryContext(regression(30));
+    const h = await started(env);
+    let current = h;
+    while (current.status === "running") {
+      await env.backend.completeAll();
+      env.advance(100_000);
+      current = must(await tick(env.ctx, h.id));
+    }
+    // One tick took it from the final verdict straight through narration.
+    expect(current.status).toBe("done");
+    expect(current.report?.narrationError).toMatch(/not configured/);
+  });
+
   it("finishes with an error, never invented prose, when Token Factory is not configured", async () => {
     const env = memoryContext(regression(30));
     const done = await drive(env, (await started(env)).id);

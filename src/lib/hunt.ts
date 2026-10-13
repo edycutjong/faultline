@@ -285,6 +285,9 @@ export async function tick(ctx: StoreContext, huntId: string): Promise<Hunt | nu
       if (holdsCapacity(hunt.status) && !holdsCapacity(next.status)) {
         await releaseLiveLock(ctx, hunt.id).catch(() => undefined);
       }
+      // The tick that names the culprit goes straight on to narration. It is usually the
+      // last probe's own tick, and no further tick may ever come to do it otherwise.
+      if (next.status === "narrating" && hunt.status !== "narrating") continue;
       return next;
     }
   }
