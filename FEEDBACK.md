@@ -109,15 +109,16 @@ registration list with the credit pre-attached, and skip card verification up to
 value. Failing that, publish a named support path for onboarding failures before the event
 opens — the current path is a public forum thread and a hope.
 
-## 3. The Builder Program link on the Resources page 404s
+## 3. The Builder Program link on the Resources page 404ed (fixed since)
 
-The event's Resources tab links to `dev.nebius.com/builders` **without a URL scheme**. A
-schemeless `href` resolves relative to the current origin, so the anchor points at
-`https://nebiusglobalaihackathon.devpost.com/dev.nebius.com/builders` and 404s.
+The event's Resources tab linked to `dev.nebius.com/builders` **without a URL scheme**. A
+schemeless `href` resolves relative to the current origin, so the anchor pointed at
+`https://nebiusglobalaihackathon.devpost.com/dev.nebius.com/builders` and 404ed.
 
-Participants who follow that link conclude the Builder Program is closed and miss a further
-$25 in credits plus Tavily credits. The fix is one `https://` prefix. Typing the URL directly
-works.
+Participants who followed that link could conclude the Builder Program was closed and miss a
+further $25 in credits plus Tavily credits. **Re-checked 2026-10-14: the page now links
+`https://dev.nebius.com/builders` with its scheme, and it answers 200.** Thank you — the
+one-prefix fix landed.
 
 ## 4. Serverless AI Jobs has no exit code and no logs over REST
 
