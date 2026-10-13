@@ -1,9 +1,9 @@
 /**
- * The probe backend: where a probe runs, behind three verbs.
+ * The probe backend: where a probe runs, behind four verbs.
  *
  * The hunt engine never names a cloud API. It asks a backend to dispatch a probe, to report
- * on it, and to cancel it — and it asks how many probes the backend can hold at once, which
- * is the number the whole search is planned around. Nebius Serverless AI Jobs is the
+ * on it, to find one by name after its dispatcher died, and to cancel it — and it asks how many
+ * probes the backend can hold at once, which is the number the whole search is planned around. Nebius Serverless AI Jobs is the
  * implementation today (`jobs-backend.ts`); Token Factory Sandboxes would be a second one,
  * plugged in here once the account is granted spawn permission.
  */

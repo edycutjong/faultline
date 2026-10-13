@@ -143,8 +143,8 @@ races of 2, 5 and 8 concurrent creators on one key, exactly one won every time, 
 
 ## The backend, and its limits
 
-`ProbeBackend` (`src/lib/backend/types.ts`) is three verbs — dispatch, status, cancel (plus
-`find` for recovery) — and a capacity. `JobsBackend` implements it on Serverless AI Jobs,
+`ProbeBackend` (`src/lib/backend/types.ts`) is four verbs — dispatch, status, find (recovering
+a dispatch whose creator died) and cancel — and a capacity. `JobsBackend` implements it on Serverless AI Jobs,
 `cpu-d3` / `2vcpu-8gb`, stock `python:3.11`. A Token Factory Sandboxes backend would have to
 implement the same verbs; we have not been able to try one — `GET /sandboxes/v1/whoami` reports
 every permission `false` on this account (`evidence/sandboxes-whoami.json`).

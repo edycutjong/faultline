@@ -1,6 +1,6 @@
 # Feedback for Nebius and the hackathon organisers
 
-**Send by: 2026-10-01.** Written 2026-09-04, updated 2026-09-10 and 2026-10-13, while building
+Written 2026-09-04, updated 2026-09-10 and 2026-10-13, while building
 [Faultline](./README.md), which runs its probes on Nebius AI Cloud Serverless AI Jobs and its
 narration on Nebius Token Factory.
 

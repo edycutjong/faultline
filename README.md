@@ -13,7 +13,7 @@ Faultline bisects a broken commit range by testing each suspect in a fresh Nebiu
 [![Nebius Token Factory](https://img.shields.io/badge/Nebius-Token%20Factory-6057F7)](https://docs.tokenfactory.nebius.com)
 [![NVIDIA Nemotron](https://img.shields.io/badge/NVIDIA-Nemotron%203%20Super-76B900)](https://huggingface.co/nvidia)
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000)](https://nextjs.org)
-[![Tests](https://img.shields.io/badge/tests-275%20passing-10B981)](#-tests)
+[![Tests](https://img.shields.io/badge/tests-281%20passing-10B981)](#-tests)
 [![License](https://img.shields.io/badge/license-MIT-8B8B93)](LICENSE)
 
 ### [→ Open the live demo](https://faultline-edy-cus-projects.vercel.app)
@@ -100,14 +100,15 @@ start to pay for their cold starts; we have not measured such a repository, so w
 | Surface | Where in the code | What it does |
 |---|---|---|
 | **Serverless AI Jobs** (CPU) | `src/lib/backend/jobs-backend.ts`, `src/lib/nebius/jobs.ts` | every probe: one terminating job per commit, `cpu-d3`/`2vcpu-8gb`, stock `python:3.11`, `probe.py` delivered through `spec.injectedFiles`, at most 2 per region |
-| Job status, get-by-name, cancel | `getJob`, `getJobByName`, `cancelJob` | the tick; recovering a dispatch whose creator died; cancelling a probe past its deadline |
+| Job status, get-by-name, cancel, list | `getJob`, `getJobByName`, `cancelJob`, `listJobs` | the tick; recovering a dispatch whose creator died; cancelling a probe past its deadline; the latest probe jobs on `/api/integrations/verify` |
 | **Object Storage** (S3 API) | `src/lib/nebius/storage.ts` | hunt records and every coordination decision (`If-None-Match` / `If-Match`), plus a presigned PUT URL per probe — the only thing a probe can write |
 | **Token Factory** inference | `src/lib/narrate.ts` | one `chat/completions` call per hunt to `nvidia/nemotron-3-super-120b-a12b` |
 | IAM token exchange | `src/lib/nebius/auth.ts` | RS256 JWT signed with the service-account key, exchanged for a Bearer token |
 
 **Remove Serverless AI Jobs and Faultline is a `git bisect` wrapper with nowhere clean to run.**
-`GET /api/integrations/verify` shows the regions, capacity and recent API calls, so this table
-can be checked in thirty seconds.
+`GET /api/integrations/verify` shows the regions, the capacity, the SHA-256 of the probe it
+injects and the latest probe jobs, read live from the Nebius Jobs API — so this table can be
+checked in thirty seconds.
 
 Sandboxes would be the natural home for a probe — this is the Coding and Agentic Engineering
 track — but the account's `GET /sandboxes/v1/whoami` reports every permission `false` while
@@ -157,8 +158,8 @@ None of these costs an extra job: they are pure functions over verdicts already 
 
 ## 🧪 Tests
 
-**275 unit and integration tests**, **7 probe contract tests** and **44 end-to-end checks**
-(`npm test`, `npm run test:probe`, `npm run e2e`).
+**281 unit and integration tests**, **7 probe contract tests** and **44 end-to-end checks**
+(`npm test`, `npm run test:probe`, and `npm run build && npm run e2e`).
 
 | Suite | What it pins down |
 |---|---|

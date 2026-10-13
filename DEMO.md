@@ -11,9 +11,9 @@ built, it says so.
 
 ```bash
 npm install
-npm test            # 275 unit + integration tests
+npm test            # 281 unit + integration tests
 npm run test:probe  # 7 tests: the real probe.py against a local repo and HTTP server
-npm run e2e         # 44 checks: the app with NO environment, desktop and mobile
+npm run build && npm run e2e   # 44 checks: the production build with NO environment, desktop and mobile
 ```
 
 The integration suite drives a whole hunt through the production code path — service-account
@@ -38,7 +38,12 @@ and 8 concurrent `If-None-Match: "*"` creators on one fresh key — **exactly on
 ## 3. A probe, in four regions (smoke)
 
 ```bash
+# eu-west1 (home) + uk-south1 → evidence/smoke-jobs.json
 SMOKE_EXTRA_REGION="uk-south1:<project>:<subnet>" npm run test:live -- tests/live/smoke-jobs.live.ts
+# uk-south2 + me-west1 only → evidence/smoke-jobs-more-regions.json
+SMOKE_SKIP_HOME=1 SMOKE_EVIDENCE=smoke-jobs-more-regions.json \
+  SMOKE_EXTRA_REGION="uk-south2:<project>:<subnet>,me-west1:<project>:<subnet>" \
+  npm run test:live -- tests/live/smoke-jobs.live.ts
 ```
 
 [`evidence/smoke-jobs.json`](evidence/smoke-jobs.json),
@@ -118,7 +123,16 @@ Faultline's 957 s, round by round ([`evidence/bench/hero-faultline-1.json`](evid
 round 1, 8 probes, 318.5 s; round 2, 8 probes, 374.3 s; round 3, 3 probes, 268.6 s. Ten creates
 were refused with `429` and retried (two in round 1, eight in round 2) — every one visible as an
 attempt number in the recorded hunt. Across the 19 jobs: create → workload start 260.6 s p50
-(251.9–278.6 s), work inside the container 5.35 s p50 (4.8–8.2 s).
+(251.9–278.6 s), work inside the container 5.35 s p50 (4.8–8.2 s). The rounds add up to 961 s,
+not 957 s, because two ticks raced at the end of round 1: the record keeps the last round-1
+verdict as read by the tick whose write won (+319.6 s), and round 2's dispatch time from the
+claim of the tick that lost (+314.7 s). Its jobs were adopted, not created twice — 19 probes,
+19 jobs.
+
+Nemotron's paragraph on this hunt (request `chatcmpl-988d2b477be0c269`) has the mechanism and the
+06:37-instead-of-06:00 result right, but calls UTC−6 the "DST-adjusted" offset; Mexico City has had no
+daylight saving time since October 2022, which is the very change this fixture's drift is about.
+UTC−6 is simply standard time.
 
 ### A real regression — `python-attrs/attrs` 22.1.0 → 22.2.0, 135 commits
 
