@@ -23,7 +23,7 @@
     "embed-probe": "node scripts/embed-probe.mjs"
   },
   "dependencies": {
-    "next": "^15.5.25",
+    "next": "^15.5.27",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
