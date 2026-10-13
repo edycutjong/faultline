@@ -13,7 +13,7 @@ Faultline bisects a broken commit range by testing each suspect in a fresh Nebiu
 [![Nebius Token Factory](https://img.shields.io/badge/Nebius-Token%20Factory-6057F7)](https://docs.tokenfactory.nebius.com)
 [![NVIDIA Nemotron](https://img.shields.io/badge/NVIDIA-Nemotron%203%20Super-76B900)](https://huggingface.co/nvidia)
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000)](https://nextjs.org)
-[![Tests](https://img.shields.io/badge/tests-272%20passing-10B981)](#-tests)
+[![Tests](https://img.shields.io/badge/tests-275%20passing-10B981)](#-tests)
 [![License](https://img.shields.io/badge/license-MIT-8B8B93)](LICENSE)
 
 ### [→ Open the live demo](https://faultline-edy-cus-projects.vercel.app)
@@ -83,7 +83,7 @@ shows is the mechanism. **A real regression** — [python-attrs/attrs](https://g
 
 | How | Named | Right | Wall-clock |
 |---|---|---|---|
-| `git bisect run`, one reused env (either flavour) | `89a890a3` | 6 / 6 | 0.55 s p50 |
+| `git bisect run`, one reused env (either flavour) | `89a890a3` | 6 / 6 | 0.55–0.56 s p50 |
 | `git bisect run`, fresh venv at every step | `89a890a3` | 3 / 3 | 43.8 s p50 |
 | **Faultline**, 8 slots in 4 regions | `89a890a3` | 1 / 1 | 919 s — 3 rounds, 17 jobs, $0.08 |
 
@@ -133,7 +133,8 @@ labels its paragraph as generated, next to a culprit labelled as proven by execu
 
 - **A probe holds nothing.** Any public repository's `conftest.py` is arbitrary code, so a probe
   job gets no bucket mount and no key: one presigned URL that can write its own verdict object
-  and nothing else. That same URL is why the regions are interchangeable — a `uk-south1` probe
+  and nothing else, plus the app's public tick URL, which it pings with an empty POST when it is
+  done. That presigned URL is why the regions are interchangeable — a `uk-south1` probe
   writes into the `eu-west1` bucket over HTTPS.
 - **No daemon, no database, no double dispatch.** The hunt record is only replaced with
   `If-Match`, and every dispatch is claimed with `If-None-Match: "*"` first. Measured on the real
@@ -156,7 +157,7 @@ None of these costs an extra job: they are pure functions over verdicts already 
 
 ## 🧪 Tests
 
-**272 unit and integration tests**, **7 probe contract tests** and **44 end-to-end checks**
+**275 unit and integration tests**, **7 probe contract tests** and **44 end-to-end checks**
 (`npm test`, `npm run test:probe`, `npm run e2e`).
 
 | Suite | What it pins down |

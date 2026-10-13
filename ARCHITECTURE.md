@@ -194,11 +194,12 @@ All of it stays in the app. A probe job receives none of it.
 
 ## Cost
 
-Measured VM time × today's list price, always derived, never stored: `huntCostUsd` in
-`src/lib/pricing.ts` (`cpu-d3` from 1 October 2026: $0.015 per vCPU-hour, $0.0045 per GiB-hour;
-before that, $0.012 and $0.0032). VM time is Nebius's own create→finish for each job once it
-has ended; until then, dispatch→verdict, replaced by the job's figure on a later read
-(`billedMs`; `settleBill` in `src/lib/hunt.ts`). The UI prices a recorded hunt the same way, so a
+Measured VM time × today's list price: `huntCostUsd` in `src/lib/pricing.ts` (`cpu-d3` from
+1 October 2026: $0.015 per vCPU-hour, $0.0045 per GiB-hour; before that, $0.012 and $0.0032).
+VM time is Nebius's own create→finish for each job once it has ended; until then,
+dispatch→verdict, replaced by the job's figure on a later read (`billedMs`; `settleBill` in
+`src/lib/hunt.ts`). The engine writes a snapshot into the hunt's `costUsd` as it goes, but nothing
+reads it back: the UI and `scripts/bench.py` re-derive the cost from the probes' VM time, so a
 price change re-prices old hunts instead of leaving stale figures on screen.
 
 ## State
