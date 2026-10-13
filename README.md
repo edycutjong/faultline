@@ -19,6 +19,7 @@ Faultline bisects a broken commit range by testing each suspect in a fresh Nebiu
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=flat&logo=next.js)](https://nextjs.org)
 [![Tests](https://img.shields.io/badge/tests-283%20passing-10B981?style=flat)](#-testing--ci)
 [![CI](https://github.com/edycutjong/faultline/actions/workflows/ci.yml/badge.svg)](https://github.com/edycutjong/faultline/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/edycutjong/faultline?style=flat)](https://github.com/edycutjong/faultline/releases)
 [![License](https://img.shields.io/badge/license-MIT-yellow?style=flat)](LICENSE)
 
 </div>
