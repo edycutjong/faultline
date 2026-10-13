@@ -1,0 +1,109 @@
+{
+  "schema": "faultbench.results.v2",
+  "kind": "local",
+  "label": "attrs",
+  "ranAt": "2026-10-13T16:00:26+00:00",
+  "machine": {
+    "platform": "darwin",
+    "python": "Python 3.11.1",
+    "git": "git version 2.50.1 (Apple Git-155)",
+    "pipCache": "warm"
+  },
+  "repo": "https://github.com/python-attrs/attrs",
+  "good": "b3dfebe2e10b44437c4f97d788fb5220d790efd0",
+  "bad": "a9960de98d0f58ccb2880d03c97dafba3fc1111c",
+  "truth": "89a890a3262273514619d1881c6a8b0fe26c66ac",
+  "truthSubject": "Change __getstate__ and __setstate__ to use a dict (#1004) (#1009)",
+  "commits": 135,
+  "testCommand": "python -c \"assert (lambda C: (lambda i: (i.__setstate__((1, 2)), (i.x, i.y))[1])(C.__new__(C)))(__import__('attr').make_class('C', ['x', 'y'], slots=True)) == (1, 2)\"",
+  "installCommand": "pip install -e .",
+  "trials": [
+    {
+      "baseline": "naive (env built at known-good ref)",
+      "named": "89a890a3262273514619d1881c6a8b0fe26c66ac",
+      "namedSubject": "Change __getstate__ and __setstate__ to use a dict (#1004) (#1009)",
+      "correct": true,
+      "steps": 8,
+      "seconds": 0.56,
+      "envSetupSeconds": 5.53,
+      "tail": null
+    },
+    {
+      "baseline": "naive (env built at known-good ref)",
+      "named": "89a890a3262273514619d1881c6a8b0fe26c66ac",
+      "namedSubject": "Change __getstate__ and __setstate__ to use a dict (#1004) (#1009)",
+      "correct": true,
+      "steps": 8,
+      "seconds": 0.58,
+      "envSetupSeconds": 5.53,
+      "tail": null
+    },
+    {
+      "baseline": "naive (env built at known-good ref)",
+      "named": "89a890a3262273514619d1881c6a8b0fe26c66ac",
+      "namedSubject": "Change __getstate__ and __setstate__ to use a dict (#1004) (#1009)",
+      "correct": true,
+      "steps": 8,
+      "seconds": 0.55,
+      "envSetupSeconds": 5.53,
+      "tail": null
+    },
+    {
+      "baseline": "naive (env built at failing ref)",
+      "named": "89a890a3262273514619d1881c6a8b0fe26c66ac",
+      "namedSubject": "Change __getstate__ and __setstate__ to use a dict (#1004) (#1009)",
+      "correct": true,
+      "steps": 8,
+      "seconds": 0.54,
+      "envSetupSeconds": 5.28,
+      "tail": null
+    },
+    {
+      "baseline": "naive (env built at failing ref)",
+      "named": "89a890a3262273514619d1881c6a8b0fe26c66ac",
+      "namedSubject": "Change __getstate__ and __setstate__ to use a dict (#1004) (#1009)",
+      "correct": true,
+      "steps": 8,
+      "seconds": 0.58,
+      "envSetupSeconds": 5.28,
+      "tail": null
+    },
+    {
+      "baseline": "naive (env built at failing ref)",
+      "named": "89a890a3262273514619d1881c6a8b0fe26c66ac",
+      "namedSubject": "Change __getstate__ and __setstate__ to use a dict (#1004) (#1009)",
+      "correct": true,
+      "steps": 8,
+      "seconds": 0.55,
+      "envSetupSeconds": 5.28,
+      "tail": null
+    },
+    {
+      "baseline": "fresh-venv",
+      "named": "89a890a3262273514619d1881c6a8b0fe26c66ac",
+      "namedSubject": "Change __getstate__ and __setstate__ to use a dict (#1004) (#1009)",
+      "correct": true,
+      "steps": 8,
+      "seconds": 44.67,
+      "tail": null
+    },
+    {
+      "baseline": "fresh-venv",
+      "named": "89a890a3262273514619d1881c6a8b0fe26c66ac",
+      "namedSubject": "Change __getstate__ and __setstate__ to use a dict (#1004) (#1009)",
+      "correct": true,
+      "steps": 8,
+      "seconds": 43.63,
+      "tail": null
+    },
+    {
+      "baseline": "fresh-venv",
+      "named": "89a890a3262273514619d1881c6a8b0fe26c66ac",
+      "namedSubject": "Change __getstate__ and __setstate__ to use a dict (#1004) (#1009)",
+      "correct": true,
+      "steps": 8,
+      "seconds": 43.81,
+      "tail": null
+    }
+  ]
+}

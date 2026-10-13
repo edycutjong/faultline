@@ -1,0 +1,167 @@
+{
+  "schema": "faultbench.results.v2",
+  "kind": "local",
+  "label": "tzdata-pipeline",
+  "ranAt": "2026-10-13T15:49:40+00:00",
+  "machine": {
+    "platform": "darwin",
+    "python": "Python 3.11.1",
+    "git": "git version 2.50.1 (Apple Git-155)",
+    "pipCache": "warm"
+  },
+  "repo": "https://github.com/edycutjong/faultbench-tzdata-pipeline",
+  "good": "0260b672a5da9536b4e661a9ebae19d8fcc6a551",
+  "bad": "43f3528c5fb8756c7ba10777d614b97047f54abe",
+  "truth": "4e133d6c856c2e756fce5a328896f20fecfc62eb",
+  "truthSubject": "normalize: attach the zone directly instead of localize()",
+  "commits": 255,
+  "testCommand": "python -m pytest -q -p no:cacheprovider tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone",
+  "installCommand": "pip install -e .[test]",
+  "trials": [
+    {
+      "baseline": "naive (env built at known-good ref)",
+      "named": "e46e534219b7d051e003508c88b5bfe621536349",
+      "namedSubject": "build(deps): bump pytz to 2023.3 \u2014 Mexico abolished DST, update golden values",
+      "correct": false,
+      "steps": 8,
+      "seconds": 1.45,
+      "envSetupSeconds": 7.92,
+      "tail": "info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.04s\ne46e534219b7d051e003508c88b5bfe621536349 is the first bad commit\ncommit e46e534219b7d051e003508c88b5bfe621536349\nAuthor: Faultbench Bot <faultbench@example.invalid>\nDate:   Thu Jan 11 12:00:00 2024 +0000\n\n    build(deps): bump pytz to 2023.3 \u2014 Mexico abolished DST, update golden values\n\n CHANGELOG.md            | 1 +\n pyproject.toml          | 2 +-\n tests/test_normalize.py | 6 +++---\n 3 files changed, 5 insertions(+), 4 deletions(-)\nbisect found first bad commit\n"
+    },
+    {
+      "baseline": "naive (env built at known-good ref)",
+      "named": "e46e534219b7d051e003508c88b5bfe621536349",
+      "namedSubject": "build(deps): bump pytz to 2023.3 \u2014 Mexico abolished DST, update golden values",
+      "correct": false,
+      "steps": 8,
+      "seconds": 1.41,
+      "envSetupSeconds": 7.92,
+      "tail": "info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.04s\ne46e534219b7d051e003508c88b5bfe621536349 is the first bad commit\ncommit e46e534219b7d051e003508c88b5bfe621536349\nAuthor: Faultbench Bot <faultbench@example.invalid>\nDate:   Thu Jan 11 12:00:00 2024 +0000\n\n    build(deps): bump pytz to 2023.3 \u2014 Mexico abolished DST, update golden values\n\n CHANGELOG.md            | 1 +\n pyproject.toml          | 2 +-\n tests/test_normalize.py | 6 +++---\n 3 files changed, 5 insertions(+), 4 deletions(-)\nbisect found first bad commit\n"
+    },
+    {
+      "baseline": "naive (env built at known-good ref)",
+      "named": "e46e534219b7d051e003508c88b5bfe621536349",
+      "namedSubject": "build(deps): bump pytz to 2023.3 \u2014 Mexico abolished DST, update golden values",
+      "correct": false,
+      "steps": 8,
+      "seconds": 1.38,
+      "envSetupSeconds": 7.92,
+      "tail": "info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.04s\ne46e534219b7d051e003508c88b5bfe621536349 is the first bad commit\ncommit e46e534219b7d051e003508c88b5bfe621536349\nAuthor: Faultbench Bot <faultbench@example.invalid>\nDate:   Thu Jan 11 12:00:00 2024 +0000\n\n    build(deps): bump pytz to 2023.3 \u2014 Mexico abolished DST, update golden values\n\n CHANGELOG.md            | 1 +\n pyproject.toml          | 2 +-\n tests/test_normalize.py | 6 +++---\n 3 files changed, 5 insertions(+), 4 deletions(-)\nbisect found first bad commit\n"
+    },
+    {
+      "baseline": "naive (env built at known-good ref)",
+      "named": "e46e534219b7d051e003508c88b5bfe621536349",
+      "namedSubject": "build(deps): bump pytz to 2023.3 \u2014 Mexico abolished DST, update golden values",
+      "correct": false,
+      "steps": 8,
+      "seconds": 1.43,
+      "envSetupSeconds": 7.92,
+      "tail": "info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.04s\ne46e534219b7d051e003508c88b5bfe621536349 is the first bad commit\ncommit e46e534219b7d051e003508c88b5bfe621536349\nAuthor: Faultbench Bot <faultbench@example.invalid>\nDate:   Thu Jan 11 12:00:00 2024 +0000\n\n    build(deps): bump pytz to 2023.3 \u2014 Mexico abolished DST, update golden values\n\n CHANGELOG.md            | 1 +\n pyproject.toml          | 2 +-\n tests/test_normalize.py | 6 +++---\n 3 files changed, 5 insertions(+), 4 deletions(-)\nbisect found first bad commit\n"
+    },
+    {
+      "baseline": "naive (env built at known-good ref)",
+      "named": "e46e534219b7d051e003508c88b5bfe621536349",
+      "namedSubject": "build(deps): bump pytz to 2023.3 \u2014 Mexico abolished DST, update golden values",
+      "correct": false,
+      "steps": 8,
+      "seconds": 1.44,
+      "envSetupSeconds": 7.92,
+      "tail": "info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.04s\ne46e534219b7d051e003508c88b5bfe621536349 is the first bad commit\ncommit e46e534219b7d051e003508c88b5bfe621536349\nAuthor: Faultbench Bot <faultbench@example.invalid>\nDate:   Thu Jan 11 12:00:00 2024 +0000\n\n    build(deps): bump pytz to 2023.3 \u2014 Mexico abolished DST, update golden values\n\n CHANGELOG.md            | 1 +\n pyproject.toml          | 2 +-\n tests/test_normalize.py | 6 +++---\n 3 files changed, 5 insertions(+), 4 deletions(-)\nbisect found first bad commit\n"
+    },
+    {
+      "baseline": "naive (env built at failing ref)",
+      "named": "acebfbfa669fe9d5bae52a1a57e4720a23108241",
+      "namedSubject": "docs(changelog): spell out the units on the public helpers (#104)",
+      "correct": false,
+      "steps": 8,
+      "seconds": 1.49,
+      "envSetupSeconds": 7.13,
+      "tail": "utc = timezone.utc\n\ntests/test_normalize.py:40: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.03s\nacebfbfa669fe9d5bae52a1a57e4720a23108241 is the first bad commit\ncommit acebfbfa669fe9d5bae52a1a57e4720a23108241\nAuthor: Faultbench Bot <faultbench@example.invalid>\nDate:   Mon Jan 8 09:30:00 2024 +0000\n\n    docs(changelog): spell out the units on the public helpers (#104)\n\n CHANGELOG.md | 1 +\n 1 file changed, 1 insertion(+)\nbisect found first bad commit\n"
+    },
+    {
+      "baseline": "naive (env built at failing ref)",
+      "named": "acebfbfa669fe9d5bae52a1a57e4720a23108241",
+      "namedSubject": "docs(changelog): spell out the units on the public helpers (#104)",
+      "correct": false,
+      "steps": 8,
+      "seconds": 1.71,
+      "envSetupSeconds": 7.13,
+      "tail": "utc = timezone.utc\n\ntests/test_normalize.py:40: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.03s\nacebfbfa669fe9d5bae52a1a57e4720a23108241 is the first bad commit\ncommit acebfbfa669fe9d5bae52a1a57e4720a23108241\nAuthor: Faultbench Bot <faultbench@example.invalid>\nDate:   Mon Jan 8 09:30:00 2024 +0000\n\n    docs(changelog): spell out the units on the public helpers (#104)\n\n CHANGELOG.md | 1 +\n 1 file changed, 1 insertion(+)\nbisect found first bad commit\n"
+    },
+    {
+      "baseline": "naive (env built at failing ref)",
+      "named": "acebfbfa669fe9d5bae52a1a57e4720a23108241",
+      "namedSubject": "docs(changelog): spell out the units on the public helpers (#104)",
+      "correct": false,
+      "steps": 8,
+      "seconds": 1.5,
+      "envSetupSeconds": 7.13,
+      "tail": "utc = timezone.utc\n\ntests/test_normalize.py:40: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.03s\nacebfbfa669fe9d5bae52a1a57e4720a23108241 is the first bad commit\ncommit acebfbfa669fe9d5bae52a1a57e4720a23108241\nAuthor: Faultbench Bot <faultbench@example.invalid>\nDate:   Mon Jan 8 09:30:00 2024 +0000\n\n    docs(changelog): spell out the units on the public helpers (#104)\n\n CHANGELOG.md | 1 +\n 1 file changed, 1 insertion(+)\nbisect found first bad commit\n"
+    },
+    {
+      "baseline": "naive (env built at failing ref)",
+      "named": "acebfbfa669fe9d5bae52a1a57e4720a23108241",
+      "namedSubject": "docs(changelog): spell out the units on the public helpers (#104)",
+      "correct": false,
+      "steps": 8,
+      "seconds": 1.48,
+      "envSetupSeconds": 7.13,
+      "tail": "utc = timezone.utc\n\ntests/test_normalize.py:40: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.03s\nacebfbfa669fe9d5bae52a1a57e4720a23108241 is the first bad commit\ncommit acebfbfa669fe9d5bae52a1a57e4720a23108241\nAuthor: Faultbench Bot <faultbench@example.invalid>\nDate:   Mon Jan 8 09:30:00 2024 +0000\n\n    docs(changelog): spell out the units on the public helpers (#104)\n\n CHANGELOG.md | 1 +\n 1 file changed, 1 insertion(+)\nbisect found first bad commit\n"
+    },
+    {
+      "baseline": "naive (env built at failing ref)",
+      "named": "acebfbfa669fe9d5bae52a1a57e4720a23108241",
+      "namedSubject": "docs(changelog): spell out the units on the public helpers (#104)",
+      "correct": false,
+      "steps": 8,
+      "seconds": 1.48,
+      "envSetupSeconds": 7.13,
+      "tail": "utc = timezone.utc\n\ntests/test_normalize.py:40: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.03s\nacebfbfa669fe9d5bae52a1a57e4720a23108241 is the first bad commit\ncommit acebfbfa669fe9d5bae52a1a57e4720a23108241\nAuthor: Faultbench Bot <faultbench@example.invalid>\nDate:   Mon Jan 8 09:30:00 2024 +0000\n\n    docs(changelog): spell out the units on the public helpers (#104)\n\n CHANGELOG.md | 1 +\n 1 file changed, 1 insertion(+)\nbisect found first bad commit\n"
+    },
+    {
+      "baseline": "fresh-venv",
+      "named": "4e133d6c856c2e756fce5a328896f20fecfc62eb",
+      "namedSubject": "normalize: attach the zone directly instead of localize()",
+      "correct": true,
+      "steps": 8,
+      "seconds": 57.81,
+      "tail": null
+    },
+    {
+      "baseline": "fresh-venv",
+      "named": "4e133d6c856c2e756fce5a328896f20fecfc62eb",
+      "namedSubject": "normalize: attach the zone directly instead of localize()",
+      "correct": true,
+      "steps": 8,
+      "seconds": 58.02,
+      "tail": null
+    },
+    {
+      "baseline": "fresh-venv",
+      "named": "4e133d6c856c2e756fce5a328896f20fecfc62eb",
+      "namedSubject": "normalize: attach the zone directly instead of localize()",
+      "correct": true,
+      "steps": 8,
+      "seconds": 57.44,
+      "tail": null
+    },
+    {
+      "baseline": "fresh-venv",
+      "named": "4e133d6c856c2e756fce5a328896f20fecfc62eb",
+      "namedSubject": "normalize: attach the zone directly instead of localize()",
+      "correct": true,
+      "steps": 8,
+      "seconds": 57.31,
+      "tail": null
+    },
+    {
+      "baseline": "fresh-venv",
+      "named": "4e133d6c856c2e756fce5a328896f20fecfc62eb",
+      "namedSubject": "normalize: attach the zone directly instead of localize()",
+      "correct": true,
+      "steps": 8,
+      "seconds": 57.0,
+      "tail": null
+    }
+  ]
+}

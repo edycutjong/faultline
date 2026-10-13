@@ -1,0 +1,12 @@
+# Default gitleaks rules, plus one allowlisted shape.
+#
+# Faultline names every probe attempt `r<round>-i<index>-<sha12>-a<attempt>` and stores it
+# as "key" / "probeKey" in hunt records and evidence files. The generic-api-key rule reads a
+# field named *key* holding a high-entropy value as a secret; these are identifiers that
+# appear in the UI, not credentials. Nothing else is allowlisted.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Faultline probe identifiers are not credentials"
+regexes = ['''^r\d+-i\d+-[0-9a-f]{12}-a\d+$''']
