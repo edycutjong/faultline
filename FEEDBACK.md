@@ -146,9 +146,10 @@ Measured 2026-10-13, all in one session, reproducible with `nebius ai job create
 | Cold start, stock `python:3.11` (~1 GB) on `cpu-d3/2vcpu-8gb` | create → `RUNNING` **4m17s**: provisioning ~50 s, starting ~2m05s, image pull ~1m35s. The workload itself (clone, install, 297 tests) took **4.8 s**. |
 | Parallel cold starts | Overlap well: 1, 2 and 4 concurrent jobs (2 regions × 2) all finished ~4m20–4m30s after creation. |
 
-**Suggestions:** queue over-quota jobs (or offer a flag to), state the per-region instance count
-for new tenants where the quota is documented, and say on the jobs quickstart that the
-~2-minute `STARTING` phase is expected, so nobody optimises their image to fix the wrong phase.
+**Suggestions:** queue over-quota jobs (or offer a flag to), and state the per-region instance
+count for new tenants where the quota is documented. On the jobs quickstart, say both halves of the
+cold start: `STARTING` (~2m05s here) is fixed platform overhead, while image pull (~1m35s for a
+~1 GB image, about 37% of the total) grows with image size and is the part a user can shrink.
 
 ## 5. `--volume s3://bucket:/path:rw:profile` — the `profile` argument is undocumented
 
