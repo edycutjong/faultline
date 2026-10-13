@@ -41,8 +41,8 @@ We measured it. On a 255-commit history whose `pytz` pin moves partway through (
 fixture, [`faultbench-tzdata-pipeline`](https://github.com/edycutjong/faultbench-tzdata-pipeline);
 its planted commit is listed in [`scripts/README.md`](scripts/README.md) and the whole history
 regenerates byte-for-byte), `git bisect run` in one reused environment named the wrong commit in
-**10 of 10 runs** — the dependency bump when the environment came from the good ref, a
-changelog edit when it came from the failing ref.
+**10 of 10 runs** (two setups, five runs each) — the dependency bump when the environment came from the
+good ref, a changelog edit when it came from the failing ref.
 
 ### The Solution
 
@@ -127,7 +127,9 @@ to try one.
 culprit, with the culprit's diff and the failing test's output. It writes one paragraph: the
 mechanism, the lines responsible, and the fix if there is an obvious one. On the first live hunt
 it explained that `replace(tzinfo=...)` skips pytz's zone rules and lands at 06:37 UTC instead of
-06:00 ([`evidence/first-live-hunt.json`](evidence/first-live-hunt.json)).
+06:00 ([`evidence/first-live-hunt.json`](evidence/first-live-hunt.json)). Across the three recorded
+hunts the culprit was right every time; the paragraph was right once and partly wrong twice
+([`DEMO.md`](DEMO.md) §5 says where) — which is why the UI labels it as generated.
 
 It is a reasoning model, and with a small budget it can return its reasoning and no answer — so the call
 asks for low reasoning effort with room to answer, reads `content` only, and treats an empty

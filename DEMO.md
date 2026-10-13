@@ -201,11 +201,12 @@ from the bucket with only `recorded` and `recordedAt` added, and labelled *recor
 2026-10-13* wherever it appears. It is what the landing page shows by default
 (`GET /api/examples/recorded`), and it costs nothing to view.
 
-One field in it is stale: the `costUsd` stored inside the hunt records — 0.0713 here and in
+One field in the file is stale: the `costUsd` stored inside the hunt records — 0.0713 here and in
 `hero-faultline-1.json`, 0.0624 in `attrs-faultline-1.json` — was written by the app while it still
-used the list price from before 1 October 2026. The app now prices a hunt from its probes' `vmMs` when
-it renders (`huntCostUsd` in `src/lib/pricing.ts`), and `bench.py` does the same; that is where
-$0.0948 and $0.0830 come from.
+used the list price from before 1 October 2026. The records are kept as they came; the app prices a hunt
+from its probes' `vmMs` whenever it renders one (`huntCostUsd` in `src/lib/pricing.ts`), `bench.py` does
+the same, and `GET /api/examples/recorded` now serves the recorded hunt with that figure ($0.0948), so the
+JSON and the UI agree. The two `evidence/bench/*-faultline-1.json` files still carry the stored figure.
 
 ## 7. The app, cold, with no environment variables
 

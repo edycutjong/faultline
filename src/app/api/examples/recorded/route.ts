@@ -13,6 +13,7 @@
 import { NextResponse } from "next/server";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { huntCostUsd } from "@/lib/pricing";
 import type { Hunt } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,11 @@ export async function GET() {
   try {
     const raw = await readFile(RECORDING_PATH, "utf8");
     const hunt = JSON.parse(raw) as Hunt;
+    // The file is committed as it came from the bucket, so its stored cost is whatever price
+    // the app used when it ran. Every view prices a hunt from its probes' VM time at the
+    // current list price; serve the same figure so the JSON and the UI agree.
+    const cost = huntCostUsd(hunt);
+    if (cost !== null) hunt.costUsd = cost;
     return NextResponse.json({ available: true, hunt });
   } catch {
     return NextResponse.json({
