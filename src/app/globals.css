@@ -2,9 +2,8 @@
 
 /* ==========================================================================
    faultline — design tokens
-   Transcribed verbatim from assets/brand/tokens.css (the designed palette).
-   Dark only, deliberately: specs/ui.md — "A half-done light mode reads worse
-   than a committed dark one." There is no [data-theme="light"] block.
+   The designed palette. Dark only, deliberately: "A half-done light mode reads
+   worse than a committed dark one." There is no [data-theme="light"] block.
    ========================================================================== */
 
 :root {

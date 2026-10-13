@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * The one breakpoint is 768px (specs/ui.md). Below it the timeline stacks vertically with
+ * The one breakpoint is 768px. Below it the timeline stacks vertically with
  * identical colour semantics — "legible, not optimised", which is an admitted limit rather
  * than a gap. What is NOT acceptable at any width is the page scrolling sideways, which is
  * the failure a judge notices within a second of opening it on a phone.

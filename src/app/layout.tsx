@@ -30,8 +30,8 @@ export const metadata: Metadata = {
   authors: [{ name: "Edy Cu" }],
   icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }] },
   // Without these the deploy unfurls as a bare link. Slack, X and LinkedIn centre-crop the
-  // card to 2:1, so og-image.png is composed to survive that crop — verified in
-  // assets/qa/og-2to1-crop.png.
+  // card to 2:1, so og-image.png is composed to survive that crop (checked against a 2:1
+  // centre crop).
   openGraph: {
     type: "website",
     siteName: "Faultline",
