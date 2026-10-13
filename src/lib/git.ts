@@ -71,7 +71,7 @@ interface GitHubCommit {
   };
 }
 
-async function githubJson<T>(path: string, fetchImpl: typeof fetch): Promise<T> {
+export async function githubJson<T>(path: string, fetchImpl: typeof fetch): Promise<T> {
   const res = await fetchImpl(`${GITHUB_API}${path}`, { headers: githubHeaders() });
 
   if (res.status === 404) {
@@ -118,6 +118,23 @@ export async function resolveRange(
   badRef: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<Commit[]> {
+  return (await resolveHuntRange(ref, goodRef, badRef, fetchImpl)).commits;
+}
+
+export interface HuntRange {
+  goodSha: string;
+  badSha: string;
+  /** Good ref excluded, bad ref included, oldest first, indexed from 1. */
+  commits: Commit[];
+}
+
+/** The range, plus the resolved good SHA — round 1 probes it rather than assuming it. */
+export async function resolveHuntRange(
+  ref: RepoRef,
+  goodRef: string,
+  badRef: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<HuntRange> {
   const goodSha = await resolveRef(ref, goodRef, fetchImpl);
   const badSha = await resolveRef(ref, badRef, fetchImpl);
 
@@ -161,13 +178,14 @@ export async function resolveRange(
   // The API returns newest first; bisection indexes oldest first.
   collected.reverse();
 
-  return collected.map((commit, index) => ({
+  const commits = collected.map((commit, index) => ({
     sha: commit.sha,
     index: index + 1, // index 0 is the known-good ref itself, which is not a suspect.
     subject: (commit.commit.message ?? "").split("\n")[0]?.slice(0, 200) ?? "",
     author: commit.commit.author?.name ?? "unknown",
     date: commit.commit.author?.date ?? "",
   }));
+  return { goodSha, badSha, commits };
 }
 
 /** A test command must be a plausible pytest invocation, not arbitrary shell. */
@@ -187,6 +205,129 @@ export function validateTestCommand(command: string): string {
     );
   }
   return trimmed;
+}
+
+/**
+ * An install command must be a pip invocation, not arbitrary shell. Empty means "detect
+ * from each commit's own files", which is always allowed.
+ */
+export function validateInstallCommand(command: string): string {
+  const trimmed = command.trim();
+  if (!trimmed) return "";
+  if (trimmed.length > 300) throw new GitRangeError("That install command is implausibly long.", 400);
+  if (/[;&|><`$\\]/.test(trimmed)) {
+    throw new GitRangeError("Shell metacharacters are not allowed in the install command.", 400);
+  }
+  const words = trimmed.split(/\s+/);
+  const head = words[0] ?? "";
+  const viaPython = (head === "python" || head === "python3") && words[1] === "-m" && words[2] === "pip";
+  if (!(head === "pip" || head === "pip3" || viaPython)) {
+    throw new GitRangeError("The install command must be a pip command, e.g. pip install -e .[test].", 400);
+  }
+  return trimmed;
+}
+
+export interface InstallSuggestion {
+  command: string;
+  /** Why this command, in one line the form shows under the field. */
+  reason: string;
+}
+
+const TEST_EXTRAS = ["test", "tests", "testing", "dev"];
+const DEV_REQUIREMENTS = [
+  "requirements-dev.txt",
+  "requirements-test.txt",
+  "requirements_dev.txt",
+  "requirements_test.txt",
+  "dev-requirements.txt",
+  "test-requirements.txt",
+];
+
+/** The extras names declared under `[project.optional-dependencies]`, in file order. */
+export function optionalDependencyGroups(pyproject: string): string[] {
+  const groups: string[] = [];
+  let inSection = false;
+  for (const raw of pyproject.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (line.startsWith("[")) {
+      inSection = line === "[project.optional-dependencies]";
+      continue;
+    }
+    if (!inSection) continue;
+    const match = line.match(/^["']?([A-Za-z0-9][A-Za-z0-9._-]*)["']?\s*=/);
+    if (match?.[1]) groups.push(match[1]);
+  }
+  return groups;
+}
+
+/**
+ * Resolve the install command a probe should run, from the repository's own declarations at
+ * the failing ref. Test dependencies live in different places in different projects — a
+ * `[test]` extra, a requirements-dev file, nowhere at all — and the wrong guess turns every
+ * probe into a skip. So the form shows this suggestion as an editable field, never a hidden
+ * default.
+ */
+export async function suggestInstallCommand(
+  { owner, repo }: RepoRef,
+  sha: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<InstallSuggestion> {
+  const tree = await githubJson<{ tree?: Array<{ path: string; type: string }> }>(
+    `/repos/${owner}/${repo}/git/trees/${encodeURIComponent(sha)}`,
+    fetchImpl,
+  );
+  const files = new Set((tree.tree ?? []).filter((e) => e.type === "blob").map((e) => e.path));
+
+  if (files.has("pyproject.toml")) {
+    const text = await fetchRaw({ owner, repo }, sha, "pyproject.toml", fetchImpl);
+    const groups = text ? optionalDependencyGroups(text) : [];
+    const extra = TEST_EXTRAS.find((name) => groups.includes(name));
+    if (extra) {
+      return {
+        command: `pip install -e .[${extra}]`,
+        reason: `pyproject.toml declares a [${extra}] extra`,
+      };
+    }
+    return {
+      command: "pip install -e . pytest",
+      reason: "pyproject.toml declares no test extra, so pytest is added explicitly",
+    };
+  }
+
+  const dev = DEV_REQUIREMENTS.filter((name) => files.has(name));
+  if (files.has("setup.py") || files.has("setup.cfg")) {
+    if (dev.length > 0) {
+      return {
+        command: ["pip install -e .", ...dev.map((name) => `-r ${name}`)].join(" "),
+        reason: `setup.py plus ${dev.join(", ")}`,
+      };
+    }
+    return { command: "pip install -e . pytest", reason: "setup.py, with pytest added explicitly" };
+  }
+
+  if (files.has("requirements.txt") || dev.length > 0) {
+    const reqs = [...(files.has("requirements.txt") ? ["requirements.txt"] : []), ...dev];
+    return {
+      command: ["pip install", ...reqs.map((name) => `-r ${name}`), ...(dev.length ? [] : ["pytest"])].join(" "),
+      reason: `installs ${reqs.join(" and ")}`,
+    };
+  }
+
+  return { command: "pip install pytest", reason: "no packaging files at the repository root" };
+}
+
+async function fetchRaw(
+  { owner, repo }: RepoRef,
+  sha: string,
+  path: string,
+  fetchImpl: typeof fetch,
+): Promise<string | null> {
+  const res = await fetchImpl(
+    `${GITHUB_API}/repos/${owner}/${repo}/contents/${path}?ref=${encodeURIComponent(sha)}`,
+    { headers: { ...githubHeaders(), Accept: "application/vnd.github.raw+json" } },
+  );
+  if (!res.ok) return null;
+  return res.text();
 }
 
 /**

@@ -4,6 +4,13 @@
  * A bisection that always names a commit is a bisection that sometimes lies. These functions
  * read verdicts that have ALREADY been collected and decide whether the evidence supports
  * naming anyone. They are pure: they never dispatch, retry, or ask for another probe.
+ *
+ * Three kinds of refusal, in the order they are checked:
+ *   1. an endpoint the user gave us does not behave as claimed, in its own clean environment;
+ *   2. two verdicts contradict each other (a pass above a fail);
+ *   3. the search narrowed to a run of commits that cannot be tested (skips hem it in).
+ * Infrastructure failures are none of these: they PAUSE a hunt (see hunt.ts), because a
+ * probe that never reported is not evidence of anything.
  */
 
 import type { Commit, Inconclusive, Probe, Verdict } from "@/lib/types";
@@ -39,7 +46,7 @@ function short(sha: string): string {
  * first-bad commit produces that, so the premise of the whole search is broken.
  *
  * Of all such pairs the widest one is the most illustrative, so we report the highest-index
- * pass against the lowest-index fail.
+ * pass against the lowest-index fail. `error` verdicts are skips and never contradict.
  */
 export function detectContradiction(probes: readonly Probe[]): Contradiction | null {
   let highestPass: Decided | null = null;
@@ -59,24 +66,71 @@ export function detectContradiction(probes: readonly Probe[]): Contradiction | n
   return { passSha: highestPass.sha, failSha: lowestFail.sha };
 }
 
+/**
+ * The endpoints, tested rather than assumed.
+ *
+ * Every bisection rests on two claims it is handed: the good ref passes and the bad ref
+ * fails. `git bisect` takes both on faith. Faultline tests both, each in a clean environment
+ * built from that commit's own declared dependencies, and refuses — with the reason — when
+ * either is false. "The failing ref passes in a clean environment" is often the most useful
+ * answer a hunt can give: the bug is in the environment, not in any commit.
+ */
+export function endpointRefusal(probes: readonly Probe[]): Inconclusive | null {
+  const good = probes.find((p) => p.role === "good" && p.verdict !== null);
+  const bad = probes.find((p) => p.role === "bad" && p.verdict !== null);
 
-/** Probes from the most recent round present, which is the unit "half a round" refers to. */
-function latestRound(probes: readonly Probe[]): Probe[] {
-  if (probes.length === 0) return [];
-  let max = probes[0].round;
-  for (const probe of probes) if (probe.round > max) max = probe.round;
-  return probes.filter((probe) => probe.round === max);
+  if (good?.verdict === "error") {
+    return refusal(
+      "good_unbuildable",
+      "Your known-good ref can't be built today.",
+      `Commit ${short(good.commitSha)} could not be checked out, installed or run in a fresh ` +
+        `container (${firstLine(good.detail)}). Faultline will not take its "good" on faith, so ` +
+        `there is no floor to search from. Pick a newer known-good ref — one whose declared ` +
+        `dependencies still install.`,
+    );
+  }
+  if (good?.verdict === "fail") {
+    return refusal(
+      "good_fails",
+      "Your known-good ref fails this test too.",
+      `In a clean environment built from its own declared dependencies, ${short(good.commitSha)} ` +
+        `fails the test. The break is older than this range — or the test depends on something ` +
+        `outside the repository. Move the known-good ref further back and run again.`,
+    );
+  }
+  if (bad?.verdict === "error") {
+    return refusal(
+      "bad_unbuildable",
+      "The failing ref can't be built in a clean environment.",
+      `Commit ${short(bad.commitSha)} could not be checked out, installed or run in a fresh ` +
+        `container (${firstLine(bad.detail)}). Without a clean failure to anchor on, any commit ` +
+        `Faultline named would be a guess. Check the install command.`,
+    );
+  }
+  if (bad?.verdict === "pass") {
+    return refusal(
+      "bad_passes",
+      "The failing ref passes in a clean environment.",
+      `Built from scratch with its own declared dependencies, ${short(bad.commitSha)} passes ` +
+        `the test. The failure you are seeing does not come from a commit in this range — look ` +
+        `at the environment it failed in: a dependency that resolved differently, a stale ` +
+        `virtualenv, a system library, or the clock.`,
+    );
+  }
+  return null;
 }
 
 /**
  * Decide whether the collected evidence refuses to name a culprit, and say why in copy a
  * maintainer can act on. Returns null when the search may legitimately continue.
  *
- * Order matters: a contradiction outranks everything, because a range where every probe
- * failed AND a later probe passed is a contradiction first and an "already broken" range
- * second — reporting the weaker reason would hide the real problem.
+ * Order matters: an endpoint that misbehaves invalidates every interior verdict, and a
+ * contradiction outranks anything the narrowing would conclude.
  */
 export function classifyInconclusive(probes: readonly Probe[]): Inconclusive | null {
+  const endpoint = endpointRefusal(probes);
+  if (endpoint) return endpoint;
+
   const contradiction = detectContradiction(probes);
   if (contradiction !== null) {
     return {
@@ -89,79 +143,49 @@ export function classifyInconclusive(probes: readonly Probe[]): Inconclusive | n
         `something outside the repository, or this range contains more than one independent ` +
         `break. Faultline names no commit here, because any commit it named would be a guess.`,
       evidence: contradiction,
+      range: null,
     };
   }
 
-  const answers = decided(probes);
-  if (answers.length === 0) {
-    const errored = latestRound(probes).filter((probe) => probe.verdict === "error");
-    return errored.length === 0 ? null : probeErrors(errored.length, latestRound(probes).length);
-  }
-
-  // `all_fail` and `all_pass` are deliberately NOT refusals.
-  //
-  // A hunt asserts two things it never probes: the good ref passes and the bad ref fails.
-  // Under those assumptions a round in which every probe fails simply means the culprit is
-  // early in the range, and one in which every probe passes means it is late. Both narrow
-  // correctly and settle on a real commit. Refusing here would make Faultline decline to
-  // answer precisely when the guilty commit sits at either edge of the range — the two
-  // positions a bisection tool must handle. What those cases do earn is a caveat on the
-  // report, which `edgeCaveat` below supplies.
-
-  const round = latestRound(probes);
-  const errored = round.filter((probe) => probe.verdict === "error").length;
-  // Half a round of silence is enough to make the surviving verdicts unsafe to narrow on.
-  if (round.length > 0 && errored * 2 >= round.length) {
-    return probeErrors(errored, round.length);
-  }
-
   return null;
-}
-
-function probeErrors(errored: number, total: number): Inconclusive {
-  return {
-    reason: "probe_errors",
-    headline: "Too many probes never reported.",
-    explanation:
-      `${errored} of ${total} probes in this round returned no verdict — the container stopped ` +
-      `before the test could answer. That is a fault in how the test runs, not in the commits, ` +
-      `and the handful of verdicts that did come back are too thin to narrow on. The test ` +
-      `command and the probe image are where the answer is.`,
-    evidence: null,
-  };
 }
 
 /**
- * A caveat for a culprit that landed on the very edge of the searched range.
+ * The culprit is hemmed in by commits that cannot be tested: it is one of `(low, high]`.
  *
- * Neither case is a refusal — both are correct answers — but each rests on an assumption the
- * hunt never tested, and a report that hides that is overstating its evidence.
+ * `git bisect` reports exactly this ("only skipped commits left to test … the first bad
+ * commit could be any of"); so does Faultline, on the same amber screen as a refusal,
+ * because naming one commit of the run would be a guess.
  */
-export function edgeCaveat(
+export function skippedRange(
   commits: readonly Commit[],
-  culpritIndex: number | null,
-): string | null {
-  if (culpritIndex === null || commits.length === 0) return null;
+  lowIndex: number,
+  highIndex: number,
+): Inconclusive {
+  const shas = commits
+    .filter((c) => c.index > lowIndex && c.index <= highIndex)
+    .sort((a, b) => a.index - b.index)
+    .map((c) => c.sha);
+  const count = shas.length;
+  return {
+    reason: "skipped_range",
+    headline: `The culprit is one of these ${count} commits.`,
+    explanation:
+      `Every commit between the last pass and the first fail could not be built or run, so ` +
+      `the search cannot see inside this run. The first bad commit is one of these ${count}; ` +
+      `the newest of them failed the test. Faultline names the range rather than guess a ` +
+      `commit inside it — fix the install command or the build for these commits and the next ` +
+      `hunt can split it.`,
+    evidence: null,
+    range: { fromIndex: lowIndex + 1, toIndex: highIndex, shas },
+  };
+}
 
-  const first = Math.min(...commits.map((c) => c.index));
-  const last = Math.max(...commits.map((c) => c.index));
+function refusal(reason: Inconclusive["reason"], headline: string, explanation: string): Inconclusive {
+  return { reason, headline, explanation, evidence: null, range: null };
+}
 
-  if (culpritIndex === first) {
-    return (
-      "This is the first commit in the range, so every commit Faultline tested failed. That " +
-      "is consistent with this commit being the cause, but it also assumes the known-good ref " +
-      "genuinely passes. If it does not, the real break is older than this window and the good " +
-      "ref needs to move further back."
-    );
-  }
-
-  if (culpritIndex === last) {
-    return (
-      "This is the last commit in the range, so every earlier commit Faultline tested passed. " +
-      "That is consistent with this commit being the cause, and it rests on the failing ref " +
-      "genuinely failing — which is the observation that started the hunt."
-    );
-  }
-
-  return null;
+function firstLine(text: string | null): string {
+  const line = (text ?? "no detail reported").split("\n")[0]?.trim() ?? "";
+  return line.length > 160 ? `${line.slice(0, 157)}...` : line;
 }

@@ -1,54 +1,141 @@
 /**
  * The hunt control loop.
  *
- * There is no daemon and no worker. Every `GET /api/hunts/{id}` performs one *reconcile
- * tick*: read the hunt, collect whatever verdicts have landed, narrow the range, and if the
- * round is complete dispatch the next band. The client polling every two seconds is what
- * drives the search forward, which means nothing has to stay alive between requests — the
- * property that lets a hunt survive a 46-day judging window on serverless hosting.
+ * There is no daemon and no worker. A *tick* reads the hunt, collects whatever verdicts have
+ * landed, narrows the range, and dispatches whatever the next step needs. Three things call
+ * it: the page polling every two seconds, each probe's empty "reconcile now" request when its
+ * verdict is stored, and the uptime sweep. So a hunt advances with nobody watching, and
+ * nothing has to stay alive between requests.
+ *
+ * Ticks race, by design. Two rules make that safe:
+ *   1. the hunt record is only replaced with `If-Match: <etag>` — a tick that loses re-reads
+ *      and re-applies its (pure) reasoning to the newer record;
+ *   2. every side effect is claimed first with `If-None-Match: "*"` — one claim per
+ *      (round, commit, attempt) for a dispatch, one per attempt for narration — and the
+ *      claim records the outcome, so a tick that loses the record race loses nothing.
  */
 
 import { randomUUID } from "node:crypto";
-import type { Commit, Hunt, Probe, Verdict } from "@/lib/types";
-import { isTerminal } from "@/lib/types";
-import { DEFAULT_BAND_SIZE, culpritIndex, isSettled, narrow, planBand, estimateRounds } from "@/lib/planner";
-import { classifyInconclusive } from "@/lib/verdicts";
-import { readProbeResult, writeHunt, type StoreContext } from "@/lib/store";
-import { createJob, getJob, cancelJob, NebiusApiError } from "@/lib/nebius/jobs";
-import { buildPrompt, dispatchNarration, pollNarration } from "@/lib/narrate";
+import type { Commit, FaultReport, Hunt, Inconclusive, Pause, Probe, ProbeResult, ProbeRole } from "@/lib/types";
+import type { ProbeBackend } from "@/lib/backend/types";
+import {
+  DEFAULT_BAND_SIZE,
+  effectiveBand,
+  expectedRounds,
+  firstRoundInterior,
+  huntBandSize,
+  huntSlots,
+  isHemmedBySkips,
+  isSettled,
+  narrow,
+  planBand,
+} from "@/lib/planner";
+import { classifyInconclusive, skippedRange } from "@/lib/verdicts";
+import {
+  claimDispatch,
+  claimNarration,
+  createHunt,
+  incrementDailyCount,
+  readClaim,
+  readHunt,
+  readHuntVersioned,
+  readNarrationClaim,
+  readVerdict,
+  recordDispatch,
+  recordNarration,
+  releaseLiveLock,
+  acquireLiveLock,
+  replaceHunt,
+  verdictUrl,
+  type DispatchClaim,
+  type StoreContext,
+} from "@/lib/store";
+import { keys } from "@/lib/nebius/storage";
+import { NARRATION_MODEL, probeCostUsd } from "@/lib/nebius/config";
+import { buildPrompt, narrate, NARRATION_PROVIDER } from "@/lib/narrate";
 import { fetchCommitDiff, parseRepoUrl } from "@/lib/git";
-import { probeCostUsd, PROBE_MOUNT_PATH } from "@/lib/nebius/config";
+import { PROBE_SHA256 } from "@/lib/probe-source";
 
-export { PROBE_MOUNT_PATH };
+/** First attempt plus two retries. A third silent attempt pauses the hunt. */
+export const MAX_ATTEMPTS = 3;
+/** The probe's own deadline for clone + install + test — far inside the 3600 s job floor. */
+export const PROBE_TIMEOUT_SECONDS = 900;
+/** VM provisioning + image pull, measured at ~4m20s; the platform itself gives up at 30 min. */
+const COLD_START_ALLOWANCE_MS = 25 * 60_000;
+const DEADLINE_MARGIN_MS = 5 * 60_000;
+/** After a quota rejection, wait before trying the same slot again. */
+const QUOTA_BACKOFF_MS = 60_000;
+/** A claim with no job ID this old means its owner died mid-dispatch. */
+const DISPATCH_RECOVERY_MS = 3 * 60_000;
+/** A narration claim with no result this old is abandoned; the next attempt may run. */
+const NARRATION_STALE_MS = 3 * 60_000;
+const NARRATION_ATTEMPTS = 2;
+/** The presigned verdict URL outlives every deadline above. */
+const VERDICT_URL_TTL_SECONDS = 2 * 60 * 60;
+
+const FINAL = new Set<Hunt["status"]>(["done", "inconclusive", "error"]);
+
+export function isFinal(status: Hunt["status"]): boolean {
+  return FINAL.has(status);
+}
+
+/** Statuses that hold the backend's capacity — and therefore the live-hunt lock. */
+function holdsCapacity(status: Hunt["status"]): boolean {
+  return status === "planning" || status === "running";
+}
+
+// ---------------------------------------------------------------------------------------------
+// Creation
+// ---------------------------------------------------------------------------------------------
 
 export interface CreateHuntInput {
   repoUrl: string;
   testCommand: string;
+  installCommand?: string;
   goodRef: string;
+  goodSha: string;
   badRef: string;
   commits: Commit[];
-  /** Probes per round. Omitted means DEFAULT_BAND_SIZE. */
+  /** Interior probes per round before capacity caps it. Omitted means DEFAULT_BAND_SIZE. */
   bandSize?: number;
+  /** Concurrent probes the backend can hold. */
+  slots: number;
+  backend: string;
+  regions: string[];
+  tickBaseUrl?: string | null;
+  now?: Date;
 }
 
 export function newHunt(input: CreateHuntInput): Hunt {
+  const id = randomUUID();
+  const now = input.now ?? new Date();
+  const base = input.tickBaseUrl?.replace(/\/+$/, "") ?? null;
   return {
-    id: randomUUID(),
+    id,
     repoUrl: input.repoUrl,
     testCommand: input.testCommand,
+    installCommand: input.installCommand ?? "",
     goodRef: input.goodRef,
+    goodSha: input.goodSha,
     badRef: input.badRef,
     status: "planning",
     commits: input.commits,
-    bandSize: input.bandSize ?? DEFAULT_BAND_SIZE,
     probes: [],
     round: 0,
     lowIndex: 0,
     highIndex: input.commits.length,
     report: null,
     inconclusive: null,
-    createdAt: new Date().toISOString(),
+    pause: null,
+    createdAt: now.toISOString(),
     finishedAt: null,
+    bandSize: input.bandSize ?? DEFAULT_BAND_SIZE,
+    slots: Math.max(1, Math.floor(input.slots)),
+    backend: input.backend,
+    regions: input.regions,
+    probeTimeoutSeconds: PROBE_TIMEOUT_SECONDS,
+    probeSha256: PROBE_SHA256,
+    tickUrl: base ? `${base}/api/hunts/${id}/tick` : null,
     wallClockMs: null,
     costUsd: null,
     recorded: false,
@@ -56,240 +143,237 @@ export function newHunt(input: CreateHuntInput): Hunt {
   };
 }
 
-/** Total rounds this hunt is expected to need, for the "Round 2 of ~3" status line. */
-export function expectedRounds(hunt: Hunt): number {
-  return estimateRounds(hunt.commits.length, huntBandSize(hunt));
-}
+export { expectedRounds, huntBandSize, huntSlots };
 
 /**
- * Hunts written before `bandSize` existed do not carry the field. Reading them back from
- * Object Storage must not produce a band of `undefined`, which planBand would turn into an
- * empty round and a hunt that silently stalls forever.
+ * Names one attempt at one commit in one round — its claim, its verdict object and its job.
+ * The commit index makes it unique by construction; the SHA prefix makes it readable.
  */
-export function huntBandSize(hunt: Hunt): number {
-  const n = hunt.bandSize;
-  return Number.isInteger(n) && n > 0 ? n : DEFAULT_BAND_SIZE;
+export function probeKey(round: number, index: number, sha: string, attempt: number): string {
+  return `r${round}-i${index}-${sha.slice(0, 12)}-a${attempt}`;
 }
 
 function commitAt(hunt: Hunt, index: number): Commit | null {
   return hunt.commits.find((c) => c.index === index) ?? null;
 }
 
-/**
- * Dispatch one band as concurrent Serverless Jobs.
- *
- * Dispatch is deliberately all-or-nothing per probe rather than per band: if one job fails
- * to create, the others still run and the failed probe is recorded as an `error`, which the
- * planner ignores for narrowing. A whole band failing to dispatch surfaces as a hunt error.
- */
-export async function dispatchBand(
-  ctx: StoreContext,
-  hunt: Hunt,
-  indices: number[],
-): Promise<Hunt> {
-  const round = hunt.round + 1;
-  const dispatchedAt = new Date().toISOString();
+function shaAt(hunt: Hunt, index: number): string | null {
+  return index === 0 ? hunt.goodSha : (commitAt(hunt, index)?.sha ?? null);
+}
 
-  const probes = await Promise.all(
-    indices.map(async (index): Promise<Probe> => {
-      const commit = commitAt(hunt, index);
-      const sha = commit?.sha ?? "";
-      const base: Probe = {
-        commitSha: sha,
-        commitIndex: index,
-        round,
-        jobId: null,
-        jobState: "PROVISIONING",
-        verdict: null,
-        detail: null,
-        dispatchedAt,
-        startedAt: null,
-        finishedAt: null,
-        durationMs: null,
-        verdictKey: `${hunt.id}/probes/${sha}.json`,
-      };
-
-      if (!ctx.config || !commit) {
-        return {
-          ...base,
-          jobState: "FAILED",
-          verdict: "error",
-          detail: ctx.config
-            ? `No commit at index ${index}.`
-            : "Nebius is not configured, so no probe job could be dispatched.",
-        };
-      }
-
-      try {
-        const jobId = await createJob(ctx.config, {
-          name: `faultline-${hunt.id.slice(0, 8)}-r${round}-${sha.slice(0, 7)}`,
-          image: ctx.config.probeImage,
-          mountBucketAt: PROBE_MOUNT_PATH,
-          env: {
-            FAULTLINE_HUNT_ID: hunt.id,
-            FAULTLINE_REPO_URL: hunt.repoUrl,
-            FAULTLINE_COMMIT_SHA: sha,
-            FAULTLINE_TEST_COMMAND: hunt.testCommand,
-            FAULTLINE_OUTPUT_PATH: PROBE_MOUNT_PATH,
-          },
-        });
-        return { ...base, jobId };
-      } catch (error) {
-        return {
-          ...base,
-          jobState: "FAILED",
-          verdict: "error",
-          detail: describeError(error),
-        };
-      }
-    }),
-  );
-
-  const next: Hunt = {
-    ...hunt,
+function plannedProbe(hunt: Hunt, index: number, role: ProbeRole, round: number): Probe {
+  const sha = shaAt(hunt, index) ?? "";
+  const key = probeKey(round, index, sha, 1);
+  return {
+    commitSha: sha,
+    commitIndex: index,
     round,
-    status: "running",
-    probes: [...hunt.probes, ...probes],
+    role,
+    attempt: 1,
+    key,
+    phase: "queued",
+    region: null,
+    jobId: null,
+    jobState: null,
+    verdict: null,
+    detail: null,
+    exitCode: null,
+    tail: null,
+    installCommand: null,
+    dispatchedAt: null,
+    startedAt: null,
+    finishedAt: null,
+    durationMs: null,
+    vmMs: null,
+    verdictKey: keys.probeVerdict(hunt.id, key),
+    notBefore: null,
+    infraFailures: [],
+    budgetFrom: 1,
   };
-  await writeHunt(ctx, next);
-  return next;
 }
 
 /**
- * One reconcile tick.
- *
- * Idempotent by construction: it only ever reads verdicts that already exist and advances
- * the round when the current one is complete, so two concurrent polls converge rather than
- * double-dispatching.
+ * Round 1: the two endpoints — tested in their own clean environments rather than assumed —
+ * plus as many interior probes as the backend has room for beside them.
  */
-export async function reconcile(ctx: StoreContext, hunt: Hunt): Promise<Hunt> {
-  if (hunt.status === "done" || hunt.status === "inconclusive" || hunt.status === "error") {
-    return hunt;
-  }
-  if (hunt.recorded) return hunt;
-  if (hunt.status === "narrating") return advanceNarration(ctx, hunt);
-
-  const probes = await Promise.all(hunt.probes.map((probe) => refreshProbe(ctx, hunt, probe)));
-  let next: Hunt = { ...hunt, probes, costUsd: totalCost(probes) };
-
-  const currentRound = probes.filter((p) => p.round === next.round);
-  const pending = currentRound.filter((p) => p.verdict === null);
-  if (pending.length > 0) {
-    await writeHunt(ctx, next);
-    return next;
-  }
-
-  // The round is complete. Refuse before narrowing: a contradiction means the verdicts
-  // cannot all be explained by one culprit, so narrowing them would blame someone.
-  const inconclusive = classifyInconclusive(probes);
-  if (inconclusive) {
-    next = {
-      ...next,
-      status: "inconclusive",
-      inconclusive,
-      finishedAt: new Date().toISOString(),
-      wallClockMs: elapsed(next),
-    };
-    await cancelOutstanding(ctx, next);
-    await writeHunt(ctx, next);
-    return next;
-  }
-
-  const bounds = narrow(
-    next.lowIndex,
-    next.highIndex,
-    currentRound
-      .filter((p): p is Probe & { verdict: Verdict } => p.verdict !== null)
-      .map((p) => ({ index: p.commitIndex, verdict: p.verdict })),
-  );
-  next = { ...next, lowIndex: bounds.lowIndex, highIndex: bounds.highIndex };
-
-  if (isSettled(next.lowIndex, next.highIndex)) {
-    return settle(ctx, next);
-  }
-
-  const band = planBand(next.lowIndex, next.highIndex, huntBandSize(next));
-  if (band.length === 0) {
-    // Unreachable while `isSettled` is false, but a stalled planner must not spin forever.
-    return settle(ctx, next);
-  }
-  return dispatchBand(ctx, next, band);
+export function planFirstRound(hunt: Hunt): Probe[] {
+  const m = hunt.commits.length;
+  const interior = firstRoundInterior(huntSlots(hunt), huntBandSize(hunt));
+  const band = interior > 0 ? planBand(0, m, interior) : [];
+  return [
+    plannedProbe(hunt, 0, "good", 1),
+    ...band.map((index) => plannedProbe(hunt, index, "interior", 1)),
+    plannedProbe(hunt, m, "bad", 1),
+  ];
 }
 
-/** Pull a probe's verdict file, and its job state for the evidence trail. */
-async function refreshProbe(ctx: StoreContext, hunt: Hunt, probe: Probe): Promise<Probe> {
-  if (probe.verdict !== null) return probe;
+export type StartResult =
+  | { ok: true; hunt: Hunt }
+  | { ok: false; status: number; error: string; holder?: string };
 
-  let updated = probe;
-
-  // The verdict file is the authority. Read it first: a job can report COMPLETED a moment
-  // before the object is visible, and a job that is still RUNNING may already have written.
-  const result = await readProbeResult(ctx, hunt.id, probe.commitSha).catch(() => null);
-  if (result) {
-    updated = {
-      ...updated,
-      verdict: result.verdict,
-      detail: result.detail,
-      durationMs: result.durationMs,
-      finishedAt: new Date().toISOString(),
+/**
+ * Create a live hunt: take the one-live-hunt lock, write the record with round 1 planned,
+ * count it against today's budget, and run the first tick, which dispatches round 1.
+ */
+export async function startHunt(ctx: StoreContext, hunt: Hunt): Promise<StartResult> {
+  if (!ctx.backend) {
+    return {
+      ok: false,
+      status: 503,
+      error: "Live hunts need Nebius credentials, and none are configured here. The recorded example hunt works without them.",
     };
   }
 
-  if (ctx.config && probe.jobId) {
-    try {
-      const job = await getJob(ctx.config, probe.jobId);
-      updated = {
-        ...updated,
-        jobState: job.status.state,
-        startedAt: job.status.startedAt ?? updated.startedAt,
-      };
+  const lock = await acquireLiveLock(ctx, hunt.id, async (holder) => {
+    const other = await readHunt(ctx, holder);
+    return !other || !holdsCapacity(other.status);
+  });
+  if (!lock.acquired) {
+    return {
+      ok: false,
+      status: 409,
+      error:
+        "A live hunt is already running, and it is using every probe slot this deployment has. Watch it, or try again when it finishes.",
+      holder: lock.holder,
+    };
+  }
 
-      // A terminal job with no verdict file wrote nothing — the container died before it
-      // could report. That is an `error`, never a `fail`: treating it as a failure would
-      // narrow the search onto a commit whose test never ran.
-      if (updated.verdict === null && isTerminal(job.status.state)) {
-        updated = {
-          ...updated,
-          verdict: "error",
-          detail:
-            job.status.stateDetails?.message ??
-            `Job finished in state ${job.status.state} without writing a verdict.`,
-          finishedAt: job.status.finishedAt ?? new Date().toISOString(),
-        };
+  const planned: Hunt = { ...hunt, status: "running", round: 1, probes: planFirstRound(hunt) };
+  if (!(await createHunt(ctx, planned))) {
+    await releaseLiveLock(ctx, hunt.id);
+    return { ok: false, status: 409, error: "A hunt with that ID already exists." };
+  }
+  await incrementDailyCount(ctx).catch(() => undefined);
+
+  const ticked = await tick(ctx, hunt.id);
+  return { ok: true, hunt: ticked ?? planned };
+}
+
+// ---------------------------------------------------------------------------------------------
+// The tick
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * One reconcile. Returns the hunt as it now stands, or null if there is no such hunt.
+ *
+ * Compare-and-swap loop: read with ETag, reason, write with If-Match. Losing the write means
+ * another tick moved the hunt first; the reasoning is re-run against what it wrote. Side
+ * effects performed on the way (dispatches, narration) are recorded in their claims, so the
+ * re-run adopts them instead of repeating them.
+ */
+export async function tick(ctx: StoreContext, huntId: string): Promise<Hunt | null> {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const read = await readHuntVersioned(ctx, huntId);
+    if (!read) return null;
+    const hunt = read.value;
+    if (isFinal(hunt.status) || hunt.recorded) return hunt;
+
+    const next = await advance(ctx, hunt);
+    if (JSON.stringify(next) === JSON.stringify(hunt)) return hunt;
+
+    const written = await replaceHunt(ctx, next, read.etag);
+    if (written.ok) {
+      if (holdsCapacity(hunt.status) && !holdsCapacity(next.status)) {
+        await releaseLiveLock(ctx, hunt.id).catch(() => undefined);
       }
-    } catch (error) {
-      // A transient polling failure must not decide a verdict. Leave the probe pending and
-      // let the next tick retry.
-      if (error instanceof NebiusApiError && error.status === 404) {
-        updated = {
-          ...updated,
-          verdict: "error",
-          detail: "The Nebius job for this probe no longer exists.",
-        };
-      }
+      return next;
     }
   }
-
-  return updated;
+  return readHunt(ctx, huntId);
 }
 
-/** The range is down to one commit. Record the culprit and hand off to narration. */
-async function settle(ctx: StoreContext, hunt: Hunt): Promise<Hunt> {
-  const index = culpritIndex(hunt.lowIndex, hunt.highIndex);
-  const culprit = index === null ? null : commitAt(hunt, index);
+/** The pure-ish heart of a tick: everything a tick decides, given one snapshot. */
+async function advance(ctx: StoreContext, hunt: Hunt): Promise<Hunt> {
+  if (!ctx.backend) return hunt.status === "narrating" ? advanceNarration(ctx, hunt) : hunt;
 
-  if (!culprit) {
-    const next: Hunt = {
-      ...hunt,
-      status: "error",
-      finishedAt: new Date().toISOString(),
-      wallClockMs: elapsed(hunt),
-    };
-    await writeHunt(ctx, next);
-    return next;
+  const now = ctx.now();
+  let probes = await Promise.all(hunt.probes.map((probe) => refreshProbe(ctx, hunt, probe, now)));
+  let next: Hunt = { ...hunt, probes, costUsd: totalCost(probes) };
+
+  // Jobs of the last round are still exiting when the culprit is named; keep reading them
+  // through narration so their VM time reaches the cost.
+  if (hunt.status === "narrating") return advanceNarration(ctx, next);
+  if (hunt.status === "paused") return next;
+
+  // #7: a probe that failed to report on every attempt. Nothing was learned, so nothing is
+  // concluded — the hunt stops and says so, and can be resumed.
+  const exhausted = probes.find((p) => p.phase === "queued" && p.infraFailures.length > 0 && attemptsUsed(p) >= MAX_ATTEMPTS);
+  if (exhausted) {
+    return { ...next, status: "paused", pause: pauseFor(exhausted, now) };
   }
 
-  const next: Hunt = {
+  probes = await dispatchQueued(ctx, next, probes, now);
+  next = { ...next, probes };
+
+  const current = probes.filter((p) => p.round === next.round);
+  if (current.some((p) => p.phase !== "done")) return next;
+
+  // The round is complete. Refuse before narrowing: a misbehaving endpoint or a
+  // contradiction means the verdicts cannot all be explained by one culprit.
+  const inconclusive = classifyInconclusive(probes);
+  if (inconclusive) return finish(next, "inconclusive", inconclusive, now);
+
+  const decided = probes
+    .filter((p) => p.verdict === "pass" || p.verdict === "fail")
+    .map((p) => ({ index: p.commitIndex, verdict: p.verdict as "pass" | "fail" }));
+  const bounds = narrow(next.lowIndex, next.highIndex, decided);
+  next = { ...next, lowIndex: bounds.lowIndex, highIndex: bounds.highIndex };
+
+  if (isSettled(next.lowIndex, next.highIndex)) return settle(next, now);
+
+  // #2: `error` verdicts are skips. Plan around them; if they are all that is left
+  // between the bounds, the answer is the range, not a guess inside it.
+  const skipped = new Set(probes.filter((p) => p.verdict === "error" && p.role === "interior").map((p) => p.commitIndex));
+  const band = planBand(next.lowIndex, next.highIndex, effectiveBand(huntSlots(next), huntBandSize(next)), skipped);
+  if (band.length === 0 || isHemmedBySkips(next.lowIndex, next.highIndex, skipped)) {
+    return finish(next, "inconclusive", skippedRange(next.commits, next.lowIndex, next.highIndex), now);
+  }
+
+  const round = next.round + 1;
+  const planned = band.map((index) => plannedProbe(next, index, "interior", round));
+  next = { ...next, round, probes: [...probes, ...planned] };
+  const dispatched = await dispatchQueued(ctx, next, next.probes, now);
+  return { ...next, probes: dispatched };
+}
+
+/** Silent attempts in the current retry budget. */
+export function attemptsUsed(probe: Pick<Probe, "infraFailures" | "budgetFrom">): number {
+  const from = Number.isInteger(probe.budgetFrom) ? probe.budgetFrom : 1;
+  return probe.infraFailures.filter((f) => f.attempt >= from).length;
+}
+
+function pauseFor(probe: Probe, now: Date): Pause {
+  const last = probe.infraFailures.at(-1);
+  return {
+    commitSha: probe.commitSha,
+    commitIndex: probe.commitIndex,
+    round: probe.round,
+    attempts: attemptsUsed(probe),
+    message:
+      `The probe for ${probe.commitSha.slice(0, 7)} never reported, ${attemptsUsed(probe)} times running ` +
+      `(last: ${last?.reason ?? "unknown"}). That is the infrastructure, not the code, so nothing is ` +
+      `concluded from it. Resume to try again.`,
+    at: now.toISOString(),
+  };
+}
+
+function finish(hunt: Hunt, status: "inconclusive", inconclusive: Inconclusive, now: Date): Hunt {
+  return {
+    ...hunt,
+    status,
+    inconclusive,
+    finishedAt: now.toISOString(),
+    wallClockMs: now.getTime() - new Date(hunt.createdAt).getTime(),
+  };
+}
+
+/** The range is down to one commit. Record the culprit; narration happens next. */
+function settle(hunt: Hunt, now: Date): Hunt {
+  const culprit = commitAt(hunt, hunt.highIndex);
+  if (!culprit) {
+    return { ...hunt, status: "error", finishedAt: now.toISOString(), wallClockMs: now.getTime() - new Date(hunt.createdAt).getTime() };
+  }
+  return {
     ...hunt,
     status: "narrating",
     report: {
@@ -299,52 +383,273 @@ async function settle(ctx: StoreContext, hunt: Hunt): Promise<Hunt> {
       culpritDate: culprit.date,
       diffText: "",
       rootCauseMd: null,
-      modelId: "nvidia/OpenCodeReasoning-Nemotron-14B",
-      narrationJobId: null,
+      modelId: NARRATION_MODEL,
+      narrationProvider: NARRATION_PROVIDER,
+      narrationRequestId: null,
       narrationError: null,
     },
-    finishedAt: new Date().toISOString(),
-    wallClockMs: elapsed(hunt),
+    finishedAt: now.toISOString(),
+    wallClockMs: now.getTime() - new Date(hunt.createdAt).getTime(),
   };
+}
 
-  await cancelOutstanding(ctx, next);
-  await writeHunt(ctx, next);
-  return next;
+// ---------------------------------------------------------------------------------------------
+// Probes: refresh and dispatch
+// ---------------------------------------------------------------------------------------------
+
+/** Mark this attempt as having produced no verdict, and queue the next one. */
+function failAttempt(probe: Probe, hunt: Hunt, reason: string, now: Date, backoffMs = 0): Probe {
+  const failure = { attempt: probe.attempt, jobId: probe.jobId, region: probe.region, reason, at: now.toISOString() };
+  const attempt = probe.attempt + 1;
+  const key = probeKey(probe.round, probe.commitIndex, probe.commitSha, attempt);
+  return {
+    ...probe,
+    attempt,
+    key,
+    phase: "queued",
+    region: null,
+    jobId: null,
+    jobState: null,
+    dispatchedAt: null,
+    startedAt: null,
+    verdictKey: keys.probeVerdict(hunt.id, key),
+    notBefore: backoffMs > 0 ? new Date(now.getTime() + backoffMs).toISOString() : null,
+    infraFailures: [...probe.infraFailures, failure],
+  };
+}
+
+function applyVerdict(probe: Probe, result: ProbeResult, now: Date): Probe {
+  return {
+    ...probe,
+    phase: "done",
+    verdict: result.verdict,
+    detail: result.detail,
+    exitCode: result.exitCode,
+    tail: result.tail,
+    installCommand: result.installCommand,
+    durationMs: result.durationMs,
+    finishedAt: now.toISOString(),
+  };
+}
+
+function probeDeadlineMs(hunt: Hunt): number {
+  return COLD_START_ALLOWANCE_MS + hunt.probeTimeoutSeconds * 1000 + DEADLINE_MARGIN_MS;
+}
+
+/** Learn what happened to one probe since the last tick. Never throws. */
+async function refreshProbe(ctx: StoreContext, hunt: Hunt, probe: Probe, now: Date): Promise<Probe> {
+  const backend = ctx.backend;
+  if (!backend) return probe;
+  try {
+    if (probe.phase === "dispatching") return await adoptClaim(ctx, hunt, probe, now);
+
+    if (probe.phase === "done" && probe.jobId && !(probe.jobState && isJobFinal(probe.jobState))) {
+      // The verdict is in; keep reading the job until it ends, for its billed VM time.
+      return withRunStatus(probe, await backend.status(probe.jobId));
+    }
+
+    if (probe.phase !== "running" || !probe.jobId) return probe;
+
+    const first = await readVerdict(ctx, hunt.id, probe.key, probe.commitSha);
+    if (first.kind === "valid") {
+      return withRunStatus(applyVerdict(probe, first.result, now), await backend.status(probe.jobId).catch(() => null));
+    }
+
+    const status = await backend.status(probe.jobId);
+    if (status === null) return failAttempt(probe, hunt, "the job no longer exists", now);
+    const updated = withRunStatus(probe, status);
+
+    if (status.terminal) {
+      // The probe stores its verdict before it exits, so after a terminal state the read
+      // is authoritative — read once more to close the race with the first read.
+      const second = await readVerdict(ctx, hunt.id, probe.key, probe.commitSha);
+      if (second.kind === "valid") return applyVerdict(updated, second.result, now);
+      const reason =
+        second.kind === "invalid"
+          ? `the verdict was not a complete document (${second.reason})`
+          : `the job ended ${status.state}${status.code ? ` (${status.code})` : ""} without reporting${status.message ? `: ${status.message}` : ""}`;
+      const quota = /quota/i.test(`${status.code ?? ""} ${status.message ?? ""}`);
+      return failAttempt(updated, hunt, reason, now, quota ? QUOTA_BACKOFF_MS : 0);
+    }
+
+    const age = probe.dispatchedAt ? now.getTime() - new Date(probe.dispatchedAt).getTime() : 0;
+    if (age > probeDeadlineMs(hunt)) {
+      await backend.cancel(probe.jobId).catch(() => undefined);
+      return failAttempt(updated, hunt, `no verdict within ${Math.round(probeDeadlineMs(hunt) / 60_000)} minutes`, now);
+    }
+    return updated;
+  } catch {
+    // A transient read failure must not decide anything. Try again next tick.
+    return probe;
+  }
+}
+
+function isJobFinal(state: NonNullable<Probe["jobState"]>): boolean {
+  return state === "COMPLETED" || state === "FAILED" || state === "CANCELLED" || state === "ERROR";
+}
+
+function withRunStatus(probe: Probe, status: Awaited<ReturnType<NonNullable<StoreContext["backend"]>["status"]>> | null): Probe {
+  if (!status) return probe;
+  const created = status.createdAt ?? probe.dispatchedAt;
+  const vmMs = status.finishedAt && created ? Math.max(0, new Date(status.finishedAt).getTime() - new Date(created).getTime()) : probe.vmMs;
+  return {
+    ...probe,
+    jobState: status.state,
+    startedAt: status.startedAt ?? probe.startedAt,
+    vmMs,
+  };
+}
+
+/** A `dispatching` probe: its claim exists; find out what the claim's owner did. */
+async function adoptClaim(ctx: StoreContext, hunt: Hunt, probe: Probe, now: Date): Promise<Probe> {
+  const claim = await readClaim(ctx, hunt.id, probe.key);
+  if (!claim) return { ...probe, phase: "queued" };
+  if (claim.runId) {
+    return { ...probe, phase: "running", region: claim.region, jobId: claim.runId, dispatchedAt: claim.claimedAt };
+  }
+  if (claim.error) return failAttempt({ ...probe, region: claim.region }, hunt, `dispatch failed: ${claim.error}`, now, quotaBackoff(claim.error));
+
+  if (now.getTime() - new Date(claim.claimedAt).getTime() < DISPATCH_RECOVERY_MS) return probe;
+  // The owner died between claiming and recording. The job name is deterministic, so the
+  // job — if it was ever created — can be found without creating a second one.
+  const found = await ctx.backend?.find(jobName(hunt, probe.key), claim.region);
+  if (found) {
+    await recordDispatch(ctx, hunt.id, { ...claim, runId: found.runId });
+    return { ...probe, phase: "running", region: claim.region, jobId: found.runId, dispatchedAt: claim.claimedAt };
+  }
+  return failAttempt({ ...probe, region: claim.region }, hunt, "dispatch never completed", now);
+}
+
+function quotaBackoff(message: string): number {
+  return /quota/i.test(message) ? QUOTA_BACKOFF_MS : 0;
+}
+
+export function jobName(hunt: Pick<Hunt, "id">, key: string): string {
+  return `faultline-${hunt.id.slice(0, 8)}-${key}`;
 }
 
 /**
- * Release VMs for probes still in flight once the answer is known.
- *
- * Jobs bill per second, so an abandoned probe is money spent on an answer nobody will read.
+ * Put queued probes into free slots. Never more than `slotsPerRegion` live jobs in a region:
+ * past the quota a job is rejected, not queued, and a rejected probe is a wasted attempt.
  */
-async function cancelOutstanding(ctx: StoreContext, hunt: Hunt): Promise<void> {
-  if (!ctx.config) return;
-  const outstanding = hunt.probes.filter((p) => p.verdict === null && p.jobId);
+async function dispatchQueued(ctx: StoreContext, hunt: Hunt, probes: Probe[], now: Date): Promise<Probe[]> {
+  const backend = ctx.backend;
+  if (!backend) return probes;
+
+  const busy = new Map<string, number>(backend.regions.map((r) => [r, 0]));
+  for (const probe of probes) {
+    const holding =
+      probe.phase === "dispatching" ||
+      probe.phase === "running" ||
+      (probe.phase === "done" && probe.jobId !== null && !(probe.jobState && isJobFinal(probe.jobState)));
+    if (holding && probe.region) busy.set(probe.region, (busy.get(probe.region) ?? 0) + 1);
+  }
+
+  const assignments: Array<{ position: number; region: string }> = [];
+  probes.forEach((probe, position) => {
+    if (probe.phase !== "queued") return;
+    if (probe.notBefore && new Date(probe.notBefore).getTime() > now.getTime()) return;
+    const avoid = new Set(probe.infraFailures.map((f) => f.region).filter((r): r is string => r !== null));
+    const free = backend.regions.filter((r) => (busy.get(r) ?? 0) < backend.slotsPerRegion);
+    const region = free.find((r) => !avoid.has(r)) ?? free[0];
+    if (!region) return;
+    busy.set(region, (busy.get(region) ?? 0) + 1);
+    assignments.push({ position, region });
+  });
+
+  const out = [...probes];
   await Promise.all(
-    outstanding.map(async (probe) => {
-      if (!ctx.config || !probe.jobId) return;
-      await cancelJob(ctx.config, probe.jobId).catch(() => undefined);
+    assignments.map(async ({ position, region }) => {
+      const probe = out[position];
+      if (probe) out[position] = await dispatchOne(ctx, backend, hunt, probe, region, now);
     }),
   );
+  return out;
+}
+
+async function dispatchOne(
+  ctx: StoreContext,
+  backend: ProbeBackend,
+  hunt: Hunt,
+  probe: Probe,
+  region: string,
+  now: Date,
+): Promise<Probe> {
+  const claim: DispatchClaim = { probeKey: probe.key, claimedAt: now.toISOString(), region, runId: null, error: null };
+  try {
+    const { won } = await claimDispatch(ctx, hunt.id, claim);
+    if (!won) return await adoptClaim(ctx, hunt, { ...probe, phase: "dispatching", region }, now);
+  } catch {
+    return probe; // storage hiccup: nothing happened, try next tick
+  }
+
+  try {
+    const { runId } = await backend.dispatch({
+      name: jobName(hunt, probe.key),
+      region,
+      huntId: hunt.id,
+      probeKey: probe.key,
+      repoUrl: hunt.repoUrl,
+      commitSha: probe.commitSha,
+      testCommand: hunt.testCommand,
+      installCommand: hunt.installCommand,
+      verdictUrl: verdictUrl(ctx, hunt.id, probe.key, VERDICT_URL_TTL_SECONDS),
+      tickUrl: hunt.tickUrl,
+      timeoutSeconds: hunt.probeTimeoutSeconds,
+    });
+    await recordDispatch(ctx, hunt.id, { ...claim, runId }).catch(() => undefined);
+    return { ...probe, phase: "running", region, jobId: runId, jobState: "PROVISIONING", dispatchedAt: claim.claimedAt, notBefore: null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await recordDispatch(ctx, hunt.id, { ...claim, error: message }).catch(() => undefined);
+    return failAttempt({ ...probe, region }, hunt, `dispatch failed: ${message}`, now, quotaBackoff(message));
+  }
 }
 
 function totalCost(probes: readonly Probe[]): number | null {
-  const measured = probes.filter((p) => p.durationMs !== null);
+  const measured = probes.filter((p) => p.vmMs !== null);
   if (measured.length === 0) return null;
-  return measured.reduce((sum, p) => sum + probeCostUsd(p.durationMs ?? 0), 0);
+  return measured.reduce((sum, p) => sum + probeCostUsd(p.vmMs ?? 0), 0);
 }
 
-function elapsed(hunt: Hunt): number {
-  return Date.now() - new Date(hunt.createdAt).getTime();
+// ---------------------------------------------------------------------------------------------
+// Resume
+// ---------------------------------------------------------------------------------------------
+
+export type ResumeResult = { ok: true; hunt: Hunt } | { ok: false; status: number; error: string; holder?: string };
+
+/** Give a paused hunt a fresh retry budget, if the live-hunt lock is free. */
+export async function resumeHunt(ctx: StoreContext, huntId: string): Promise<ResumeResult> {
+  const current = await readHuntVersioned(ctx, huntId);
+  if (!current) return { ok: false, status: 404, error: "No such hunt." };
+  if (current.value.status !== "paused") return { ok: true, hunt: current.value };
+
+  const lock = await acquireLiveLock(ctx, huntId, async (holder) => {
+    const other = await readHunt(ctx, holder);
+    return !other || !holdsCapacity(other.status);
+  });
+  if (!lock.acquired) {
+    return { ok: false, status: 409, error: "Another live hunt is running. Resume this one when it finishes.", holder: lock.holder };
+  }
+
+  const hunt = current.value;
+  const probes = hunt.probes.map((probe) =>
+    probe.phase === "queued" && attemptsUsed(probe) >= MAX_ATTEMPTS
+      ? { ...probe, notBefore: null, budgetFrom: probe.attempt }
+      : probe,
+  );
+  const resumed: Hunt = { ...hunt, status: "running", pause: null, probes };
+  const written = await replaceHunt(ctx, resumed, current.etag);
+  if (!written.ok) return { ok: false, status: 409, error: "The hunt changed while resuming; try again." };
+  return { ok: true, hunt: (await tick(ctx, huntId)) ?? resumed };
 }
 
-function describeError(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
-}
+// ---------------------------------------------------------------------------------------------
+// Narration
+// ---------------------------------------------------------------------------------------------
 
 /**
- * Drive the narration stage.
+ * Drive the narration stage: one Token Factory call, claimed so racing ticks make it once.
  *
  * Narration is strictly a decoration on an answer that already exists, so every failure path
  * here lands on `done` with an explanation of what went wrong — never on `error`. A hunt that
@@ -352,63 +657,67 @@ function describeError(error: unknown): string {
  */
 async function advanceNarration(ctx: StoreContext, hunt: Hunt): Promise<Hunt> {
   const report = hunt.report;
-  if (!ctx.config || !report) {
-    return finishNarration(ctx, hunt, {
-      narrationError: ctx.config
-        ? "No report to narrate."
-        : "Nebius is not configured, so the root-cause explanation was not generated.",
-    });
-  }
+  if (!report) return { ...hunt, status: "error" };
+  const now = ctx.now();
 
-  if (!report.narrationJobId) {
-    try {
-      const ref = parseRepoUrl(hunt.repoUrl);
-      const diff = await fetchCommitDiff(ref, report.culpritSha);
-      const failureOutput =
-        hunt.probes.find((p) => p.commitSha === report.culpritSha && p.verdict === "fail")
-          ?.detail ?? "";
-
-      const jobId = await dispatchNarration(
-        ctx.config,
-        { ...hunt, report: { ...report, diffText: diff } },
-        buildPrompt({ ...hunt, report }, diff, failureOutput),
-      );
-
-      const next: Hunt = {
-        ...hunt,
-        report: { ...report, diffText: diff, narrationJobId: jobId },
-      };
-      await writeHunt(ctx, next);
-      return next;
-    } catch (error) {
-      return finishNarration(ctx, hunt, { narrationError: describeError(error) });
+  for (let attempt = 1; attempt <= NARRATION_ATTEMPTS; attempt += 1) {
+    const existing = await readNarrationClaim(ctx, hunt.id, attempt);
+    if (existing?.result) return applyNarration(hunt, existing.result);
+    if (existing) {
+      const age = now.getTime() - new Date(existing.claimedAt).getTime();
+      if (age < NARRATION_STALE_MS) return hunt; // another tick is talking to the model
+      continue; // abandoned; the next attempt may run
     }
+    if (!(await claimNarration(ctx, hunt.id, attempt, now))) return hunt;
+
+    const result = await runNarration(ctx, hunt, report);
+    await recordNarration(ctx, hunt.id, { attempt, claimedAt: now.toISOString(), result }).catch(() => undefined);
+    return applyNarration(hunt, result);
   }
 
-  const status = await pollNarration(ctx.config, hunt, report.narrationJobId);
-  if (status.state === "pending") return hunt;
-  if (status.state === "failed") {
-    return finishNarration(ctx, hunt, { narrationError: status.reason });
-  }
-  return finishNarration(ctx, hunt, { rootCauseMd: status.result.rootCauseMd });
+  return applyNarration(hunt, {
+    rootCauseMd: null,
+    error: "The explanation was started but never finished.",
+    requestId: null,
+    diffText: report.diffText,
+  });
 }
 
-async function finishNarration(
+async function runNarration(
   ctx: StoreContext,
   hunt: Hunt,
-  patch: { rootCauseMd?: string; narrationError?: string },
-): Promise<Hunt> {
-  const next: Hunt = {
+  report: FaultReport,
+): Promise<{ rootCauseMd: string | null; error: string | null; requestId: string | null; diffText: string }> {
+  let diffText = "";
+  try {
+    diffText = await fetchCommitDiff(parseRepoUrl(hunt.repoUrl), report.culpritSha, 24_000, ctx.fetchImpl);
+  } catch (error) {
+    return { rootCauseMd: null, error: `Could not fetch the culprit's diff: ${error instanceof Error ? error.message : String(error)}`, requestId: null, diffText };
+  }
+  if (!ctx.tokenFactory) {
+    return { rootCauseMd: null, error: "Token Factory is not configured, so no explanation was generated.", requestId: null, diffText };
+  }
+  const failing = hunt.probes.find((p) => p.commitSha === report.culpritSha && p.verdict === "fail");
+  const prompt = buildPrompt({ ...hunt, report: { ...report, diffText } }, diffText, failing?.tail ?? failing?.detail ?? "");
+  const outcome = await narrate(ctx.tokenFactory, prompt, ctx.fetchImpl);
+  return { rootCauseMd: outcome.rootCauseMd, error: outcome.error, requestId: outcome.requestId, diffText };
+}
+
+function applyNarration(
+  hunt: Hunt,
+  result: { rootCauseMd: string | null; error: string | null; requestId: string | null; diffText: string },
+): Hunt {
+  return {
     ...hunt,
     status: "done",
     report: hunt.report
       ? {
           ...hunt.report,
-          rootCauseMd: patch.rootCauseMd ?? hunt.report.rootCauseMd,
-          narrationError: patch.narrationError ?? hunt.report.narrationError,
+          diffText: result.diffText || hunt.report.diffText,
+          rootCauseMd: result.rootCauseMd,
+          narrationRequestId: result.requestId,
+          narrationError: result.error,
         }
       : null,
   };
-  await writeHunt(ctx, next);
-  return next;
 }

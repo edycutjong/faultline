@@ -9,22 +9,15 @@
 import { describe, it, expect } from "vitest";
 import { renderIssue } from "@/lib/issue";
 import type { Hunt, Probe } from "@/lib/types";
+import { probe as baseProbe } from "./helpers";
 
 function probe(index: number, verdict: Probe["verdict"], round = 1): Probe {
-  return {
+  return baseProbe(index, verdict, {
     commitSha: `c${String(index).padStart(38, "0")}`,
-    commitIndex: index,
     round,
     jobId: `computejob-e00${String(index).padStart(6, "0")}`,
-    jobState: "COMPLETED",
-    verdict,
-    detail: null,
-    dispatchedAt: "2026-09-04T10:00:00Z",
-    startedAt: "2026-09-04T10:00:05Z",
-    finishedAt: "2026-09-04T10:00:46Z",
     durationMs: 41_000,
-    verdictKey: "k",
-  };
+  });
 }
 
 function hunt(overrides: Partial<Hunt> = {}): Hunt {
@@ -41,10 +34,19 @@ function hunt(overrides: Partial<Hunt> = {}): Hunt {
     repoUrl: "https://github.com/faultline-bench/tzdata-pipeline",
     testCommand: "pytest tests/test_window.py::test_daily_boundary",
     goodRef: "v1.4.0",
+    goodSha: "c".repeat(40),
     badRef: "HEAD",
+    installCommand: "pip install -e .[test]",
     status: "done",
     commits,
     bandSize: 8,
+    slots: 8,
+    backend: "nebius-serverless-jobs",
+    regions: ["eu-west1"],
+    probeTimeoutSeconds: 900,
+    probeSha256: "0".repeat(64),
+    tickUrl: null,
+    pause: null,
     probes: [probe(7, "pass"), probe(14, "fail")],
     round: 2,
     lowIndex: 12,
@@ -56,8 +58,9 @@ function hunt(overrides: Partial<Hunt> = {}): Hunt {
       culpritDate: "2026-08-05T00:00:00Z",
       diffText: "diff --git a/x b/x",
       rootCauseMd: "The replace(tzinfo=) call keeps the local offset, so the boundary shifts.",
-      modelId: "nvidia/OpenCodeReasoning-Nemotron-14B",
-      narrationJobId: "computejob-e00999999",
+      modelId: "nvidia/nemotron-3-super-120b-a12b",
+      narrationProvider: "nebius-token-factory",
+      narrationRequestId: "chatcmpl-1",
       narrationError: null,
     },
     inconclusive: null,
@@ -86,7 +89,7 @@ describe("renderIssue", () => {
     const md = renderIssue(hunt());
 
     expect(md).toContain("The replace(tzinfo=) call keeps the local offset");
-    expect(md).toContain("nvidia/OpenCodeReasoning-Nemotron-14B");
+    expect(md).toContain("nvidia/nemotron-3-super-120b-a12b on Nebius Token Factory");
     // The distinction the whole report rests on: prose is generated, the commit is not.
     expect(md).toContain("established by running the test, not by a model");
   });
@@ -109,24 +112,33 @@ describe("renderIssue", () => {
     });
 
     expect(md).toContain("No generated explanation");
-    expect(md).not.toContain("nvidia/OpenCodeReasoning-Nemotron-14B");
+    expect(md).not.toContain("nvidia/nemotron-3-super-120b-a12b");
     expect(md).toContain("Evidence trail");
   });
 
-  it("adds the first-commit caveat when the culprit sits at the edge of the range", () => {
-    const base = hunt();
-    const commits = base.commits;
-    const md = renderIssue({
-      ...base,
-      report: base.report ? { ...base.report, culpritSha: commits[0]?.sha ?? "" } : null,
-    });
-
-    expect(md).toContain("Worth knowing");
-    expect(md).toContain("first commit in the range");
+  it("states that both ends were tested rather than assumed", () => {
+    // Endpoints are probed in round 1, so an edge culprit needs no caveat — the report says
+    // what was proven instead.
+    const md = renderIssue(hunt());
+    expect(md).toContain("Both ends were tested, not assumed");
+    expect(md).not.toContain("Worth knowing");
   });
 
-  it("adds no caveat for a culprit in the middle", () => {
-    expect(renderIssue(hunt())).not.toContain("Worth knowing");
+  it("records the install command every probe ran, and labels the endpoint probes", () => {
+    const base = hunt();
+    const md = renderIssue({
+      ...base,
+      probes: [{ ...probe(0, "pass"), role: "good" }, ...base.probes, { ...probe(64, "fail"), role: "bad" }],
+    });
+    expect(md).toContain("`pip install -e .[test]`");
+    expect(md).toContain("(known good)");
+    expect(md).toContain("(failing ref)");
+  });
+
+  it("shows an untestable commit as a skip, not an error", () => {
+    const base = hunt();
+    const md = renderIssue({ ...base, probes: [...base.probes, probe(20, "error")] });
+    expect(md).toContain("| skip |");
   });
 
   it("renders an em dash for a probe with no measured duration", () => {

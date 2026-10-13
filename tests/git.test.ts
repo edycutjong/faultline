@@ -13,8 +13,12 @@ import { describe, it, expect } from "vitest";
 import {
   GitRangeError,
   fetchCommitDiff,
+  optionalDependencyGroups,
   parseRepoUrl,
+  resolveHuntRange,
   resolveRange,
+  suggestInstallCommand,
+  validateInstallCommand,
   validateTestCommand,
 } from "@/lib/git";
 
@@ -218,7 +222,8 @@ describe("resolveRange", () => {
     // Index 1 is the oldest suspect — the commit immediately after the known-good ref.
     expect(commits[0]?.sha).toBe(shaFor(1));
     expect(commits[9]?.sha).toBe(shaFor(10));
-    // The good ref is the baseline, not a suspect; testing it would waste a probe.
+    // The good ref is the baseline, not a suspect: round 1 tests it as an endpoint, but it
+    // can never be the culprit, so it is not in the range.
     expect(commits.map((c) => c.sha)).not.toContain(shaFor(0));
   });
 
@@ -417,3 +422,92 @@ describe("fetchCommitDiff", () => {
     expect(error.message).toContain(shaFor(13).slice(0, 7));
   });
 });
+
+describe("resolveHuntRange", () => {
+  it("returns the resolved good and bad SHAs with the range, so round 1 can probe both", async () => {
+    const github = fakeGitHub(linearHistory(5));
+    const range = await resolveHuntRange(REPO, "good", "bad", github.impl);
+    expect(range.goodSha).toBe(shaFor(0));
+    expect(range.badSha).toBe(shaFor(5));
+    expect(range.commits.map((c) => c.index)).toEqual([1, 2, 3, 4, 5]);
+  });
+});
+
+describe("validateInstallCommand", () => {
+  it("allows empty (detect per commit) and pip commands", () => {
+    expect(validateInstallCommand("")).toBe("");
+    expect(validateInstallCommand("  pip install -e .[test]  ")).toBe("pip install -e .[test]");
+    expect(validateInstallCommand("python -m pip install -r requirements.txt")).toBe(
+      "python -m pip install -r requirements.txt",
+    );
+  });
+
+  it.each(["make test", "bash install.sh", "python setup.py develop", "curl x"])("refuses %p", (command) => {
+    expect(caught(() => validateInstallCommand(command)).message).toMatch(/must be a pip command/);
+  });
+
+  it.each([";", "&", "|", ">", "<", "`", "$", "\\"])("refuses shell metacharacter %p", (meta) => {
+    expect(caught(() => validateInstallCommand(`pip install x ${meta} y`)).message).toMatch(/metacharacters/);
+  });
+});
+
+describe("optionalDependencyGroups", () => {
+  it("reads the extras names under [project.optional-dependencies] only", () => {
+    const toml = [
+      "[project]",
+      'name = "tzdata-pipeline"',
+      "dependencies = []",
+      "",
+      "[project.optional-dependencies]",
+      'test = ["pytest>=7"]',
+      'docs = ["sphinx"]',
+      "",
+      "[tool.pytest.ini_options]",
+      'addopts = "-q"',
+    ].join("\n");
+    expect(optionalDependencyGroups(toml)).toEqual(["test", "docs"]);
+  });
+});
+
+describe("suggestInstallCommand", () => {
+  function repoWith(files: Record<string, string>): typeof fetch {
+    return async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/git/trees/")) {
+        return new Response(JSON.stringify({ tree: Object.keys(files).map((path) => ({ path, type: "blob" })) }));
+      }
+      const match = url.match(/\/contents\/([^?]+)/);
+      if (match && match[1] && files[match[1]] !== undefined) return new Response(files[match[1]]);
+      return new Response("not found", { status: 404 });
+    };
+  }
+
+  it("uses a declared [test] extra", async () => {
+    const impl = repoWith({ "pyproject.toml": '[project.optional-dependencies]\ntest = ["pytest"]\n' });
+    expect(await suggestInstallCommand(REPO, shaFor(1), impl)).toEqual({
+      command: "pip install -e .[test]",
+      reason: "pyproject.toml declares a [test] extra",
+    });
+  });
+
+  it("adds pytest explicitly when the project declares no test extra", async () => {
+    const impl = repoWith({ "pyproject.toml": '[project]\nname = "x"\n' });
+    expect((await suggestInstallCommand(REPO, shaFor(1), impl)).command).toBe("pip install -e . pytest");
+  });
+
+  it("combines setup.py with a requirements-dev file", async () => {
+    const impl = repoWith({ "setup.py": "", "requirements-dev.txt": "pytest" });
+    expect((await suggestInstallCommand(REPO, shaFor(1), impl)).command).toBe("pip install -e . -r requirements-dev.txt");
+  });
+
+  it("installs requirements.txt plus pytest for a plain script repo", async () => {
+    const impl = repoWith({ "requirements.txt": "requests" });
+    expect((await suggestInstallCommand(REPO, shaFor(1), impl)).command).toBe("pip install -r requirements.txt pytest");
+  });
+
+  it("falls back to pytest alone when there is nothing to install", async () => {
+    const impl = repoWith({ "README.md": "" });
+    expect((await suggestInstallCommand(REPO, shaFor(1), impl)).command).toBe("pip install pytest");
+  });
+});
+

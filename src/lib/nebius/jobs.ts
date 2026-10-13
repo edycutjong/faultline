@@ -7,7 +7,10 @@
  *
  * The API exposes no exit code and no logs over REST, so a job's *state* tells us only
  * whether the container ran — never whether the test passed. The verdict comes from the
- * file the probe writes to the mounted bucket. See `src/lib/store.ts`.
+ * document the probe PUTs to its presigned URL. See `src/lib/store.ts`.
+ *
+ * No job is ever given a bucket mount. A probe runs a visitor's repository, so anything
+ * mounted into it — and any credential in its environment — belongs to the visitor.
  */
 
 import type { NebiusJobState } from "@/lib/types";
@@ -17,6 +20,7 @@ import {
   PROBE_PLATFORM,
   PROBE_PRESET,
   type NebiusConfig,
+  type ProbeRegion,
 } from "./config";
 
 export interface JobStateDetails {
@@ -34,20 +38,31 @@ export interface NebiusJob {
   };
 }
 
+/** A small file materialised in the container before the entrypoint runs (≤ 64 KiB). */
+export interface InjectedFile {
+  containerPath: string;
+  content: string;
+}
+
 export interface CreateJobOptions {
   name: string;
   image: string;
+  /** Where the job runs. Omitted means the home region's project and subnet. */
+  target?: ProbeRegion;
   containerCommand?: string;
   args?: string;
   env?: Record<string, string>;
+  /** Files written into the container at launch — how probe.py reaches a stock image. */
+  files?: InjectedFile[];
   platform?: string;
   preset?: string;
   /** Job timeout. The API floor is 3600s; a job still terminates when its container exits. */
   timeoutSeconds?: number;
   diskSizeBytes?: number;
-  /** Mount the hunt bucket read-write so the probe can write its verdict. */
-  mountBucketAt?: string;
 }
+
+/** The API's documented ceiling for one injected file. */
+export const INJECTED_FILE_MAX_BYTES = 64 * 1024;
 
 interface OperationResponse {
   resourceId?: string;
@@ -136,17 +151,23 @@ export async function createJob(
   options: CreateJobOptions,
   fetchImpl: typeof fetch = fetch,
 ): Promise<string> {
+  const target = options.target ?? {
+    region: config.region,
+    projectId: config.projectId,
+    subnetId: config.subnetId,
+  };
+
   const spec: Record<string, unknown> = {
     image: options.image,
     platform: options.platform ?? PROBE_PLATFORM,
     preset: options.preset ?? PROBE_PRESET,
-    subnetId: config.subnetId,
-    // The documented minimum is 3600s. A probe exits long before this; the timeout is a
-    // backstop against a hung test holding a VM open and billing per second.
+    subnetId: target.subnetId,
+    // The documented minimum is 3600s. A probe exits long before this — it enforces its own,
+    // shorter timeout so it always lives to report — and this is the backstop behind it.
     timeout: `${Math.max(3600, options.timeoutSeconds ?? 3600)}s`,
     disk: {
       type: "NETWORK_SSD",
-      sizeBytes: String(options.diskSizeBytes ?? 64 * 1024 * 1024 * 1024),
+      sizeBytes: String(options.diskSizeBytes ?? 32 * 1024 * 1024 * 1024),
     },
   };
 
@@ -160,32 +181,25 @@ export async function createJob(
     }));
   }
 
-  if (options.mountBucketAt) {
-    // The CLI's `--volume s3://bucket:/path:rw:profile` shorthand relies on an AWS profile
-    // inside the container, which is undocumented. The REST shape takes inline credentials,
-    // which is fully specified, so that is what we send.
-    spec.volumes = [
-      {
-        source: `s3://${config.bucket}`,
-        containerPath: options.mountBucketAt,
-        mode: "READ_WRITE",
-        s3Config: {
-          endpoint: config.s3Endpoint,
-          region: config.region,
-          credentials: {
-            accessKeyId: config.s3AccessKeyId,
-            secretAccessKey: config.s3SecretAccessKey,
-          },
-        },
-      },
-    ];
+  if (options.files?.length) {
+    spec.injectedFiles = options.files.map((file) => {
+      const bytes = Buffer.from(file.content, "utf8");
+      if (bytes.length === 0 || bytes.length > INJECTED_FILE_MAX_BYTES) {
+        throw new NebiusApiError(
+          `injected file ${file.containerPath} is ${bytes.length} bytes; the API accepts 1 B – 64 KiB`,
+          400,
+          "",
+        );
+      }
+      return { containerPath: file.containerPath, content: bytes.toString("base64") };
+    });
   }
 
   const op = await api<OperationResponse>(
     config,
     "POST",
     "/ai/v1/jobs",
-    { metadata: { parentId: config.projectId, name: options.name }, spec },
+    { metadata: { parentId: target.projectId, name: options.name }, spec },
     fetchImpl,
   );
 
@@ -213,14 +227,40 @@ export async function getJob(
   );
 }
 
+/**
+ * Find a job by its (deterministic) name. Used to recover a dispatch whose creator died
+ * between creating the job and recording its ID: the name is derived from (hunt, round,
+ * commit, attempt), so the job can always be found again without a second create.
+ */
+export async function getJobByName(
+  config: NebiusConfig,
+  projectId: string,
+  name: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<NebiusJob | null> {
+  try {
+    return await api<NebiusJob>(
+      config,
+      "GET",
+      `/ai/v1/jobs/get-by-name?parentId=${encodeURIComponent(projectId)}&name=${encodeURIComponent(name)}`,
+      undefined,
+      fetchImpl,
+    );
+  } catch (error) {
+    if (error instanceof NebiusApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
 export async function listJobs(
   config: NebiusConfig,
+  projectId: string = config.projectId,
   fetchImpl: typeof fetch = fetch,
 ): Promise<NebiusJob[]> {
   const res = await api<{ items?: NebiusJob[] }>(
     config,
     "GET",
-    `/ai/v1/jobs?parentId=${encodeURIComponent(config.projectId)}`,
+    `/ai/v1/jobs?parentId=${encodeURIComponent(projectId)}`,
     undefined,
     fetchImpl,
   );

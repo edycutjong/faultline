@@ -1,8 +1,19 @@
 import { describe, it, expect } from "vitest";
 
-import { huntBandSize, newHunt } from "@/lib/hunt";
-import { DEFAULT_BAND_SIZE, estimateRounds, planBand } from "@/lib/planner";
+import { huntBandSize, newHunt, type CreateHuntInput } from "@/lib/hunt";
+import { DEFAULT_BAND_SIZE, estimateHuntRounds, estimateRounds, firstRoundInterior, planBand } from "@/lib/planner";
 import type { Commit, Hunt } from "@/lib/types";
+
+const BASE: Omit<CreateHuntInput, "commits"> = {
+  repoUrl: "https://github.com/a/b",
+  testCommand: "pytest",
+  goodRef: "v1",
+  goodSha: "0".repeat(40),
+  badRef: "HEAD",
+  slots: 8,
+  backend: "nebius-serverless-jobs",
+  regions: ["eu-west1"],
+};
 
 function commits(n: number): Commit[] {
   return Array.from({ length: n }, (_, i) => ({
@@ -21,17 +32,11 @@ function commits(n: number): Commit[] {
  */
 describe("hunt band size", () => {
   it("defaults to DEFAULT_BAND_SIZE when the caller does not ask", () => {
-    expect(newHunt({
-      repoUrl: "https://github.com/a/b", testCommand: "pytest", goodRef: "v1",
-      badRef: "HEAD", commits: commits(64),
-    }).bandSize).toBe(DEFAULT_BAND_SIZE);
+    expect(newHunt({ ...BASE, commits: commits(64) }).bandSize).toBe(DEFAULT_BAND_SIZE);
   });
 
   it("carries an explicit band size through creation", () => {
-    expect(newHunt({
-      repoUrl: "https://github.com/a/b", testCommand: "pytest", goodRef: "v1",
-      badRef: "HEAD", commits: commits(64), bandSize: 1,
-    }).bandSize).toBe(1);
+    expect(newHunt({ ...BASE, commits: commits(64), bandSize: 1 }).bandSize).toBe(1);
   });
 
   /**
@@ -43,10 +48,7 @@ describe("hunt band size", () => {
   it("falls back to the default for hunts stored before the field existed", () => {
     // Omit<> rather than an intersection: `Hunt & { bandSize?: number }` still has bandSize
     // required, so `delete` on it is a type error.
-    const legacy: Omit<Hunt, "bandSize"> & { bandSize?: number } = newHunt({
-      repoUrl: "https://github.com/a/b", testCommand: "pytest", goodRef: "v1",
-      badRef: "HEAD", commits: commits(64),
-    });
+    const legacy: Omit<Hunt, "bandSize"> & { bandSize?: number } = newHunt({ ...BASE, commits: commits(64) });
     delete legacy.bandSize;
 
     expect(huntBandSize(legacy as Hunt)).toBe(DEFAULT_BAND_SIZE);
@@ -54,10 +56,7 @@ describe("hunt band size", () => {
   });
 
   it.each([0, -1, 1.5, NaN])("rejects %p and falls back rather than planning an empty band", (bad) => {
-    const hunt = { ...newHunt({
-      repoUrl: "https://github.com/a/b", testCommand: "pytest", goodRef: "v1",
-      badRef: "HEAD", commits: commits(64),
-    }), bandSize: bad as number };
+    const hunt = { ...newHunt({ ...BASE, commits: commits(64) }), bandSize: bad as number };
     expect(huntBandSize(hunt)).toBe(DEFAULT_BAND_SIZE);
   });
 
@@ -74,5 +73,20 @@ describe("hunt band size", () => {
   it("plans exactly one probe per round at band 1, which is what git bisect does", () => {
     expect(planBand(0, 256, 1)).toHaveLength(1);
     expect(planBand(0, 256, 8)).toHaveLength(8);
+  });
+
+  /**
+   * What a hunt actually needs once the backend's capacity and the endpoint round are
+   * counted: on this tenant's measured 2 VMs per region, one region gives 2 slots and four
+   * regions give 8.
+   */
+  it("counts the endpoint round and the backend's capacity", () => {
+    expect(firstRoundInterior(2, 8)).toBe(0);
+    expect(firstRoundInterior(8, 8)).toBe(6);
+    expect(firstRoundInterior(10, 8)).toBe(8);
+    expect(estimateHuntRounds(256, 8, 8)).toBe(3);
+    expect(estimateHuntRounds(256, 2, 8)).toBe(7);
+    expect(estimateHuntRounds(64, 8, 8)).toBe(3); // 64 → ~10 → ~2 → 1
+    expect(estimateHuntRounds(1, 2, 8)).toBe(1);
   });
 });

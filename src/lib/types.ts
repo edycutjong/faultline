@@ -6,7 +6,13 @@
  * type in this file references Nebius, HTTP, or storage.
  */
 
-/** A probe's answer about one commit. `error` means the probe itself broke, not the test. */
+/**
+ * A probe's answer about one commit.
+ *
+ * `error` means the probe RAN but the commit could not be tested — it would not check out,
+ * install or finish in time. That is `git bisect skip`: it says nothing about the commit, so
+ * it never narrows the search and never counts as a contradiction.
+ */
 export type Verdict = "pass" | "fail" | "error";
 
 /**
@@ -52,6 +58,27 @@ export interface Commit {
 }
 
 /**
+ * Why a probe exists. The two endpoint probes test the refs the user GAVE us: a search that
+ * assumes its own premises can name an innocent commit with total confidence.
+ */
+export type ProbeRole = "good" | "bad" | "interior";
+
+/**
+ * Where a probe is in its life. `queued` probes wait for a free slot; `dispatching` means a
+ * dispatch claim exists but the job ID has not been read back yet.
+ */
+export type ProbePhase = "queued" | "dispatching" | "running" | "done" | "cancelled";
+
+/** One attempt that produced no verdict — infrastructure, never evidence about the commit. */
+export interface InfraFailure {
+  attempt: number;
+  jobId: string | null;
+  region: string | null;
+  reason: string;
+  at: string;
+}
+
+/**
  * One dispatched test of one commit.
  *
  * `jobId` is the real Nebius job ID and is rendered in the UI on purpose: it is the evidence
@@ -61,22 +88,48 @@ export interface Probe {
   commitSha: string;
   commitIndex: number;
   round: number;
+  role: ProbeRole;
+  /** 1-based. A probe whose job dies without reporting is retried; see MAX_ATTEMPTS. */
+  attempt: number;
+  /** `r<round>-i<index>-<sha12>-a<attempt>` — names the dispatch claim, the verdict object and the job. */
+  key: string;
+  phase: ProbePhase;
+  region: string | null;
   jobId: string | null;
-  jobState: NebiusJobState;
+  jobState: NebiusJobState | null;
   verdict: Verdict | null;
-  /** Populated for `error` verdicts and FAILED/ERROR job states. */
+  /** Populated for every verdict: what was installed and how the test exited, or why not. */
   detail: string | null;
-  dispatchedAt: string;
+  /** The test command's exit code. The Jobs API exposes none, so the probe carries it. */
+  exitCode: number | null;
+  /** Last lines of the test output, capped by the probe. What a maintainer actually reads. */
+  tail: string | null;
+  /** The install command the probe actually ran for this commit. */
+  installCommand: string | null;
+  /** When the job was created. */
+  dispatchedAt: string | null;
+  /** When the job's workload started — after VM provisioning and the image pull. */
   startedAt: string | null;
+  /** When the verdict landed, or the probe was given up on. */
   finishedAt: string | null;
+  /** Time spent inside the container (clone + install + test), as the probe measured it. */
   durationMs: number | null;
-  /** Object Storage key the probe container wrote its verdict JSON to. */
+  /** Job created → job finished, as Nebius reports it: the VM time this probe could bill. */
+  vmMs: number | null;
+  /** Object Storage key the probe PUTs its verdict to — the only key it can write. */
   verdictKey: string;
+  /** Do not dispatch before this time (backoff after a quota rejection). */
+  notBefore: string | null;
+  infraFailures: InfraFailure[];
+  /** First attempt of the current retry budget. Resuming a paused hunt starts a new one. */
+  budgetFrom: number;
 }
 
 export type HuntStatus =
   | "planning"
   | "running"
+  /** A probe failed to report MAX_ATTEMPTS times. Nothing was concluded; resumable. */
+  | "paused"
   | "narrating"
   | "done"
   | "inconclusive"
@@ -89,54 +142,98 @@ export interface FaultReport {
   culpritAuthor: string;
   culpritDate: string;
   diffText: string;
-  /** One paragraph. Null while the narration job is still running. */
+  /** One paragraph. Null while narration is still running, or when it failed. */
   rootCauseMd: string | null;
   modelId: string;
-  narrationJobId: string | null;
+  /** Where the model ran — a Token Factory request, so the paragraph is traceable. */
+  narrationProvider: string | null;
+  narrationRequestId: string | null;
   /** Set when narration failed; the culprit is still valid without it. */
   narrationError: string | null;
 }
 
-/**
- * Why a hunt stopped without naming a commit. `contradiction` is the honest-refusal case:
- * a `pass` verdict at a higher commit index than a `fail`, which no single culprit explains.
- */
+export type InconclusiveReason =
+  /** A `pass` above a `fail`: no single first-bad commit explains it. */
+  | "contradiction"
+  /** The known-good ref fails in its own clean environment. */
+  | "good_fails"
+  /** The failing ref passes in its own clean environment — the failure is environmental. */
+  | "bad_passes"
+  /** The known-good ref cannot be built today. */
+  | "good_unbuildable"
+  /** The failing ref cannot be built in a clean environment. */
+  | "bad_unbuildable"
+  /** Narrowed to a run of commits, but untestable commits hide which one is first-bad. */
+  | "skipped_range";
+
+/** Why a hunt stopped without naming a single commit. Every reason carries its evidence. */
 export interface Inconclusive {
-  reason: "contradiction" | "all_fail" | "all_pass" | "probe_errors";
+  reason: InconclusiveReason;
   headline: string;
   explanation: string;
   /** The specific commit pair that contradicts, when reason is `contradiction`. */
   evidence: { passSha: string; failSha: string } | null;
+  /** For `skipped_range`: the culprit is one of these commits, oldest first. */
+  range: { fromIndex: number; toIndex: number; shas: string[] } | null;
+}
+
+/** A hunt stopped because the infrastructure, not the code, would not answer. */
+export interface Pause {
+  commitSha: string;
+  commitIndex: number;
+  round: number;
+  attempts: number;
+  message: string;
+  at: string;
 }
 
 export interface Hunt {
   id: string;
   repoUrl: string;
   testCommand: string;
+  /**
+   * The install command every probe runs before the test, editable at creation and resolved
+   * from the repository's own declarations. Empty means "detect per commit".
+   */
+  installCommand: string;
   goodRef: string;
+  /** The known-good ref, resolved. Probed in round 1 at index 0. */
+  goodSha: string;
   badRef: string;
   status: HuntStatus;
-  /** The full suspect range, resolved once at creation. Never re-fetched. */
+  /** The suspect range, good ref excluded, resolved once at creation. Never re-fetched. */
   commits: Commit[];
   probes: Probe[];
   round: number;
-  /** Inclusive index bounds of the range still under suspicion. */
+  /** Bounds of the range still under suspicion: the culprit lies in (lowIndex, highIndex]. */
   lowIndex: number;
   highIndex: number;
   report: FaultReport | null;
   inconclusive: Inconclusive | null;
+  pause: Pause | null;
   createdAt: string;
   finishedAt: string | null;
   /**
-   * Probes dispatched per round. Defaults to DEFAULT_BAND_SIZE; settable so the sequential
-   * baseline can be MEASURED rather than derived — a hunt at bandSize 1 is literally
-   * `git bisect` on the same infrastructure, same container, same cold starts. Without this
-   * the headline "3 rounds, not 8" would rest on arithmetic instead of a run a judge can repeat.
+   * Interior probes per round, before the backend's capacity caps it. Settable so the
+   * sequential baseline can be MEASURED rather than derived: a hunt at bandSize 1 is literally
+   * `git bisect` on the same infrastructure, same container, same cold starts.
    */
   bandSize: number;
-  /** Wall-clock across all rounds. Populated at terminal state. */
+  /** Concurrent probes the backend could hold when this hunt was created. */
+  slots: number;
+  /** Which backend ran the probes, e.g. `nebius-serverless-jobs`. */
+  backend: string;
+  /** Regions probes could be dispatched to. */
+  regions: string[];
+  /** The probe's own deadline, inside the platform's job timeout. */
+  probeTimeoutSeconds: number;
+  /** sha256 of the probe.py every job of this hunt ran. */
+  probeSha256: string;
+  /** Where a probe sends its empty "reconcile now" request. Null when there is nowhere. */
+  tickUrl: string | null;
+  /** Wall-clock from creation to the culprit (or the refusal). Populated at terminal state. */
   wallClockMs: number | null;
-  /** Sum of measured job seconds x preset price. Null until a probe reports duration. */
+  /** List-price cost of the VM time every probe job used. Null until a job reports times. */
   costUsd: number | null;
   /** True for the committed recorded run, which must never be presented as live. */
   recorded: boolean;
@@ -144,15 +241,18 @@ export interface Hunt {
   recordedAt: string | null;
 }
 
-/** What the probe container writes to Object Storage. The verdict contract, frozen. */
+/** What a probe PUTs to its presigned URL. The verdict contract, frozen. */
 export interface ProbeResult {
-  schema: "faultline.probe.v1";
+  schema: "faultline.probe.v2";
   huntId: string;
+  probeKey: string;
   commitSha: string;
   verdict: Verdict;
   /** Process exit code of the test command. The Jobs API exposes no exit code, so we carry it. */
   exitCode: number | null;
   durationMs: number;
+  installCommand: string | null;
+  timings: { cloneMs?: number; installMs?: number; testMs?: number };
   detail: string | null;
   /** Last lines of test output, capped. The evidence a maintainer actually reads. */
   tail: string | null;
