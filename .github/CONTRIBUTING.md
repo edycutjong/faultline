@@ -18,7 +18,7 @@ credentials are needed only to run a real hunt.
 
 ```bash
 npm run ci     # lint, typecheck, tests with coverage, production audit
-npm run e2e    # Playwright, desktop and mobile
+npm run build && npm run e2e    # Playwright against the production build, desktop and mobile
 ```
 
 - Add or update tests for any behavior change.

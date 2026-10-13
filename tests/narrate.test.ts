@@ -15,7 +15,6 @@ import type { Hunt } from "@/lib/types";
 
 const TF: TokenFactoryConfig = {
   apiKey: "tf-key-for-tests",
-  projectId: null,
   baseUrl: "https://api.tokenfactory.nebius.com/v1",
   model: NARRATION_MODEL,
 };
@@ -141,7 +140,6 @@ describe("loadTokenFactoryConfig", () => {
     expect(loadTokenFactoryConfig({} as NodeJS.ProcessEnv)).toBeNull();
     expect(loadTokenFactoryConfig({ TOKENFACTORY_API_KEY: " k " } as unknown as NodeJS.ProcessEnv)).toEqual({
       apiKey: "k",
-      projectId: null,
       baseUrl: "https://api.tokenfactory.nebius.com/v1",
       model: "nvidia/nemotron-3-super-120b-a12b",
     });

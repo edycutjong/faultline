@@ -408,7 +408,7 @@ describe("#5 — one live hunt at a time", () => {
 });
 
 describe("narration", () => {
-  const tf = { apiKey: "tf-test", projectId: null, baseUrl: "https://tf.example/v1", model: "nvidia/nemotron-3-super-120b-a12b" };
+  const tf = { apiKey: "tf-test", baseUrl: "https://tf.example/v1", model: "nvidia/nemotron-3-super-120b-a12b" };
 
   it("calls Token Factory once even when ticks race through the narrating stage", async () => {
     let calls = 0;

@@ -162,7 +162,6 @@ export { PRICING, probeCostUsd } from "@/lib/pricing";
 /** Token Factory: where the narration model is called. Independent of the Jobs credentials. */
 export interface TokenFactoryConfig {
   apiKey: string;
-  projectId: string | null;
   baseUrl: string;
   model: string;
 }
@@ -175,7 +174,6 @@ export function loadTokenFactoryConfig(env: NodeJS.ProcessEnv = process.env): To
   if (!apiKey) return null;
   return {
     apiKey,
-    projectId: env.TOKENFACTORY_PROJECT_ID?.trim() || null,
     baseUrl: env.TOKENFACTORY_BASE_URL?.trim() || TOKEN_FACTORY_BASE_URL,
     model: env.FAULTLINE_NARRATION_MODEL?.trim() || NARRATION_MODEL,
   };

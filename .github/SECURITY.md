@@ -19,8 +19,10 @@ You will get an acknowledgment within 48 hours and a timeline after triage.
 
 `npm audit --omit=dev` reports **none** (checked 2026-10-14, on `next@15.5.27`, after a
 non-breaking `npm audit fix` cleared advisories in `next`, `sharp` and `source-map-js`).
-Development-only tooling still reports advisories whose fix needs a major version bump
-(`npm audit` without `--omit=dev`); none of that code ships in the deployed app.
+Development-only tooling still reports advisories (`npm audit` without `--omit=dev`, through
+`eslint-config-next`) whose only offered fix is a breaking change — `npm audit fix --force` would
+move `eslint-config-next` to 14.2.35, a different major version. None of that code ships in the
+deployed app.
 
 This project must stay live and working for judges through **2026-12-15**. A major framework
 bump applied unattended to a submitted project is a realistic way to take the demo down, so
