@@ -1,0 +1,1663 @@
+{
+  "schema": "faultbench.results.v2",
+  "kind": "faultline",
+  "label": "attrs",
+  "ranAt": "2026-10-13T16:44:37+00:00",
+  "api": "https://faultline-edy-cus-projects.vercel.app",
+  "huntId": "50824b63-967d-4716-b81b-b49cef1f1bfd",
+  "repo": "https://github.com/python-attrs/attrs",
+  "truth": "89a890a3262273514619d1881c6a8b0fe26c66ac",
+  "named": "89a890a3262273514619d1881c6a8b0fe26c66ac",
+  "correct": true,
+  "status": "done",
+  "inconclusive": null,
+  "seconds": 918.9,
+  "rounds": 3,
+  "probes": 17,
+  "slots": 8,
+  "regions": [
+    "eu-west1",
+    "uk-south1",
+    "uk-south2",
+    "me-west1"
+  ],
+  "vmSeconds": 4527.6,
+  "costUsd": 0.083,
+  "priceBasis": "cpu-d3 list price from 2026-10-01: $0.015/vCPU-h, $0.0045/GiB-h (docs.nebius.com/compute/resources/pricing)",
+  "jobIds": [
+    "aijob-e01cxet6671cy7p4vs",
+    "aijob-e01sn8zt8f4hjzm8nk",
+    "aijob-e03sbzyx36r0r0jx58",
+    "aijob-e03bhk1db0mzbjkcqw",
+    "aijob-e05vjdtn5yspy989t3",
+    "aijob-e05bbzctzn1jzn9r8j",
+    "aijob-i00y3hr7anqt1mepa9",
+    "aijob-i00m9yejszdx247zmv",
+    "aijob-e05zc37r8wq44nr6af",
+    "aijob-e05pk3fhb00sd924pz",
+    "aijob-i00rpv0cmde90s70gb",
+    "aijob-i00qg6ysxyzrappd65",
+    "aijob-e01kvjabzz7jsnj9ak",
+    "aijob-e03zj2cnk2gkc02t6b",
+    "aijob-e01jt77ga4hch1p1ms",
+    "aijob-e03thf59bgfv8fybw7",
+    "aijob-e03amkmvhgqp1fb6hv"
+  ],
+  "infraRetries": 16,
+  "perRound": [
+    {
+      "round": 1,
+      "probes": 8,
+      "seconds": 290.3
+    },
+    {
+      "round": 2,
+      "probes": 8,
+      "seconds": 337.2
+    },
+    {
+      "round": 3,
+      "probes": 1,
+      "seconds": 258.1
+    }
+  ],
+  "coldStartSeconds": {
+    "n": 17,
+    "unit": "s",
+    "min": 251.5,
+    "p50": 256.39,
+    "p95": 271.01,
+    "max": 271.01,
+    "mean": 259.74,
+    "p95_meaningful": false
+  },
+  "inContainerSeconds": {
+    "n": 17,
+    "unit": "s",
+    "min": 3.54,
+    "p50": 3.73,
+    "p95": 5.85,
+    "max": 5.85,
+    "mean": 4.23,
+    "p95_meaningful": false
+  },
+  "narration": {
+    "model": "nvidia/nemotron-3-super-120b-a12b",
+    "requestId": "chatcmpl-95d7f86bfadb7974",
+    "error": null
+  },
+  "hunt": {
+    "id": "50824b63-967d-4716-b81b-b49cef1f1bfd",
+    "repoUrl": "https://github.com/python-attrs/attrs",
+    "testCommand": "python -c \"assert (lambda C: (lambda i: (i.__setstate__((1, 2)), (i.x, i.y))[1])(C.__new__(C)))(__import__('attr').make_class('C', ['x', 'y'], slots=True)) == (1, 2)\"",
+    "installCommand": "pip install -e .",
+    "goodRef": "b3dfebe2e10b44437c4f97d788fb5220d790efd0",
+    "goodSha": "b3dfebe2e10b44437c4f97d788fb5220d790efd0",
+    "badRef": "a9960de98d0f58ccb2880d03c97dafba3fc1111c",
+    "status": "done",
+    "commits": [
+      {
+        "sha": "a683bdb656e23433c5f9af94ef642a837b1faa8e",
+        "index": 1,
+        "subject": "Start new development cycle",
+        "author": "Hynek Schlawack",
+        "date": "2022-07-28T13:22:12Z"
+      },
+      {
+        "sha": "430113c213c5213840abedbe369fe8bca8702f55",
+        "index": 2,
+        "subject": "Add zenodo badge",
+        "author": "Hynek Schlawack",
+        "date": "2022-07-28T13:46:55Z"
+      },
+      {
+        "sha": "0e9a101fc0414a53d72684a053818da96cbe4e6f",
+        "index": 3,
+        "subject": "Add citation",
+        "author": "Hynek Schlawack",
+        "date": "2022-07-28T13:54:39Z"
+      },
+      {
+        "sha": "c428229aca34833fc0e5db9d6fc21efca48356fd",
+        "index": 4,
+        "subject": "Refer to glossary explicitly so it's not in fixed font",
+        "author": "Hynek Schlawack",
+        "date": "2022-07-29T03:43:07Z"
+      },
+      {
+        "sha": "95e0c423ca31123a9537405fd2de5a1ee9f01b7c",
+        "index": 5,
+        "subject": "Update .gitignore",
+        "author": "Hynek Schlawack",
+        "date": "2022-07-30T11:23:03Z"
+      },
+      {
+        "sha": "06ce35459453e7c2964b0e0e25794a6af9aeb976",
+        "index": 6,
+        "subject": "pre-commit autoupdate, add yesqa",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-01T08:07:49Z"
+      },
+      {
+        "sha": "107367d437484006a7d01854e91e478401690087",
+        "index": 7,
+        "subject": "[pre-commit.ci] pre-commit autoupdate (#990)",
+        "author": "pre-commit-ci[bot]",
+        "date": "2022-08-02T03:51:38Z"
+      },
+      {
+        "sha": "08f8319efefca8dbaaeb7dc35dbd9a76d5a2400d",
+        "index": 8,
+        "subject": "Drop Python 3.5 (#988)",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-05T07:48:00Z"
+      },
+      {
+        "sha": "daa654c62ac6e31fe58dbdf1c22d82dfa27632c5",
+        "index": 9,
+        "subject": "Expand supporters",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-06T04:53:37Z"
+      },
+      {
+        "sha": "a2a741097c43ef5a36cc5e3c2e855a0a5c27b8b6",
+        "index": 10,
+        "subject": "Don't need this word",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-06T04:55:49Z"
+      },
+      {
+        "sha": "983c2c42935ccfc2fce77d6f20dac7821bc720e8",
+        "index": 11,
+        "subject": "Re-import AttrsInstance in attrs ns (#994)",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-07T00:13:02Z"
+      },
+      {
+        "sha": "a8191556c0aad84125d2c3435c5a2352b2f8a9ba",
+        "index": 12,
+        "subject": "Speedup `_setattr` usage and fix slight performance regressions (#991)",
+        "author": "davfsa",
+        "date": "2022-08-07T07:52:28Z"
+      },
+      {
+        "sha": "61516832448ea9ba9cf47281caec840a09e32a40",
+        "index": 13,
+        "subject": "Eliminate most str.format() and %-formatting (#995)",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-10T10:41:46Z"
+      },
+      {
+        "sha": "fbcae2a8b0e4a6d9227639d4a4293e4241976219",
+        "index": 14,
+        "subject": "Switch to 1% static packaging configuration (#998)",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-10T12:15:32Z"
+      },
+      {
+        "sha": "1007eb1c49c375c670a36716fc9924c4619eb3eb",
+        "index": 15,
+        "subject": "Remove forgotten double pytest config",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-10T12:18:27Z"
+      },
+      {
+        "sha": "4a281b04b422131bc21267bbf361a48314961e92",
+        "index": 16,
+        "subject": "Add warning re #993",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-10T12:32:00Z"
+      },
+      {
+        "sha": "351637400a97b853993f9cae82dc8fad085b3c3f",
+        "index": 17,
+        "subject": "Polish newsfragments",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-10T13:03:57Z"
+      },
+      {
+        "sha": "92ef1421b62cd7edcea8980f717b8758a51ac931",
+        "index": 18,
+        "subject": "Fix typo",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-11T05:11:18Z"
+      },
+      {
+        "sha": "38434525164e73cc9af393cfc7c6dc39fbbbc4f4",
+        "index": 19,
+        "subject": "Replace omnipresent pytest.mark.parametrize(\"(slots|frozen)\" w/ fixture (#1002)",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-11T07:35:39Z"
+      },
+      {
+        "sha": "714bf67a2f7db7d7b429fb43ec63be9778144ccd",
+        "index": 20,
+        "subject": "Extend we-are-not-a-serialization-framework",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-11T08:00:00Z"
+      },
+      {
+        "sha": "80c61b79cf1ad279974d9782deab3f649b0bb40a",
+        "index": 21,
+        "subject": "Remove frogotten path fragment",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-11T08:01:54Z"
+      },
+      {
+        "sha": "0c19e1600e4dee54a30fa3d4469dc9518e44a372",
+        "index": 22,
+        "subject": "Stop installing pre-commit in dev",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-11T08:09:37Z"
+      },
+      {
+        "sha": "536ddc57e25228655e78634db91d6ebd23dbb5d1",
+        "index": 23,
+        "subject": "Why not",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-11T08:13:13Z"
+      },
+      {
+        "sha": "c58ffd4e4cba5d5e58356722b985fc362358c48e",
+        "index": 24,
+        "subject": "Call abc.update_abstractmethods on 3.10+ (#1001)",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-11T11:33:34Z"
+      },
+      {
+        "sha": "a2c1275d1bbdf5a8774ce76d3e7bb5a310a1179c",
+        "index": 25,
+        "subject": "Make tox's pre-commit output more helpful",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-13T10:47:53Z"
+      },
+      {
+        "sha": "f7d64c01900b7050348ae8e2011e42c3514811b4",
+        "index": 26,
+        "subject": "Remove universal wheel, python 2 is unsupported (#1005)",
+        "author": "gopackgo90",
+        "date": "2022-08-15T06:24:32Z"
+      },
+      {
+        "sha": "006b31f46c45c3c2c3491e99cf55c6347eb06ec0",
+        "index": 27,
+        "subject": "Update GHA setup-python action",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-15T07:21:23Z"
+      },
+      {
+        "sha": "ca6ce8c00e45862a2e08b860d0b28e60dc08b73f",
+        "index": 28,
+        "subject": "Use `TypeGuard` for `has` in Python 3.10 and above (#997)",
+        "author": "layday",
+        "date": "2022-08-16T05:20:32Z"
+      },
+      {
+        "sha": "70b7f885f46a20c403f81ab3b3f7c314bae90735",
+        "index": 29,
+        "subject": "Add newsfragment for #997",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-16T05:26:50Z"
+      },
+      {
+        "sha": "5ecc39749a98c7ec3fc63b8cbaa82de5eb17c173",
+        "index": 30,
+        "subject": "Rename typing to mypy since we also have pyright (#1007)",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-16T10:15:10Z"
+      },
+      {
+        "sha": "89a890a3262273514619d1881c6a8b0fe26c66ac",
+        "index": 31,
+        "subject": "Change __getstate__ and __setstate__ to use a dict (#1004) (#1009)",
+        "author": "Nikola Dipanov",
+        "date": "2022-08-18T06:59:50Z"
+      },
+      {
+        "sha": "19f41dda6fefeb9ab099e700f0bf377a67c26275",
+        "index": 32,
+        "subject": "Add news fragement for #1009",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-18T07:01:32Z"
+      },
+      {
+        "sha": "d0b940c9b5e53114ade75531e9340ac4d22f24bb",
+        "index": 33,
+        "subject": "pre-commit autoupdate",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-18T07:03:24Z"
+      },
+      {
+        "sha": "cb047e14107db386a2e8925652f5b9dc8bd556b1",
+        "index": 34,
+        "subject": "Parametrize pickle tests with frozen",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-18T07:06:19Z"
+      },
+      {
+        "sha": "49ec7317c87c4f36f19588f7a4093616abdefd0b",
+        "index": 35,
+        "subject": "Protect pyright against 3.7 & prepare for #999",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-18T08:25:00Z"
+      },
+      {
+        "sha": "1ce864475d5408268944edf0520af97e5e743a60",
+        "index": 36,
+        "subject": "Paint the shed",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-18T08:36:49Z"
+      },
+      {
+        "sha": "6efae77bdeb5b80425ebc0bd332089df43036810",
+        "index": 37,
+        "subject": "Build sdist from a wheel in CI (#1012)",
+        "author": "Sviatoslav Sydorenko",
+        "date": "2022-08-19T04:56:30Z"
+      },
+      {
+        "sha": "307a6467d37308c22af32605f7e1e5e2b3e452f1",
+        "index": 38,
+        "subject": "Minor docs fixes",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-19T07:03:00Z"
+      },
+      {
+        "sha": "a961e9a42f36423381c16553e112224d822716e5",
+        "index": 39,
+        "subject": "Reflow GHA",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-19T07:22:35Z"
+      },
+      {
+        "sha": "70b3cf16e1d46771df28dcdbd103364ab794ac1a",
+        "index": 40,
+        "subject": "Use pytest-xdist in tox / CI (#1011)",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-21T07:38:37Z"
+      },
+      {
+        "sha": "e1fa525307870536e4ab24bdc31018b167b2a0fb",
+        "index": 41,
+        "subject": "Use build-and-inspect-python-package",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-21T07:42:03Z"
+      },
+      {
+        "sha": "649b273c823927650f01150462f7e2c55fe2d13f",
+        "index": 42,
+        "subject": "Make tests for simple-class actually run",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-22T08:54:22Z"
+      },
+      {
+        "sha": "c76062a73354828606c45ff2716956a6bb01506f",
+        "index": 43,
+        "subject": "Rename CI workflow to a more meaningful name",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-22T09:08:03Z"
+      },
+      {
+        "sha": "fdf824211f890d96f28b8382fe48884cc71d2e1b",
+        "index": 44,
+        "subject": "Fix pre-commit link syntax in contributing doc (#1018)",
+        "author": "Sviatoslav Sydorenko",
+        "date": "2022-08-22T14:09:55Z"
+      },
+      {
+        "sha": "09757569dc23f2bc9507c1b4ea6939cac2bae245",
+        "index": 45,
+        "subject": "Make link to contributing easier to find",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-22T14:15:23Z"
+      },
+      {
+        "sha": "c9cb0ffd2382fbceb13211065a741af81a7d357f",
+        "index": 46,
+        "subject": "fix markup",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-22T14:16:56Z"
+      },
+      {
+        "sha": "9169c499667cb306e4434a65557a17e8fdb5e1a9",
+        "index": 47,
+        "subject": "Add a preview for the \"next release\" change notes (#1016)",
+        "author": "Sviatoslav Sydorenko",
+        "date": "2022-08-22T14:27:40Z"
+      },
+      {
+        "sha": "cd355059607971d18503db4701383bb5108fff73",
+        "index": 48,
+        "subject": "Fix typo",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-22T14:39:08Z"
+      },
+      {
+        "sha": "fab5a9289d9689da823a18300bd957fd6bad7f72",
+        "index": 49,
+        "subject": "Deprecate Python 3.6 (#1017)",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-22T14:43:28Z"
+      },
+      {
+        "sha": "d4f33d96540a5887c0e4c066800891bfcb0400c9",
+        "index": 50,
+        "subject": "Use white logo in dark mode (#1019)",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-23T05:52:23Z"
+      },
+      {
+        "sha": "20453b1a61b514b13d1023edb7d42ba6950076e0",
+        "index": 51,
+        "subject": "Minor docs polish",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-23T08:12:44Z"
+      },
+      {
+        "sha": "c860e9dd2548e634c83f8e425ced3aede15d316a",
+        "index": 52,
+        "subject": "Use enum for typing NOTHING (#983)",
+        "author": "Kevin M Granger",
+        "date": "2022-08-27T15:41:56Z"
+      },
+      {
+        "sha": "7f18d92d7339171823ae3571ab75eb6648c2ccb5",
+        "index": 53,
+        "subject": "Pin towncrier for docs",
+        "author": "Hynek Schlawack",
+        "date": "2022-08-30T05:29:34Z"
+      },
+      {
+        "sha": "f7fa5a810c4c6919b6ce56228226c68bf4859e45",
+        "index": 54,
+        "subject": "Fix type errors in Pyright (#999)",
+        "author": "layday",
+        "date": "2022-08-30T13:06:10Z"
+      },
+      {
+        "sha": "f870beb84a56daaf6b638301f8afb530ed903727",
+        "index": 55,
+        "subject": "Add a not_ validator (#1010)",
+        "author": "Nick Timkovich",
+        "date": "2022-09-04T11:55:02Z"
+      },
+      {
+        "sha": "c5968d5a25519fff2f2a4d0e2abbdea80131a19e",
+        "index": 56,
+        "subject": "Remove default from type stubs from #1010",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-04T11:57:02Z"
+      },
+      {
+        "sha": "a6041144388e5306d0d3c93ff6e154d4b9dbf7d4",
+        "index": 57,
+        "subject": "[pre-commit.ci] pre-commit autoupdate (#1022)",
+        "author": "pre-commit-ci[bot]",
+        "date": "2022-09-06T05:54:17Z"
+      },
+      {
+        "sha": "e24ce2328d0e5406d74c89d2c0563c17251ef1d8",
+        "index": 58,
+        "subject": "Typography",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-12T13:09:34Z"
+      },
+      {
+        "sha": "c3078e33d05152157cec6fc9b0d2c9ff9625b10b",
+        "index": 59,
+        "subject": "Unpin towncrier",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-12T13:18:41Z"
+      },
+      {
+        "sha": "ab5712b6c54492d0d2830152cd8aaeeb489dfec8",
+        "index": 60,
+        "subject": "Use more commen term from keep a changelog",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-12T13:23:20Z"
+      },
+      {
+        "sha": "c2dd82be88de147f1fc95744c28070aa7c3f20af",
+        "index": 61,
+        "subject": "Create codeql-analysis.yml (#1024)",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-14T07:20:20Z"
+      },
+      {
+        "sha": "e31a6c9d1aa484ab89bfee04c6a06b97025a1c26",
+        "index": 62,
+        "subject": "Create dependabot.yml (#1025)",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-14T07:33:56Z"
+      },
+      {
+        "sha": "1a42ed184210adffe2f944c73716c89f3f8b7df3",
+        "index": 63,
+        "subject": "Add hard-earned OpenSSF badge",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-14T08:02:51Z"
+      },
+      {
+        "sha": "95fde1309b2116644dd05864ba06d02926c6d585",
+        "index": 64,
+        "subject": "Squeeze badges",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-14T08:05:32Z"
+      },
+      {
+        "sha": "c20a9dc7b9cd4902c247b665519ef9b416cac470",
+        "index": 65,
+        "subject": "Add defaults to cmp_using stubs (#1027)",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-19T07:20:55Z"
+      },
+      {
+        "sha": "36d6f8360408f726708f467c9e618394d2d7f74a",
+        "index": 66,
+        "subject": "Introduce a gate/check GHA job (#1029)",
+        "author": "Sviatoslav Sydorenko",
+        "date": "2022-09-26T14:50:45Z"
+      },
+      {
+        "sha": "6b73e8e01564ca60f4c6d8c79d7e5904bef52163",
+        "index": 67,
+        "subject": "Fix type docstring",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-28T07:25:16Z"
+      },
+      {
+        "sha": "38bf3021da80fa312515cd932561fdc3fd52a2db",
+        "index": 68,
+        "subject": "Extract docs into own CI job",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-28T07:42:21Z"
+      },
+      {
+        "sha": "f865d4e67ce175ffb4f5d46a32c7b767d19b2212",
+        "index": 69,
+        "subject": "Finalize extraction m(",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-28T07:46:17Z"
+      },
+      {
+        "sha": "eca0adc5edb9bcb9c0bc18d10cd2eebca97b9239",
+        "index": 70,
+        "subject": "Fix 3.11",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-28T07:49:28Z"
+      },
+      {
+        "sha": "f6d96456d81f93ef9531b6d40d8c06df412195d6",
+        "index": 71,
+        "subject": "Install tox for docs",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-28T07:53:07Z"
+      },
+      {
+        "sha": "300d3ee32ce6fb312b34b972879d1f7e5819626d",
+        "index": 72,
+        "subject": "Looks like pytest-mypy is broken on 3.11",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-28T08:29:43Z"
+      },
+      {
+        "sha": "2f447ca3e54838e941c72373958e91de2dbb9d92",
+        "index": 73,
+        "subject": "Fix version syntax",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-28T08:32:49Z"
+      },
+      {
+        "sha": "07f102dc30c49d64fb426cff149231af0be9f949",
+        "index": 74,
+        "subject": "No need to hide RTD",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-28T08:40:38Z"
+      },
+      {
+        "sha": "8415c4a00580a2c08762a4b43c712487f2244c81",
+        "index": 75,
+        "subject": "Use short syntax to request pre+final py311 (#1032)",
+        "author": "Sviatoslav Sydorenko",
+        "date": "2022-09-29T05:44:02Z"
+      },
+      {
+        "sha": "0095cd8ca24d15aa4e99f188eb9c229ed87cd22b",
+        "index": 76,
+        "subject": "[StepSecurity] ci: Harden GitHub Actions (#1034)",
+        "author": "Step Security Bot",
+        "date": "2022-09-29T06:04:18Z"
+      },
+      {
+        "sha": "a7eab339431a0aff7fa39e1ad89f03dae200bf4d",
+        "index": 77,
+        "subject": "Block on CI egress (#1035)",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-29T07:36:19Z"
+      },
+      {
+        "sha": "4b4da14880c19fd140388b7613fc914ca0734a7d",
+        "index": 78,
+        "subject": "Tighten permissions",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-29T09:00:18Z"
+      },
+      {
+        "sha": "c65cf47fc0958ba87660246fb4e73a3f066701a1",
+        "index": 79,
+        "subject": "Use more descriptive name",
+        "author": "Hynek Schlawack",
+        "date": "2022-09-29T09:01:58Z"
+      },
+      {
+        "sha": "ccecbf3ef7b56d53cd8d3a52c72e07a488d825d6",
+        "index": 80,
+        "subject": "[pre-commit.ci] pre-commit autoupdate (#1036)",
+        "author": "pre-commit-ci[bot]",
+        "date": "2022-10-04T06:41:08Z"
+      },
+      {
+        "sha": "965972eba3db4ed1b7eca53fa19aed1f3fcd166b",
+        "index": 81,
+        "subject": "Update `allowed-endpoints` in codeql-analysis.yml (#1046)",
+        "author": "Varun Sharma",
+        "date": "2022-10-27T06:59:26Z"
+      },
+      {
+        "sha": "a04ac9fdfb9f36f36b373b3725ac43c979520c30",
+        "index": 82,
+        "subject": "Pin mypy until we fix our pytest-mypy tests",
+        "author": "Hynek Schlawack",
+        "date": "2022-11-08T07:36:05Z"
+      },
+      {
+        "sha": "5a71192f8979811cf34bafbf344d979de08e53b2",
+        "index": 83,
+        "subject": "Use the stable version of Python 3.11 in CI (#1045)",
+        "author": "Olexiy Pohorely",
+        "date": "2022-11-08T07:41:42Z"
+      },
+      {
+        "sha": "bef1386f22693a963e6b321b16342e1f701a5382",
+        "index": 84,
+        "subject": "[pre-commit.ci] pre-commit autoupdate (#1050)",
+        "author": "pre-commit-ci[bot]",
+        "date": "2022-11-08T10:11:29Z"
+      },
+      {
+        "sha": "95841fc93e3c7d27cb5aab386c8540c13e899f4e",
+        "index": 85,
+        "subject": "Start moving docs to MyST / Markdown (#1053)",
+        "author": "Hynek Schlawack",
+        "date": "2022-11-16T12:58:25Z"
+      },
+      {
+        "sha": "741d37b45c0bd41b5298947bc3c3b2f686afc2be",
+        "index": 86,
+        "subject": "Simplify project information",
+        "author": "Hynek Schlawack",
+        "date": "2022-11-16T13:07:33Z"
+      },
+      {
+        "sha": "f36b6069fa8cdd8b774a8ca920efc4c7b02c6a3d",
+        "index": 87,
+        "subject": "Update sponsors",
+        "author": "Hynek Schlawack",
+        "date": "2022-11-16T14:05:23Z"
+      },
+      {
+        "sha": "36bb1f182edd6727568b25ee3e0a3b2d3b7c95b5",
+        "index": 88,
+        "subject": "Small doesn't do anything on GitHub",
+        "author": "Hynek Schlawack",
+        "date": "2022-11-16T14:17:25Z"
+      },
+      {
+        "sha": "59ff4da98c391e70565fa366d1d5838f3ecaee9a",
+        "index": 89,
+        "subject": "Better wording",
+        "author": "Hynek Schlawack",
+        "date": "2022-11-16T14:34:19Z"
+      },
+      {
+        "sha": "71bfef0abccc598cc8920e312b6b71b5c70377b8",
+        "index": 90,
+        "subject": "Move SVGs to .github & refer by raw URLs",
+        "author": "Hynek Schlawack",
+        "date": "2022-11-16T14:53:26Z"
+      },
+      {
+        "sha": "b82c89f702a4912209eee65d715edf7cffeee13c",
+        "index": 91,
+        "subject": "Update sponsors",
+        "author": "Hynek Schlawack",
+        "date": "2022-11-16T18:15:53Z"
+      },
+      {
+        "sha": "287c6cedc26cd30a3ee1420b5c25a5f3b6b1f07d",
+        "index": 92,
+        "subject": "Pin test CI image to ubuntu 20.04 for one more release (#1057)",
+        "author": "Hynek Schlawack",
+        "date": "2022-11-25T07:18:41Z"
+      },
+      {
+        "sha": "6c46bb19a04bb546dbf23396a8ac52c3354b51f8",
+        "index": 93,
+        "subject": "Start building Dash/Zeal docsets for docs (#1056)",
+        "author": "Hynek Schlawack",
+        "date": "2022-11-25T07:30:34Z"
+      },
+      {
+        "sha": "69aca6c130d98dacc31888607fa62fd28004cc2b",
+        "index": 94,
+        "subject": "Make logo call for action more timeless",
+        "author": "Hynek Schlawack",
+        "date": "2022-11-30T14:03:25Z"
+      },
+      {
+        "sha": "ee3ecb112f6af7f131a518058b2d0a7793edaa06",
+        "index": 95,
+        "subject": "Add Attribute.alias (#950)",
+        "author": "Alex Ford",
+        "date": "2022-11-30T14:39:57Z"
+      },
+      {
+        "sha": "e458448ee418e10cf28a089704dc42ba3c8aca37",
+        "index": 96,
+        "subject": "pyright: add aliasing test (#1063)",
+        "author": "Hynek Schlawack",
+        "date": "2022-11-30T15:04:57Z"
+      },
+      {
+        "sha": "6316892316baa75ba4816582564f9a147c441362",
+        "index": 97,
+        "subject": "Bump step-security/harden-runner from 1 to 2 (#1064)",
+        "author": "dependabot[bot]",
+        "date": "2022-12-01T05:39:17Z"
+      },
+      {
+        "sha": "2812fab78fa0aec199a1bd778bdce19f6919e675",
+        "index": 98,
+        "subject": "Ignore local helper Justfile",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-01T09:22:41Z"
+      },
+      {
+        "sha": "67dc8cc261a5ef64f576ce73f2281cc9021d8fb4",
+        "index": 99,
+        "subject": "Improve news fragments",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-01T16:00:20Z"
+      },
+      {
+        "sha": "0f6a9b47534912189db1200aeb7c9fb19348311e",
+        "index": 100,
+        "subject": "Add unsafe_hash alias for class-wide hash (#1065)",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-02T06:45:13Z"
+      },
+      {
+        "sha": "14008b4f35cf934b3e8c82d65578e2fe09925191",
+        "index": 101,
+        "subject": "[pre-commit.ci] pre-commit autoupdate (#1069)",
+        "author": "pre-commit-ci[bot]",
+        "date": "2022-12-06T05:38:02Z"
+      },
+      {
+        "sha": "afe211143d77dfbeda95f24611c03430a7c5cfcc",
+        "index": 102,
+        "subject": "Switch changelog to markdown (#1067)",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-07T08:15:46Z"
+      },
+      {
+        "sha": "59a445e584acf4456d4f634dfdceb47b31fa1439",
+        "index": 103,
+        "subject": "Purge stale Python 2/3 mentions",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-18T09:54:37Z"
+      },
+      {
+        "sha": "90f7590abf70e1405295387cac214485af411e3e",
+        "index": 104,
+        "subject": "Add unstable Python 3.12 to CI allowing failures (#1033)",
+        "author": "Sviatoslav Sydorenko",
+        "date": "2022-12-18T10:46:08Z"
+      },
+      {
+        "sha": "37e46c07615c39ca985919d1181b202cf4d176e7",
+        "index": 105,
+        "subject": "Add fix for coverage 7",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-19T11:03:21Z"
+      },
+      {
+        "sha": "a74bb8e1bd2e701bd9727ff8eea5cdcfcbb97cf4",
+        "index": 106,
+        "subject": "Automate PyPI releases (#1071)",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-19T13:55:18Z"
+      },
+      {
+        "sha": "2b2074c824f43f57d7553f9d141645965af18dba",
+        "index": 107,
+        "subject": "Don't run PyPI on pushes / PRs",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-19T13:56:15Z"
+      },
+      {
+        "sha": "fcf5f343c13f456bca4c41b014cf3b61ffbd0fa8",
+        "index": 108,
+        "subject": "Environments are protection enough",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-19T13:57:10Z"
+      },
+      {
+        "sha": "d80cee82d13b944cd9a382934472f78275e1a49f",
+        "index": 109,
+        "subject": "Allow pypi.org for test uploads for installs",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-19T14:22:42Z"
+      },
+      {
+        "sha": "f494c617dcce191fa5dc1b6bb6cd5839ee7826ec",
+        "index": 110,
+        "subject": "Check dist directory",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-19T14:29:15Z"
+      },
+      {
+        "sha": "edb1fd23cc54b8f6c768d690c7825583ba5889a7",
+        "index": 111,
+        "subject": "Use correct block",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-19T14:33:05Z"
+      },
+      {
+        "sha": "bf66b34d23b5786bb4efc1c6faf0c4a732a31a44",
+        "index": 112,
+        "subject": "Simplify pkg building",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-19T14:40:41Z"
+      },
+      {
+        "sha": "9fbfe52defa7813545cc6ee633c91d18bec12bbc",
+        "index": 113,
+        "subject": "Replace the logo in the PyPI README",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-19T14:55:21Z"
+      },
+      {
+        "sha": "a633a7b13bafdc9e9d99571166fc36687f7bd7f5",
+        "index": 114,
+        "subject": "Increment dev version so we can upload again",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-19T14:57:10Z"
+      },
+      {
+        "sha": "d4090f47069bf7bedcfba9d39103fd71c4e580a3",
+        "index": 115,
+        "subject": "Revert \"Increment dev version so we can upload again\"",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-19T15:02:47Z"
+      },
+      {
+        "sha": "ae4324df8818a243c2c669005e0902d6a8eb48a7",
+        "index": 116,
+        "subject": "Streamline deployment workflow",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-19T15:06:37Z"
+      },
+      {
+        "sha": "08b200efac2ed267bc8cf6c4b448fb1429097a8f",
+        "index": 117,
+        "subject": "Convert why chapter to markdown",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-19T15:38:33Z"
+      },
+      {
+        "sha": "5c280b35c1e70987e51c8f44a2d28b3975c78d21",
+        "index": 118,
+        "subject": "We can style links now!",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-19T15:42:36Z"
+      },
+      {
+        "sha": "dc1dc3b1e3a264a337b9cc3cab77e6dc1865ba82",
+        "index": 119,
+        "subject": "Convert names.rst to md",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-20T06:06:32Z"
+      },
+      {
+        "sha": "7fa9cd03d5485107bc199915a86bb789926fdf4a",
+        "index": 120,
+        "subject": "Convert overview.rst to md",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-20T06:21:08Z"
+      },
+      {
+        "sha": "a09a6e7010b259f087ebfabf46ff4c57b8ca5aef",
+        "index": 121,
+        "subject": "Convert how-does-it-work.rst to md",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-20T06:34:58Z"
+      },
+      {
+        "sha": "2aff38afc430faf0b0c14a6b2332df46e37fa7d6",
+        "index": 122,
+        "subject": "Convert types.rst to md",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-20T06:49:00Z"
+      },
+      {
+        "sha": "a760574795082929761cc190fdc566f167deccb2",
+        "index": 123,
+        "subject": "Convert init.rst to md",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-20T07:22:51Z"
+      },
+      {
+        "sha": "3473b4d3e23f42c857085e35ca4611ec97358b35",
+        "index": 124,
+        "subject": "Convert comparison.rst to md",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-20T08:12:37Z"
+      },
+      {
+        "sha": "9fd0f82ff0d632136b95e1b8737b081e537aaaee",
+        "index": 125,
+        "subject": "Convert extending.rst to md",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-20T08:26:33Z"
+      },
+      {
+        "sha": "c1c24ccafbb51d78d8b344cc6193c468f8646dec",
+        "index": 126,
+        "subject": "Convert glossary.rst to md",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-20T08:45:37Z"
+      },
+      {
+        "sha": "1bb28648248e1bed63c1c6b077e7fe4b8260efc8",
+        "index": 127,
+        "subject": "Convert examples.rst to md",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-20T09:14:46Z"
+      },
+      {
+        "sha": "6957e4a356d3de211e6fc18a146642f8d19a898d",
+        "index": 128,
+        "subject": "Use new typographic branding in the last rst file, too",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-20T09:17:48Z"
+      },
+      {
+        "sha": "403adaba51a3dbc44012ef654a6ed57ab796e5e4",
+        "index": 129,
+        "subject": "Remove stray file",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-20T09:21:21Z"
+      },
+      {
+        "sha": "519423d94adb0b0b741b128aa2084278e2685471",
+        "index": 130,
+        "subject": "Use MyST-native doctest blocks in all MD",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-20T09:46:32Z"
+      },
+      {
+        "sha": "4ad4ea073f55fe7184aa04125dfdebba66c6f4f0",
+        "index": 131,
+        "subject": "Use MyST-native include",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-20T09:47:48Z"
+      },
+      {
+        "sha": "b9f35eb2f25fa835ce61af067c20029216a0aeeb",
+        "index": 132,
+        "subject": "Fix minor stub issues (#1072)",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-20T14:10:12Z"
+      },
+      {
+        "sha": "0f62805c7d4682b37ad8b960b6e9cd60c7a9e09a",
+        "index": 133,
+        "subject": "Make towncrier marker independent from warning",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-21T08:10:43Z"
+      },
+      {
+        "sha": "566248a2d8a95d3740045ea314eb3232d52944da",
+        "index": 134,
+        "subject": "Don't linkcheck tree links",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-21T08:59:27Z"
+      },
+      {
+        "sha": "a9960de98d0f58ccb2880d03c97dafba3fc1111c",
+        "index": 135,
+        "subject": "Prepare 22.2.0",
+        "author": "Hynek Schlawack",
+        "date": "2022-12-21T09:07:30Z"
+      }
+    ],
+    "probes": [
+      {
+        "commitSha": "b3dfebe2e10b44437c4f97d788fb5220d790efd0",
+        "commitIndex": 0,
+        "round": 1,
+        "role": "good",
+        "attempt": 2,
+        "key": "r1-i0-b3dfebe2e10b-a2",
+        "phase": "done",
+        "region": "eu-west1",
+        "jobId": "aijob-e01cxet6671cy7p4vs",
+        "jobState": "COMPLETED",
+        "verdict": "pass",
+        "detail": "deps: pip install -e .; test exited 0",
+        "exitCode": 0,
+        "tail": null,
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:16:41.733Z",
+        "startedAt": "2026-10-13T16:20:54.442628617Z",
+        "finishedAt": "2026-10-13T16:21:00.572Z",
+        "durationMs": 4037,
+        "vmMs": 264118,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r1-i0-b3dfebe2e10b-a2.json",
+        "notBefore": "2026-10-13T16:16:40.319Z",
+        "infraFailures": [
+          {
+            "attempt": 1,
+            "jobId": null,
+            "region": "eu-west1",
+            "reason": "dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests",
+            "at": "2026-10-13T16:16:10.319Z",
+            "throttled": true
+          }
+        ],
+        "budgetFrom": 1
+      },
+      {
+        "commitSha": "38434525164e73cc9af393cfc7c6dc39fbbbc4f4",
+        "commitIndex": 19,
+        "round": 1,
+        "role": "interior",
+        "attempt": 2,
+        "key": "r1-i19-38434525164e-a2",
+        "phase": "done",
+        "region": "eu-west1",
+        "jobId": "aijob-e01sn8zt8f4hjzm8nk",
+        "jobState": "COMPLETED",
+        "verdict": "pass",
+        "detail": "deps: pip install -e .; test exited 0",
+        "exitCode": 0,
+        "tail": null,
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:16:41.733Z",
+        "startedAt": "2026-10-13T16:20:54.593743014Z",
+        "finishedAt": "2026-10-13T16:21:00.572Z",
+        "durationMs": 3678,
+        "vmMs": 259614,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r1-i19-38434525164e-a2.json",
+        "notBefore": "2026-10-13T16:16:40.319Z",
+        "infraFailures": [
+          {
+            "attempt": 1,
+            "jobId": null,
+            "region": "eu-west1",
+            "reason": "dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests",
+            "at": "2026-10-13T16:16:10.319Z",
+            "throttled": true
+          }
+        ],
+        "budgetFrom": 1
+      },
+      {
+        "commitSha": "a961e9a42f36423381c16553e112224d822716e5",
+        "commitIndex": 39,
+        "round": 1,
+        "role": "interior",
+        "attempt": 1,
+        "key": "r1-i39-a961e9a42f36-a1",
+        "phase": "done",
+        "region": "uk-south1",
+        "jobId": "aijob-e03sbzyx36r0r0jx58",
+        "jobState": "COMPLETED",
+        "verdict": "fail",
+        "detail": "deps: pip install -e .; test exited 1",
+        "exitCode": 1,
+        "tail": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"<string>\", line 1, in <lambda>\n  File \"<string>\", line 1, in <lambda>\nAttributeError: 'C' object has no attribute 'x'\n",
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:16:10.319Z",
+        "startedAt": "2026-10-13T16:20:24.532630980Z",
+        "finishedAt": "2026-10-13T16:20:29.507Z",
+        "durationMs": 3698,
+        "vmMs": 260589,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r1-i39-a961e9a42f36-a1.json",
+        "notBefore": null,
+        "infraFailures": [],
+        "budgetFrom": 1
+      },
+      {
+        "commitSha": "e24ce2328d0e5406d74c89d2c0563c17251ef1d8",
+        "commitIndex": 58,
+        "round": 1,
+        "role": "interior",
+        "attempt": 1,
+        "key": "r1-i58-e24ce2328d0e-a1",
+        "phase": "done",
+        "region": "uk-south1",
+        "jobId": "aijob-e03bhk1db0mzbjkcqw",
+        "jobState": "COMPLETED",
+        "verdict": "fail",
+        "detail": "deps: pip install -e .; test exited 1",
+        "exitCode": 1,
+        "tail": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"<string>\", line 1, in <lambda>\n  File \"<string>\", line 1, in <lambda>\nAttributeError: 'C' object has no attribute 'x'\n",
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:16:10.319Z",
+        "startedAt": "2026-10-13T16:20:24.355218074Z",
+        "finishedAt": "2026-10-13T16:20:29.507Z",
+        "durationMs": 3628,
+        "vmMs": 259492,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r1-i58-e24ce2328d0e-a1.json",
+        "notBefore": null,
+        "infraFailures": [],
+        "budgetFrom": 1
+      },
+      {
+        "commitSha": "a7eab339431a0aff7fa39e1ad89f03dae200bf4d",
+        "commitIndex": 77,
+        "round": 1,
+        "role": "interior",
+        "attempt": 1,
+        "key": "r1-i77-a7eab339431a-a1",
+        "phase": "done",
+        "region": "uk-south2",
+        "jobId": "aijob-e05vjdtn5yspy989t3",
+        "jobState": "COMPLETED",
+        "verdict": "fail",
+        "detail": "deps: pip install -e .; test exited 1",
+        "exitCode": 1,
+        "tail": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"<string>\", line 1, in <lambda>\n  File \"<string>\", line 1, in <lambda>\nAttributeError: 'C' object has no attribute 'x'\n",
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:16:10.319Z",
+        "startedAt": "2026-10-13T16:20:41.329506419Z",
+        "finishedAt": "2026-10-13T16:20:47.010Z",
+        "durationMs": 3675,
+        "vmMs": 271397,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r1-i77-a7eab339431a-a1.json",
+        "notBefore": null,
+        "infraFailures": [],
+        "budgetFrom": 1
+      },
+      {
+        "commitSha": "e458448ee418e10cf28a089704dc42ba3c8aca37",
+        "commitIndex": 96,
+        "round": 1,
+        "role": "interior",
+        "attempt": 1,
+        "key": "r1-i96-e458448ee418-a1",
+        "phase": "done",
+        "region": "uk-south2",
+        "jobId": "aijob-e05bbzctzn1jzn9r8j",
+        "jobState": "COMPLETED",
+        "verdict": "fail",
+        "detail": "deps: pip install -e .; test exited 1",
+        "exitCode": 1,
+        "tail": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"<string>\", line 1, in <lambda>\n  File \"<string>\", line 1, in <lambda>\nAttributeError: 'C' object has no attribute 'x'\n",
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:16:10.319Z",
+        "startedAt": "2026-10-13T16:20:37.387209229Z",
+        "finishedAt": "2026-10-13T16:20:42.993Z",
+        "durationMs": 4153,
+        "vmMs": 269357,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r1-i96-e458448ee418-a1.json",
+        "notBefore": null,
+        "infraFailures": [],
+        "budgetFrom": 1
+      },
+      {
+        "commitSha": "ae4324df8818a243c2c669005e0902d6a8eb48a7",
+        "commitIndex": 116,
+        "round": 1,
+        "role": "interior",
+        "attempt": 1,
+        "key": "r1-i116-ae4324df8818-a1",
+        "phase": "done",
+        "region": "me-west1",
+        "jobId": "aijob-i00y3hr7anqt1mepa9",
+        "jobState": "COMPLETED",
+        "verdict": "fail",
+        "detail": "deps: pip install -e .; test exited 1",
+        "exitCode": 1,
+        "tail": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"<string>\", line 1, in <lambda>\n  File \"<string>\", line 1, in <lambda>\nAttributeError: 'C' object has no attribute 'x'\n",
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:16:10.319Z",
+        "startedAt": "2026-10-13T16:20:40.570907873Z",
+        "finishedAt": "2026-10-13T16:20:47.010Z",
+        "durationMs": 5818,
+        "vmMs": 273447,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r1-i116-ae4324df8818-a1.json",
+        "notBefore": null,
+        "infraFailures": [],
+        "budgetFrom": 1
+      },
+      {
+        "commitSha": "a9960de98d0f58ccb2880d03c97dafba3fc1111c",
+        "commitIndex": 135,
+        "round": 1,
+        "role": "bad",
+        "attempt": 1,
+        "key": "r1-i135-a9960de98d0f-a1",
+        "phase": "done",
+        "region": "me-west1",
+        "jobId": "aijob-i00m9yejszdx247zmv",
+        "jobState": "COMPLETED",
+        "verdict": "fail",
+        "detail": "deps: pip install -e .; test exited 1",
+        "exitCode": 1,
+        "tail": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"<string>\", line 1, in <lambda>\n  File \"<string>\", line 1, in <lambda>\nAttributeError: 'C' object has no attribute 'x'\n",
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:16:10.319Z",
+        "startedAt": "2026-10-13T16:20:41.123763294Z",
+        "finishedAt": "2026-10-13T16:20:49.298Z",
+        "durationMs": 5519,
+        "vmMs": 274075,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r1-i135-a9960de98d0f-a1.json",
+        "notBefore": null,
+        "infraFailures": [],
+        "budgetFrom": 1
+      },
+      {
+        "commitSha": "80c61b79cf1ad279974d9782deab3f649b0bb40a",
+        "commitIndex": 21,
+        "round": 2,
+        "role": "interior",
+        "attempt": 3,
+        "key": "r2-i21-80c61b79cf1a-a3",
+        "phase": "done",
+        "region": "uk-south2",
+        "jobId": "aijob-e05zc37r8wq44nr6af",
+        "jobState": "COMPLETED",
+        "verdict": "pass",
+        "detail": "deps: pip install -e .; test exited 0",
+        "exitCode": 0,
+        "tail": null,
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:22:33.446Z",
+        "startedAt": "2026-10-13T16:26:49.180481720Z",
+        "finishedAt": "2026-10-13T16:26:56.816Z",
+        "durationMs": 4287,
+        "vmMs": 263308,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r2-i21-80c61b79cf1a-a3.json",
+        "notBefore": "2026-10-13T16:22:32.037Z",
+        "infraFailures": [
+          {
+            "attempt": 1,
+            "jobId": null,
+            "region": "uk-south1",
+            "reason": "dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests",
+            "at": "2026-10-13T16:21:00.572Z",
+            "throttled": true
+          },
+          {
+            "attempt": 2,
+            "jobId": null,
+            "region": "eu-west1",
+            "reason": "dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests",
+            "at": "2026-10-13T16:21:32.037Z",
+            "throttled": true
+          }
+        ],
+        "budgetFrom": 1
+      },
+      {
+        "commitSha": "536ddc57e25228655e78634db91d6ebd23dbb5d1",
+        "commitIndex": 23,
+        "round": 2,
+        "role": "interior",
+        "attempt": 3,
+        "key": "r2-i23-536ddc57e252-a3",
+        "phase": "done",
+        "region": "uk-south2",
+        "jobId": "aijob-e05pk3fhb00sd924pz",
+        "jobState": "COMPLETED",
+        "verdict": "pass",
+        "detail": "deps: pip install -e .; test exited 0",
+        "exitCode": 0,
+        "tail": null,
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:22:34.135Z",
+        "startedAt": "2026-10-13T16:26:50.521712349Z",
+        "finishedAt": "2026-10-13T16:26:56.816Z",
+        "durationMs": 3715,
+        "vmMs": 263898,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r2-i23-536ddc57e252-a3.json",
+        "notBefore": "2026-10-13T16:22:34.079Z",
+        "infraFailures": [
+          {
+            "attempt": 1,
+            "jobId": null,
+            "region": "uk-south1",
+            "reason": "dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests",
+            "at": "2026-10-13T16:21:00.572Z",
+            "throttled": true
+          },
+          {
+            "attempt": 2,
+            "jobId": null,
+            "region": "eu-west1",
+            "reason": "dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests",
+            "at": "2026-10-13T16:21:34.079Z",
+            "throttled": true
+          }
+        ],
+        "budgetFrom": 1
+      },
+      {
+        "commitSha": "f7d64c01900b7050348ae8e2011e42c3514811b4",
+        "commitIndex": 26,
+        "round": 2,
+        "role": "interior",
+        "attempt": 3,
+        "key": "r2-i26-f7d64c01900b-a3",
+        "phase": "done",
+        "region": "me-west1",
+        "jobId": "aijob-i00rpv0cmde90s70gb",
+        "jobState": "COMPLETED",
+        "verdict": "pass",
+        "detail": "deps: pip install -e .; test exited 0",
+        "exitCode": 0,
+        "tail": null,
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:22:35.887Z",
+        "startedAt": "2026-10-13T16:27:01.061509999Z",
+        "finishedAt": "2026-10-13T16:27:08.569Z",
+        "durationMs": 5852,
+        "vmMs": 279771,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r2-i26-f7d64c01900b-a3.json",
+        "notBefore": "2026-10-13T16:22:35.687Z",
+        "infraFailures": [
+          {
+            "attempt": 1,
+            "jobId": null,
+            "region": "uk-south2",
+            "reason": "dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests",
+            "at": "2026-10-13T16:21:03.693Z",
+            "throttled": true
+          },
+          {
+            "attempt": 2,
+            "jobId": null,
+            "region": "eu-west1",
+            "reason": "dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests",
+            "at": "2026-10-13T16:21:35.687Z",
+            "throttled": true
+          }
+        ],
+        "budgetFrom": 1
+      },
+      {
+        "commitSha": "ca6ce8c00e45862a2e08b860d0b28e60dc08b73f",
+        "commitIndex": 28,
+        "round": 2,
+        "role": "interior",
+        "attempt": 3,
+        "key": "r2-i28-ca6ce8c00e45-a3",
+        "phase": "done",
+        "region": "me-west1",
+        "jobId": "aijob-i00qg6ysxyzrappd65",
+        "jobState": "COMPLETED",
+        "verdict": "pass",
+        "detail": "deps: pip install -e .; test exited 0",
+        "exitCode": 0,
+        "tail": null,
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:22:35.887Z",
+        "startedAt": "2026-10-13T16:27:02.719407843Z",
+        "finishedAt": "2026-10-13T16:27:10.958Z",
+        "durationMs": 5327,
+        "vmMs": 274666,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r2-i28-ca6ce8c00e45-a3.json",
+        "notBefore": "2026-10-13T16:22:35.687Z",
+        "infraFailures": [
+          {
+            "attempt": 1,
+            "jobId": null,
+            "region": "uk-south1",
+            "reason": "dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests",
+            "at": "2026-10-13T16:21:03.693Z",
+            "throttled": true
+          },
+          {
+            "attempt": 2,
+            "jobId": null,
+            "region": "eu-west1",
+            "reason": "dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests",
+            "at": "2026-10-13T16:21:35.687Z",
+            "throttled": true
+          }
+        ],
+        "budgetFrom": 1
+      },
+      {
+        "commitSha": "5ecc39749a98c7ec3fc63b8cbaa82de5eb17c173",
+        "commitIndex": 30,
+        "round": 2,
+        "role": "interior",
+        "attempt": 3,
+        "key": "r2-i30-5ecc39749a98-a3",
+        "phase": "done",
+        "region": "eu-west1",
+        "jobId": "aijob-e01kvjabzz7jsnj9ak",
+        "jobState": "COMPLETED",
+        "verdict": "pass",
+        "detail": "deps: pip install -e .; test exited 0",
+        "exitCode": 0,
+        "tail": null,
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:22:35.059Z",
+        "startedAt": "2026-10-13T16:26:57.673663982Z",
+        "finishedAt": "2026-10-13T16:27:02.319Z",
+        "durationMs": 3732,
+        "vmMs": 266985,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r2-i30-5ecc39749a98-a3.json",
+        "notBefore": "2026-10-13T16:22:35.012Z",
+        "infraFailures": [
+          {
+            "attempt": 1,
+            "jobId": null,
+            "region": "uk-south1",
+            "reason": "dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests",
+            "at": "2026-10-13T16:21:03.693Z",
+            "throttled": true
+          },
+          {
+            "attempt": 2,
+            "jobId": null,
+            "region": "uk-south2",
+            "reason": "dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests",
+            "at": "2026-10-13T16:21:35.012Z",
+            "throttled": true
+          }
+        ],
+        "budgetFrom": 1
+      },
+      {
+        "commitSha": "19f41dda6fefeb9ab099e700f0bf377a67c26275",
+        "commitIndex": 32,
+        "round": 2,
+        "role": "interior",
+        "attempt": 2,
+        "key": "r2-i32-19f41dda6fef-a2",
+        "phase": "done",
+        "region": "uk-south1",
+        "jobId": "aijob-e03zj2cnk2gkc02t6b",
+        "jobState": "COMPLETED",
+        "verdict": "fail",
+        "detail": "deps: pip install -e .; test exited 1",
+        "exitCode": 1,
+        "tail": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"<string>\", line 1, in <lambda>\n  File \"<string>\", line 1, in <lambda>\nAttributeError: 'C' object has no attribute 'x'\n",
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:21:33.768Z",
+        "startedAt": "2026-10-13T16:25:51.367858746Z",
+        "finishedAt": "2026-10-13T16:25:56.624Z",
+        "durationMs": 3732,
+        "vmMs": 263845,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r2-i32-19f41dda6fef-a2.json",
+        "notBefore": "2026-10-13T16:21:33.693Z",
+        "infraFailures": [
+          {
+            "attempt": 1,
+            "jobId": null,
+            "region": "uk-south2",
+            "reason": "dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests",
+            "at": "2026-10-13T16:21:03.693Z",
+            "throttled": true
+          }
+        ],
+        "budgetFrom": 1
+      },
+      {
+        "commitSha": "49ec7317c87c4f36f19588f7a4093616abdefd0b",
+        "commitIndex": 35,
+        "round": 2,
+        "role": "interior",
+        "attempt": 3,
+        "key": "r2-i35-49ec7317c87c-a3",
+        "phase": "done",
+        "region": "eu-west1",
+        "jobId": "aijob-e01jt77ga4hch1p1ms",
+        "jobState": "COMPLETED",
+        "verdict": "fail",
+        "detail": "deps: pip install -e .; test exited 1",
+        "exitCode": 1,
+        "tail": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"<string>\", line 1, in <lambda>\n  File \"<string>\", line 1, in <lambda>\nAttributeError: 'C' object has no attribute 'x'\n",
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:22:39.724Z",
+        "startedAt": "2026-10-13T16:26:53.368932335Z",
+        "finishedAt": "2026-10-13T16:26:58.327Z",
+        "durationMs": 4006,
+        "vmMs": 260631,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r2-i35-49ec7317c87c-a3.json",
+        "notBefore": "2026-10-13T16:22:38.994Z",
+        "infraFailures": [
+          {
+            "attempt": 1,
+            "jobId": null,
+            "region": "me-west1",
+            "reason": "dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests",
+            "at": "2026-10-13T16:21:06.832Z",
+            "throttled": true
+          },
+          {
+            "attempt": 2,
+            "jobId": null,
+            "region": "eu-west1",
+            "reason": "dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests",
+            "at": "2026-10-13T16:21:38.994Z",
+            "throttled": true
+          }
+        ],
+        "budgetFrom": 1
+      },
+      {
+        "commitSha": "6efae77bdeb5b80425ebc0bd332089df43036810",
+        "commitIndex": 37,
+        "round": 2,
+        "role": "interior",
+        "attempt": 2,
+        "key": "r2-i37-6efae77bdeb5-a2",
+        "phase": "done",
+        "region": "uk-south1",
+        "jobId": "aijob-e03thf59bgfv8fybw7",
+        "jobState": "COMPLETED",
+        "verdict": "fail",
+        "detail": "deps: pip install -e .; test exited 1",
+        "exitCode": 1,
+        "tail": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"<string>\", line 1, in <lambda>\n  File \"<string>\", line 1, in <lambda>\nAttributeError: 'C' object has no attribute 'x'\n",
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:21:33.870Z",
+        "startedAt": "2026-10-13T16:25:45.370611467Z",
+        "finishedAt": "2026-10-13T16:25:50.278Z",
+        "durationMs": 3538,
+        "vmMs": 257008,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r2-i37-6efae77bdeb5-a2.json",
+        "notBefore": "2026-10-13T16:21:33.693Z",
+        "infraFailures": [
+          {
+            "attempt": 1,
+            "jobId": null,
+            "region": "me-west1",
+            "reason": "dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests",
+            "at": "2026-10-13T16:21:03.693Z",
+            "throttled": true
+          }
+        ],
+        "budgetFrom": 1
+      },
+      {
+        "commitSha": "89a890a3262273514619d1881c6a8b0fe26c66ac",
+        "commitIndex": 31,
+        "round": 3,
+        "role": "interior",
+        "attempt": 1,
+        "key": "r3-i31-89a890a32622-a1",
+        "phase": "done",
+        "region": "uk-south1",
+        "jobId": "aijob-e03amkmvhgqp1fb6hv",
+        "jobState": "COMPLETED",
+        "verdict": "fail",
+        "detail": "deps: pip install -e .; test exited 1",
+        "exitCode": 1,
+        "tail": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"<string>\", line 1, in <lambda>\n  File \"<string>\", line 1, in <lambda>\nAttributeError: 'C' object has no attribute 'x'\n",
+        "installCommand": "pip install -e .",
+        "dispatchedAt": "2026-10-13T16:27:10.132Z",
+        "startedAt": "2026-10-13T16:31:23.200862896Z",
+        "finishedAt": "2026-10-13T16:31:28.219Z",
+        "durationMs": 3598,
+        "vmMs": 265392,
+        "verdictKey": "hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/verdicts/r3-i31-89a890a32622-a1.json",
+        "notBefore": null,
+        "infraFailures": [],
+        "budgetFrom": 1
+      }
+    ],
+    "round": 3,
+    "lowIndex": 30,
+    "highIndex": 31,
+    "report": {
+      "culpritSha": "89a890a3262273514619d1881c6a8b0fe26c66ac",
+      "culpritSubject": "Change __getstate__ and __setstate__ to use a dict (#1004) (#1009)",
+      "culpritAuthor": "Nikola Dipanov",
+      "culpritDate": "2022-08-18T06:59:50Z",
+      "diffText": "diff --git a/src/attr/_make.py b/src/attr/_make.py\nindex bc296c648..bd666cc35 100644\n--- a/src/attr/_make.py\n+++ b/src/attr/_make.py\n@@ -922,7 +922,7 @@ def slots_getstate(self):\n             \"\"\"\n             Automatically created by attrs.\n             \"\"\"\n-            return tuple(getattr(self, name) for name in state_attr_names)\n+            return {name: getattr(self, name) for name in state_attr_names}\n \n         hash_caching_enabled = self._cache_hash\n \n@@ -931,8 +931,9 @@ def slots_setstate(self, state):\n             Automatically created by attrs.\n             \"\"\"\n             __bound_setattr = _obj_setattr.__get__(self)\n-            for name, value in zip(state_attr_names, state):\n-                __bound_setattr(name, value)\n+            for name in state_attr_names:\n+                if name in state:\n+                    __bound_setattr(name, state[name])\n \n             # The hash code cache is not included when the object is\n             # serialized, but it still needs to be initialized to None to\ndiff --git a/tests/test_slots.py b/tests/test_slots.py\nindex 6a1776440..2c561ad61 100644\n--- a/tests/test_slots.py\n+++ b/tests/test_slots.py\n@@ -9,6 +9,8 @@\n import types\n import weakref\n \n+from unittest import mock\n+\n import pytest\n \n import attr\n@@ -743,3 +745,58 @@ def f(self):\n \n     assert B(11).f == 121\n     assert B(17).f == 289\n+\n+\n+@attr.s(slots=True)\n+class A:\n+    x = attr.ib()\n+    b = attr.ib()\n+    c = attr.ib()\n+\n+\n+@pytest.mark.parametrize(\"cls\", [A])\n+def test_slots_unpickle_after_attr_removed(cls):\n+    \"\"\"\n+    We don't assign attributes we don't have anymore if the class has\n+    removed it.\n+    \"\"\"\n+    a = cls(1, 2, 3)\n+    a_pickled = pickle.dumps(a)\n+    a_unpickled = pickle.loads(a_pickled)\n+    assert a_unpickled == a\n+\n+    @attr.s(slots=True)\n+    class NEW_A:\n+        x = attr.ib()\n+        c = attr.ib()\n+\n+    with mock.patch(f\"{__name__}.A\", NEW_A):\n+        new_a = pickle.loads(a_pickled)\n+        assert new_a.x == 1\n+        assert new_a.c == 3\n+        assert not hasattr(new_a, \"b\")\n+\n+\n+@pytest.mark.parametrize(\"cls\", [A])\n+def test_slots_unpickle_after_attr_added(cls):\n+    \"\"\"\n+    We don't assign attribute we haven't had before if the class has one added.\n+    \"\"\"\n+    a = cls(1, 2, 3)\n+    a_pickled = pickle.dumps(a)\n+    a_unpickled = pickle.loads(a_pickled)\n+    assert a_unpickled == a\n+\n+    @attr.s(slots=True)\n+    class NEW_A:\n+        x = attr.ib()\n+        b = attr.ib()\n+        d = attr.ib()\n+        c = attr.ib()\n+\n+    with mock.patch(f\"{__name__}.A\", NEW_A):\n+        new_a = pickle.loads(a_pickled)\n+        assert new_a.x == 1\n+        assert new_a.b == 2\n+        assert new_a.c == 3\n+        assert not hasattr(new_a, \"d\")\n",
+      "rootCauseMd": "The commit changed `slots_getstate` to return a dictionary `{name: getattr(self, name) for name in state_attr_names}` instead of a tuple, while `slots_setstate` was left to iterate over `state_attr_names` and assign values only when `name in state`. When a slotted class is pickled, Python\u2019s default reduction calls `__getstate__`; the resulting dict is stored as the pickle\u2019s state payload. Upon unpickling, `__setstate__` receives that dict, but the loop now checks `if name in state` before calling `__bound_setattr`. Because the dict\u2019s keys are the attribute names, the test should succeed, however the dict produced by the new `__getstate__` is empty for the dynamically created class `C` (its `__slots__` list is not yet populated when `__getstate__` runs), so `state` contains no entries, the condition fails for both `'x'` and `'y'`, and `__setstate__` never sets those attributes, leaving the object without `x` or `y` and causing the `AttributeError: 'C' object has no attribute 'x'`. The fix is to ensure `__getstate__` returns a sequence that matches `state_attr_names`\u2014for example, revert to `return tuple(getattr(self, name) for name in state_attr_names)` or, if a dict is desired, update `__setstate__` to unconditionally assign `__bound_setattr(name, state[name])` for each `name in state_attr_names`. This restores the correct state transfer and makes the test pass.",
+      "modelId": "nvidia/nemotron-3-super-120b-a12b",
+      "narrationProvider": "nebius-token-factory",
+      "narrationRequestId": "chatcmpl-95d7f86bfadb7974",
+      "narrationError": null
+    },
+    "inconclusive": null,
+    "pause": null,
+    "createdAt": "2026-10-13T16:16:09.308Z",
+    "finishedAt": "2026-10-13T16:31:28.219Z",
+    "bandSize": 8,
+    "slots": 8,
+    "backend": "nebius-serverless-jobs",
+    "regions": [
+      "eu-west1",
+      "uk-south1",
+      "uk-south2",
+      "me-west1"
+    ],
+    "probeTimeoutSeconds": 900,
+    "probeSha256": "1f56a5108078833f2dc9f2d47dd28094378ea6abe143372320bc28acc9eeb346",
+    "tickUrl": "https://faultline-edy-cus-projects.vercel.app/api/hunts/50824b63-967d-4716-b81b-b49cef1f1bfd/tick",
+    "wallClockMs": 918911,
+    "costUsd": 0.062380170222222225,
+    "recorded": false,
+    "recordedAt": null
+  }
+}

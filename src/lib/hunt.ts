@@ -51,7 +51,8 @@ import {
   type StoreContext,
 } from "@/lib/store";
 import { keys } from "@/lib/nebius/storage";
-import { NARRATION_MODEL, probeCostUsd } from "@/lib/nebius/config";
+import { NARRATION_MODEL } from "@/lib/nebius/config";
+import { billedMs, huntCostUsd } from "@/lib/pricing";
 import { buildPrompt, narrate, NARRATION_PROVIDER } from "@/lib/narrate";
 import { fetchCommitDiff, parseRepoUrl } from "@/lib/git";
 import { PROBE_SHA256 } from "@/lib/probe-source";
@@ -681,23 +682,10 @@ async function dispatchOne(
   }
 }
 
-/**
- * VM time a probe could bill: Nebius's own create→finish once the job has ended, otherwise
- * the time from dispatch until its verdict landed — the job is still exiting then, so this is
- * a few seconds short, and later reads of the hunt replace it with the job's own figure.
- */
-export function billedMs(probe: Probe): number | null {
-  if (probe.vmMs !== null) return probe.vmMs;
-  if (probe.phase === "done" && probe.dispatchedAt && probe.finishedAt) {
-    return Math.max(0, new Date(probe.finishedAt).getTime() - new Date(probe.dispatchedAt).getTime());
-  }
-  return null;
-}
+export { billedMs };
 
 function totalCost(probes: readonly Probe[]): number | null {
-  const measured = probes.map(billedMs).filter((ms): ms is number => ms !== null);
-  if (measured.length === 0) return null;
-  return measured.reduce((sum, ms) => sum + probeCostUsd(ms), 0);
+  return huntCostUsd({ probes });
 }
 
 /** Probes whose jobs had not ended when the hunt did; their VM time is still provisional. */

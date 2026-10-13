@@ -33,7 +33,7 @@
     "rootCauseMd": "The change replaces `zone_for(zone).localize(moment)` with `moment.replace(tzinfo=zone_for(zone))` on the lines marked by the diff (`moment = zone_for(zone).localize(moment)` \u2192 `moment = moment.replace(tzinfo=zone_for(zone))`). `replace` merely attaches the zone\u2019s tzinfo object without applying the zone\u2019s historical offset rules for that date, so the naive midnight is interpreted using the zone\u2019s raw offset (which includes a non\u2011standard minute component for America/Mexico_City) instead of being properly localized, producing 06:37 UTC rather than the expected 06:00 UTC. Restoring the original `localize` call (or using `zone_for(zone).localize(moment)`) fixes the test."
   },
   "wallClockSeconds": 1001.3,
-  "costUsd": 0.03784736266666667,
+  "costUsd": 0.0504,
   "jobs": [
     {
       "round": 1,
@@ -209,5 +209,7 @@
     "Round 2's two creates were refused with 429 Too Many Requests on three ticks; each was recorded as an infrastructure failure and retried, never as a verdict.",
     "That build counted 429s against the retry budget, so the hunt paused with its reason; it was resumed once (POST /resume) after the throttle fix was deployed, and finished with no viewer.",
     "The wall clock includes the ~6 minutes the hunt stood at the throttle and the pause."
-  ]
+  ],
+  "vmSeconds": 2747.0,
+  "priceBasis": "cpu-d3 list price from 2026-10-01: $0.015/vCPU-h, $0.0045/GiB-h (docs.nebius.com/compute/resources/pricing)"
 }

@@ -12,6 +12,7 @@
 
 import type { Hunt } from "@/lib/types";
 import { EM_DASH, formatCost, formatDate } from "./format";
+import { huntCostUsd } from "@/lib/pricing";
 import { CopyIssueButton } from "./CopyIssueButton";
 import { ProbeList } from "./ProbeList";
 
@@ -82,7 +83,9 @@ export function FaultReportView({ hunt }: { hunt: Hunt }) {
           </div>
           <div>
             <dt className="text-muted">Compute cost</dt>
-            <dd className="mt-0.5 font-mono">{formatCost(hunt.costUsd)}</dd>
+            <dd className="mt-0.5 font-mono" title="Nebius VM time of every probe job, at the current cpu-d3 list price">
+              {formatCost(huntCostUsd(hunt))}
+            </dd>
           </div>
         </dl>
       </div>

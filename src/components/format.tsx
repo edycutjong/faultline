@@ -7,6 +7,7 @@
 
 import type { Commit, Hunt, Probe, Verdict } from "@/lib/types";
 import { expectedRounds } from "@/lib/planner";
+import { huntCostUsd } from "@/lib/pricing";
 
 export const EM_DASH = "—";
 
@@ -29,7 +30,7 @@ export function formatDuration(ms: number | null): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-/** Costs are sub-cent. Four decimals is the resolution the billing data actually has. */
+/** VM time × list price (src/lib/pricing.ts). Four decimals: a probe costs well under a cent. */
 export function formatCost(usd: number | null): string {
   if (usd === null || !Number.isFinite(usd)) return EM_DASH;
   return `$${usd.toFixed(4)}`;
@@ -114,7 +115,9 @@ export function statusFacts(hunt: Hunt): StatusFacts {
     probesComplete: hunt.probes.filter((p) => p.verdict !== null).length,
     probesTotal: hunt.probes.length,
     commitsRemaining: Math.max(hunt.highIndex - hunt.lowIndex, 0),
-    costUsd: hunt.costUsd,
+    // Priced now, from the VM time on record — a stored figure carries the list price of
+    // the day it was written.
+    costUsd: huntCostUsd(hunt),
   };
 }
 

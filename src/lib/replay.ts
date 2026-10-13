@@ -67,7 +67,15 @@ export function replayFrames(hunt: Hunt): ReplayFrame[] {
         highIndex: before.highIndex,
         probes: [
           ...earlier,
-          ...current.map((p) => ({ ...p, phase: "running" as const, verdict: null, detail: null, finishedAt: null, durationMs: null })),
+          ...current.map((p) => ({
+            ...p,
+            phase: "running" as const,
+            verdict: null,
+            detail: null,
+            finishedAt: null,
+            durationMs: null,
+            vmMs: null, // not yet known at this moment: the replay prices only what had happened
+          })),
         ],
       },
       caption: `round ${round} · ${current.length} probes dispatched`,

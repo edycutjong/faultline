@@ -56,6 +56,10 @@ import urllib.request
 from datetime import datetime, timezone
 
 SCHEMA = "faultbench.results.v2"
+# Nebius list price for cpu-d3 (Non-GPU AMD Epyc Genoa) from 2026-10-01; a probe is 2 vCPU + 8 GiB.
+CPU_HOUR_USD = 0.015
+GIB_HOUR_USD = 0.0045
+PRICE_BASIS = "cpu-d3 list price from 2026-10-01: $0.015/vCPU-h, $0.0045/GiB-h (docs.nebius.com/compute/resources/pricing)"
 TERMINAL = {"done", "inconclusive", "error", "paused"}
 
 
@@ -298,6 +302,8 @@ def cmd_faultline(args):
 
     named = (hunt.get("report") or {}).get("culpritSha")
     probes = hunt.get("probes", [])
+    vm = [p.get("vmMs") for p in probes if p.get("vmMs") is not None]
+    vm_ms = sum(vm) if vm else None
     cold = [iso_ms(p.get("startedAt")) - iso_ms(p.get("dispatchedAt")) for p in probes
             if iso_ms(p.get("startedAt")) is not None and iso_ms(p.get("dispatchedAt")) is not None]
     rounds = []
@@ -314,7 +320,12 @@ def cmd_faultline(args):
         "status": hunt["status"], "inconclusive": hunt.get("inconclusive"),
         "seconds": round((hunt.get("wallClockMs") or 0) / 1000, 1) if hunt.get("wallClockMs") else None,
         "rounds": hunt.get("round"), "probes": len(probes), "slots": hunt.get("slots"),
-        "regions": hunt.get("regions"), "costUsd": hunt.get("costUsd"),
+        "regions": hunt.get("regions"),
+        # Cost is derived here from the VM time Nebius reported for each job, at the list price
+        # stated below — never read from a figure stored when the hunt ran.
+        "vmSeconds": round(vm_ms / 1000, 1) if vm_ms is not None else None,
+        "costUsd": round(vm_ms / 3_600_000 * (2 * CPU_HOUR_USD + 8 * GIB_HOUR_USD), 4) if vm_ms is not None else None,
+        "priceBasis": PRICE_BASIS,
         "jobIds": [p.get("jobId") for p in probes],
         "infraRetries": sum(len(p.get("infraFailures") or []) for p in probes),
         "perRound": rounds,

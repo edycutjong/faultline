@@ -2,7 +2,7 @@
   "schema": "faultbench.results.v2",
   "kind": "faultline",
   "label": "tzdata-pipeline",
-  "ranAt": "2026-10-13T16:16:36+00:00",
+  "ranAt": "2026-10-13T16:44:36+00:00",
   "api": "https://faultline-edy-cus-projects.vercel.app",
   "huntId": "827dfe7e-0e15-41d6-97c9-105c02612eb0",
   "repo": "https://github.com/edycutjong/faultbench-tzdata-pipeline",
@@ -21,7 +21,9 @@
     "uk-south2",
     "me-west1"
   ],
-  "costUsd": 0.07127700488888888,
+  "vmSeconds": 5173.3,
+  "costUsd": 0.0948,
+  "priceBasis": "cpu-d3 list price from 2026-10-01: $0.015/vCPU-h, $0.0045/GiB-h (docs.nebius.com/compute/resources/pricing)",
   "jobIds": [
     "aijob-e01exfzvaek2xbsh24",
     "aijob-e01nvefvndgf2pmzad",

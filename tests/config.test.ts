@@ -73,8 +73,8 @@ describe("pricing", () => {
   it("prices cpu-d3 / 2vcpu-8gb at Nebius list price per measured second", () => {
     expect(PROBE_PLATFORM).toBe("cpu-d3");
     expect(PROBE_PRESET).toBe("2vcpu-8gb");
-    // One hour = 2 vCPU × $0.012 + 8 GiB × $0.0032.
-    expect(probeCostUsd(3_600_000)).toBeCloseTo(0.0496, 10);
+    // One hour = 2 vCPU × $0.015 + 8 GiB × $0.0045 (list price from 2026-10-01).
+    expect(probeCostUsd(3_600_000)).toBeCloseTo(0.066, 10);
     expect(probeCostUsd(0)).toBe(0);
   });
 });

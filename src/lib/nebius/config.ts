@@ -155,23 +155,9 @@ export const NEBIUS_TOKEN_EXCHANGE_URL =
 export const PROBE_PLATFORM = "cpu-d3";
 /** The smallest cpu-d3 preset. */
 export const PROBE_PRESET = "2vcpu-8gb";
-const PROBE_VCPUS = 2;
-const PROBE_RAM_GIB = 8;
 
-/**
- * Published Nebius list prices for `cpu-d3` (Non-GPU AMD Epyc Genoa), used to price measured
- * job seconds. Billing unit is 1 second; pricing unit is 1 hour.
- */
-export const PRICING = {
-  cpuPerCoreHourUsd: 0.012,
-  ramPerGibHourUsd: 0.0032,
-} as const;
-
-/** List-price cost of one probe VM on cpu-d3/2vcpu-8gb for a measured duration. */
-export function probeCostUsd(durationMs: number): number {
-  const hours = durationMs / 3_600_000;
-  return hours * (PROBE_VCPUS * PRICING.cpuPerCoreHourUsd + PROBE_RAM_GIB * PRICING.ramPerGibHourUsd);
-}
+// Pricing lives in src/lib/pricing.ts so the UI can price a hunt with the same function.
+export { PRICING, probeCostUsd } from "@/lib/pricing";
 
 /** Token Factory: where the narration model is called. Independent of the Jobs credentials. */
 export interface TokenFactoryConfig {
