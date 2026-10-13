@@ -26,7 +26,8 @@ have jq || die "jq is required to read CLI output"
 
 echo "==> checking the tenant is usable"
 suspension=$(nebius iam tenant list --format json | jq -r '.items[0].status.suspension_state // "UNKNOWN"')
-if [ "$suspension" != "ACTIVE" ] && [ "$suspension" != "UNSPECIFIED" ]; then
+# A healthy tenant reports NONE (observed 2026-10-13); ACTIVE/UNSPECIFIED kept for older API shapes.
+if [ "$suspension" != "NONE" ] && [ "$suspension" != "ACTIVE" ] && [ "$suspension" != "UNSPECIFIED" ]; then
   die "tenant suspension_state is ${suspension}. Nothing can be created until that clears."
 fi
 
