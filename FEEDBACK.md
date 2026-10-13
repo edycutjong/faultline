@@ -154,7 +154,7 @@ Measured 2026-10-13, all in one session, reproducible with `nebius ai job create
 | Rejected vs queued | **Rejected.** A batch product that rejects instead of queueing pushes a scheduler into every caller. |
 | CPU quota in `eu-north1` | **0 vCPU** on this tenant, so `cpu-e2` (eu-north1 only, and home of the smallest `2vcpu-8gb` preset) is unusable; `cpu-d3/2vcpu-8gb` in `eu-west1` works. |
 | Cold start, stock `python:3.11` (~1 GB) on `cpu-d3/2vcpu-8gb` | create → workload start **4 m 18 s – 4 m 31 s** across four regions (`evidence/smoke-jobs*.json`; the first job, `evidence/spike-job.json`, took 4 m 28 s). Polled every 15 s: `STARTING` from about 1 min, `IMAGE_PULLING` from about 3 min, the workload at about 4 min 20 s. The workload itself (clone, install, 297 tests) took **4.8 s**. |
-| Parallel cold starts | Overlap well: 1, 2 and 4 concurrent jobs (2 regions × 2) all finished ~4m20–4m30s after creation. |
+| Parallel cold starts | Overlap well: one job alone, two in flight together and a hunt round of eight (4 regions × 2) all reached workload start 4 m 12 s – 4 m 39 s after creation (`evidence/spike-job.json`, `evidence/smoke-jobs*.json`, `evidence/bench/hero-faultline-1.json`). |
 
 **Suggestions:** queue over-quota jobs (or offer a flag to), and state the per-region instance
 count for new tenants where the quota is documented. On the jobs quickstart, say both halves of the

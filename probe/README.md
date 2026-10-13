@@ -16,9 +16,10 @@ are `src/lib/probe-source.ts`, generated from this file by `scripts/embed-probe.
 `tests/probe-source.test.ts` fails if the two ever drift.
 
 The `Dockerfile` here builds an optional slimmer image (non-root, `uv`, pre-seeded pytest).
-It is not used by the deployed app: in the four smoke jobs the image pull took 79–95 s of a
-cold start that runs about 4 min 20 s (`evidence/smoke-jobs*.json`, `DEMO.md`), so a prebuilt
-slim image is a later optimisation, not a dependency.
+It is not used by the deployed app: in the four smoke jobs the image pull — from the first
+`IMAGE_PULLING` poll to the workload's start — took about 70–80 s, 26–31% of a cold start that
+runs about 4 min 20 s (`evidence/smoke-jobs*.json`), so a prebuilt slim image is a later
+optimisation, not a dependency.
 
 ## Why the probe has to self-report
 

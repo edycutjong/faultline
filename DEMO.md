@@ -11,9 +11,9 @@ built, it says so.
 
 ```bash
 npm install
-npm test            # 281 unit + integration tests
+npm test            # 283 unit + integration tests
 npm run test:probe  # 7 tests: the real probe.py against a local repo and HTTP server
-npm run build && npm run e2e   # 44 checks: the production build with NO environment, desktop and mobile
+npm run build && npm run e2e   # 48 checks: the production build with NO environment, desktop and mobile
 ```
 
 The integration suite drives a whole hunt through the production code path — service-account
@@ -124,10 +124,10 @@ round 1, 8 probes, 318.5 s; round 2, 8 probes, 374.3 s; round 3, 3 probes, 268.6
 were refused with `429` and retried (two in round 1, eight in round 2) — every one visible as an
 attempt number in the recorded hunt. Across the 19 jobs: create → workload start 260.6 s p50
 (251.9–278.6 s), work inside the container 5.35 s p50 (4.8–8.2 s). The rounds add up to 961 s,
-not 957 s, because two ticks raced at the end of round 1: the record keeps the last round-1
-verdict as read by the tick whose write won (+319.6 s), and round 2's dispatch time from the
-claim of the tick that lost (+314.7 s). Its jobs were adopted, not created twice — 19 probes,
-19 jobs.
+not 957 s, because the round figures overlap — mostly where two ticks raced at the end of round 1:
+the record keeps the last round-1 verdict as read by the tick whose write won (+319.6 s), and
+round 2's dispatch time from the claim of the tick that lost (+314.7 s). Its jobs were adopted,
+not created twice — 19 probes, 19 jobs.
 
 Nemotron's paragraph on this hunt (request `chatcmpl-988d2b477be0c269`) has the mechanism and the
 06:37-instead-of-06:00 result right, but calls UTC−6 the "DST-adjusted" offset; Mexico City has had no
@@ -170,8 +170,9 @@ python3 scripts/bench.py faultline --api https://faultline-edy-cus-projects.verc
 | **Faultline** — hunt `50824b63`, 8 slots in 4 regions | `89a890a3` | 1 / 1 | 918.9 s (1); 3 rounds, 17 jobs; 4,528 VM-seconds = $0.0830 at list price |
 
 Round by round ([`evidence/bench/attrs-faultline-1.json`](evidence/bench/attrs-faultline-1.json)): 290.3 s,
-337.2 s, 258.1 s; 16 creates refused with `429` and retried. Create → workload start 256.4 s p50 over
-the 17 jobs.
+337.2 s, 258.1 s; 16 creates refused with `429` and retried. Those add up to 885.6 s against the
+918.9 s hunt: round 2's first creates were refused and waited out the 30 s backoff, so its first job
+went out 33 s after round 1's last verdict. Create → workload start 256.4 s p50 over the 17 jobs.
 
 **The explanation on this one is partly wrong, and that is the design working.** Nemotron's paragraph
 (Token Factory request `chatcmpl-95d7f86bfadb7974`) correctly names the change — `__getstate__` now
