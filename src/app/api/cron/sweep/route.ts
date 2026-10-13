@@ -1,9 +1,13 @@
 /**
- * GET /api/cron/sweep — reconcile the hunt holding the live slots.
+ * GET /api/cron/sweep — reconcile the most recent live hunt.
  *
- * The backstop for a lost tick: a probe whose job died never sends one, and a hunt nobody is
- * watching would otherwise wait for the next visitor. The uptime workflow calls this on its
- * schedule; it is idempotent and safe to call from anywhere.
+ * The backstop for a lost tick: a probe whose job died never sends one, a narration call can
+ * die with its function, and a hunt nobody is watching would otherwise wait for the next
+ * visitor. So the hunt named by the live-hunt lock is ticked whether or not the lock is still
+ * held — a hunt releases it on entering narration — and whether or not it has expired: a tick
+ * is idempotent, a no-op on a finished hunt, and on a stuck one it is exactly the cleanup
+ * (deadlines, retries, pauses) the sweep exists for. The uptime workflow calls this on its
+ * schedule; it is safe to call from anywhere.
  */
 
 import { NextResponse } from "next/server";
@@ -19,7 +23,7 @@ export async function GET() {
   if (!ctx.config) return NextResponse.json({ swept: null, reason: "Nebius is not configured." });
 
   const lock = await readLiveLock(ctx).catch(() => null);
-  if (!lock || lock.released) return NextResponse.json({ swept: null });
+  if (!lock) return NextResponse.json({ swept: null });
 
   const hunt = await tick(ctx, lock.huntId).catch(() => null);
   retickAfterBackoff(hunt);
