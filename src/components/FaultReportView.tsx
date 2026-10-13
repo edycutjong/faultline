@@ -67,7 +67,7 @@ export function FaultReportView({ hunt }: { hunt: Hunt }) {
             style={{ background: "var(--guilty)" }}
             aria-hidden="true"
           />
-          <code className="font-mono text-[20px] text-text">{report.culpritSha}</code>
+          <code className="min-w-0 break-all font-mono text-[20px] text-text max-md:text-[15px]">{report.culpritSha}</code>
           <span className="rounded-full border border-line px-2.5 py-0.5 text-[12px] text-muted">
             verified by executed tests
           </span>
