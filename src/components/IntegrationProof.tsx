@@ -33,7 +33,7 @@ interface VerifyResponse {
   probeRegions?: string[];
   probeCapacity?: number;
   surfaces: Surface[];
-  latestJobs?: { readAt: string | null; jobs: LatestJob[] };
+  latestJobs?: { readAt: string | null; jobs: LatestJob[]; unavailableRegions?: string[] };
 }
 
 /** `2026-10-13 16:22 UTC` — the API's own timestamp, not the visitor's clock. */
@@ -103,21 +103,35 @@ export function IntegrationProof() {
             <p className="text-[13px] text-muted">
               Latest probe jobs, read from the Nebius Jobs API at {utcMinute(data.latestJobs.readAt)}:
             </p>
-            <ul className="mt-2 grid gap-1 font-mono text-[12px] text-muted">
+            {/* One grid for every row on wide screens, so the columns line up; a phone stacks each row. */}
+            <ul className="mt-2 grid gap-y-2 font-mono text-[12px] text-muted md:grid-cols-[max-content_max-content_max-content_1fr] md:gap-x-6 md:gap-y-1">
               {data.latestJobs.jobs.slice(0, 4).map((job) => (
-                <li key={job.id} className="flex flex-wrap gap-x-3">
-                  <span className="text-text">{job.id}</span>
-                  <span>{job.region}</span>
-                  <span>{job.state.toLowerCase()}</span>
-                  <span>{utcMinute(job.createdAt)}</span>
+                <li key={job.id} className="flex flex-wrap gap-x-3 md:contents">
+                  <span className="whitespace-nowrap text-text">{job.id}</span>
+                  <span className="whitespace-nowrap">{job.region}</span>
+                  <span className="whitespace-nowrap">{job.state.toLowerCase()}</span>
+                  <span className="whitespace-nowrap">{utcMinute(job.createdAt)}</span>
                 </li>
               ))}
             </ul>
-            <p className="mt-2 text-[13px] text-muted">The full report is at /api/integrations/verify.</p>
+            {data.latestJobs.unavailableRegions && data.latestJobs.unavailableRegions.length > 0 ? (
+              <p className="mt-2 text-[13px] text-muted">
+                Not answering just now, so their newest jobs may be missing:{" "}
+                {data.latestJobs.unavailableRegions.join(", ")}.
+              </p>
+            ) : null}
           </>
-        ) : (
-          <p className="text-[13px] text-muted">The full report is at /api/integrations/verify.</p>
-        )}
+        ) : null}
+        <p className={`text-[13px] text-muted${data?.latestJobs && data.latestJobs.jobs.length > 0 ? " mt-1" : ""}`}>
+          The full report:{" "}
+          {/* 40px tall like every other tap target on the page, though it sits in a sentence. */}
+          <a
+            href="/api/integrations/verify"
+            className="link-quiet inline-flex min-h-[40px] items-center font-mono text-[12px] underline underline-offset-2 hover:text-text"
+          >
+            /api/integrations/verify
+          </a>
+        </p>
       </footer>
     </section>
   );

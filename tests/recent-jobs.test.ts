@@ -117,6 +117,27 @@ describe("recentProbeJobs", () => {
     expect(calls).toHaveLength(4);
   });
 
+  it("skips a job without a name and orders timestamps of any precision", async () => {
+    const nameless = { metadata: { id: "aijob-e01x", parentId: "p" }, status: { state: "COMPLETED" } };
+    const { impl } = lists({
+      "project-e01home": [
+        nameless,
+        job("aijob-e01whole", "faultline-x-r1-i0-a-a1", "2026-10-13T16:22:40Z"),
+        job("aijob-e01micro", "faultline-x-r1-i1-a-a1", "2026-10-13T16:22:40.169806Z"),
+      ],
+      "project-e03uk": [],
+    });
+    const out = await recentProbeJobs(config(), { fetchImpl: impl });
+    expect(out.jobs.map((j) => j.id)).toEqual(["aijob-e01micro", "aijob-e01whole"]);
+  });
+
+  it("does not answer one request with another's cached list", async () => {
+    const { impl, calls } = lists({ "project-e01home": [job("aijob-e01a", "faultline-x-r1-i0-a-a1", "2026-10-13T12:00:00Z")], "project-e03uk": [] });
+    await recentProbeJobs(config(), { fetchImpl: impl, limit: 8 });
+    await recentProbeJobs(config(), { fetchImpl: impl, limit: 2 });
+    expect(calls).toHaveLength(4);
+  });
+
   it("does not cache a read that reached no region", async () => {
     const { impl, calls } = lists({ "project-e01home": "fail", "project-e03uk": "fail" });
     await recentProbeJobs(config(), { fetchImpl: impl });

@@ -34,7 +34,7 @@ const LIST_TIMEOUT_MS = 4_000;
 /** One read per minute per instance at most: the landing page asks on every visit. */
 const CACHE_MS = 60_000;
 
-let cache: { at: number; value: RecentJobs } | null = null;
+let cache: { key: string; at: number; value: RecentJobs } | null = null;
 
 export function clearRecentJobsCache(): void {
   cache = null;
@@ -50,7 +50,8 @@ export interface RecentJobsOptions {
 /** Newest first across every probe region. Never throws: a failed region is listed instead. */
 export async function recentProbeJobs(config: NebiusConfig, options: RecentJobsOptions = {}): Promise<RecentJobs> {
   const { limit = 8, fetchImpl = fetch, now = Date.now, timeoutMs = LIST_TIMEOUT_MS } = options;
-  if (cache && now() - cache.at < CACHE_MS) return cache.value;
+  const key = `${config.probeRegions.map((r) => r.projectId).join(",")}|${limit}`;
+  if (cache && cache.key === key && now() - cache.at < CACHE_MS) return cache.value;
 
   const lists = await Promise.allSettled(
     config.probeRegions.map((r) => withTimeout(listJobs(config, r.projectId, fetchImpl), timeoutMs)),
@@ -65,14 +66,14 @@ export async function recentProbeJobs(config: NebiusConfig, options: RecentJobsO
       return;
     }
     for (const job of list.value) {
-      if (job.metadata.name.startsWith(PROBE_JOB_PREFIX)) jobs.push(toPublic(job, region));
+      if (job.metadata?.name?.startsWith(PROBE_JOB_PREFIX)) jobs.push(toPublic(job, region));
     }
   });
-  jobs.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
+  jobs.sort((a, b) => epoch(b.createdAt) - epoch(a.createdAt));
 
   const value: RecentJobs = { jobs: jobs.slice(0, limit), unavailable, readAt: new Date(now()).toISOString() };
   // A read that reached no region is not worth keeping for a minute.
-  if (unavailable.length < config.probeRegions.length) cache = { at: now(), value };
+  if (unavailable.length < config.probeRegions.length) cache = { key, at: now(), value };
   return value;
 }
 
@@ -81,10 +82,16 @@ function toPublic(job: NebiusJob, region: string): PublicJob {
     id: job.metadata.id,
     name: job.metadata.name,
     region,
-    state: job.status.state,
+    state: job.status?.state ?? "STATE_UNSPECIFIED",
     createdAt: job.metadata.createdAt ?? null,
-    finishedAt: job.status.finishedAt ?? null,
+    finishedAt: job.status?.finishedAt ?? null,
   };
+}
+
+/** Milliseconds, whatever the fractional precision (`…40Z` and `…40.169806Z` both parse). */
+function epoch(iso: string | null): number {
+  const t = iso ? Date.parse(iso) : NaN;
+  return Number.isNaN(t) ? 0 : t;
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {

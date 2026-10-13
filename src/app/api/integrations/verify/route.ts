@@ -3,9 +3,9 @@
  *
  * A *view*, not a subsystem: the surfaces Faultline calls, where each is configured, and the
  * latest probe jobs read live from the Nebius Jobs API (`latestJobs`). A judge can confirm in
- * thirty seconds that jobs were really created, without reading code. `recentCalls` is this
- * instance's own log, so it is usually empty. No credential or credential-shaped value is
- * returned.
+ * thirty seconds that jobs were really created, without reading code. `recentCalls` is only this
+ * instance's own Nebius calls — this view's list reads included — with query strings dropped.
+ * No credential or credential-shaped value is returned.
  */
 
 import { NextResponse } from "next/server";
@@ -61,11 +61,11 @@ export async function GET() {
       },
     ],
     latestJobs: {
-      source: "GET /ai/v1/jobs in every probe region, read live (cached for up to 60 s)",
+      source: latest ? "GET /ai/v1/jobs in every probe region, read live (cached for up to 60 s)" : null,
       readAt: latest?.readAt ?? null,
       jobs: latest?.jobs ?? [],
       unavailableRegions: latest?.unavailable ?? [],
     },
-    recentCalls: recentCalls(),
+    recentCalls: recentCalls().map((call) => ({ ...call, path: call.path.split("?")[0] })),
   });
 }
