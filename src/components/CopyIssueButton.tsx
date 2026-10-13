@@ -66,7 +66,7 @@ export function CopyIssueButton({ hunt }: { hunt: Hunt }) {
         className={`rounded-lg border px-4 py-2.5 text-[14px] font-medium transition-colors duration-150 ${
           state === "copied"
             ? "copied-flash"
-            : "border-line bg-surface text-text hover:border-muted"
+            : "btn-quiet border-line bg-surface text-text"
         }`}
       >
         {state === "copied"

@@ -68,13 +68,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
             <nav aria-label="Primary" className="flex items-center gap-5 text-[13px] text-muted">
               <a
-                className="inline-flex min-h-[40px] items-center hover:text-text"
+                className="link-quiet inline-flex min-h-[40px] items-center hover:text-text"
                 href="/api/integrations/verify"
               >
                 Integration proof
               </a>
               <a
-                className="inline-flex min-h-[40px] items-center hover:text-text"
+                className="link-quiet inline-flex min-h-[40px] items-center hover:text-text"
                 href="https://github.com/edycutjong/faultline"
                 rel="noreferrer noopener"
                 target="_blank"

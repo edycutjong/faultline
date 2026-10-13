@@ -13,10 +13,13 @@
  *    is designed to look deliberate rather than broken.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Hunt } from "@/lib/types";
+import { formatElapsed, replayFrames } from "@/lib/replay";
 import { HuntView } from "./HuntView";
 import { formatDay } from "./format";
+
+const FRAME_MS = 1600;
 
 type RecordedResponse =
   | { available: true; hunt: Hunt }
@@ -93,11 +96,59 @@ export function RecordedExample() {
     return <NoRecording reason={state.reason} />;
   }
 
+  return <RecordedReplay hunt={state.hunt} />;
+}
+
+/**
+ * The recording, final state first, with a round-by-round replay. Every frame is a moment the
+ * recording really contains, labelled with the real time it happened — a replay compresses
+ * minutes of cold start into seconds, so it says so on screen rather than implying speed.
+ */
+function RecordedReplay({ hunt }: { hunt: Hunt }) {
+  const frames = useMemo(() => replayFrames(hunt), [hunt]);
+  const [frame, setFrame] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (frame === null) return;
+    if (frame >= frames.length - 1) {
+      const done = setTimeout(() => setFrame(null), FRAME_MS * 2);
+      return () => clearTimeout(done);
+    }
+    const next = setTimeout(() => setFrame(frame + 1), FRAME_MS);
+    return () => clearTimeout(next);
+  }, [frame, frames.length]);
+
+  const current = frame === null ? null : frames[frame];
+  const shown = current?.hunt ?? hunt;
+
   return (
-    <HuntView
-      hunt={state.hunt}
-      label={<RecordedRunLabel recordedAt={state.hunt.recordedAt} />}
-    />
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        {frame === null ? (
+          <button
+            type="button"
+            onClick={() => setFrame(0)}
+            className="btn-quiet rounded-lg border border-line px-4 py-2 text-[14px] text-text"
+          >
+            ▶ Replay it round by round
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setFrame(null)}
+            className="btn-quiet rounded-lg border border-line px-4 py-2 text-[14px] text-text"
+          >
+            Skip to the result
+          </button>
+        )}
+        <p className="font-mono text-[13px] text-muted" aria-live="polite">
+          {current
+            ? `replay · ${current.caption}${current.elapsedMs !== null ? ` · real time ${formatElapsed(current.elapsedMs)}` : ""}`
+            : `${hunt.round} rounds · ${hunt.probes.length} probes · real time ${formatElapsed(hunt.wallClockMs)} to the culprit`}
+        </p>
+      </div>
+      <HuntView hunt={shown} label={<RecordedRunLabel recordedAt={hunt.recordedAt} />} />
+    </div>
   );
 }
 
@@ -140,15 +191,15 @@ function NoRecording({ reason }: { reason: string }) {
           {[
             [
               "1 · Dispatch",
-              "Eight probe containers start at once on Nebius Serverless AI Jobs, one per candidate commit.",
+              "Round 1 tests the known-good ref, the failing ref and a band of suspects, each in a fresh Nebius Serverless AI Job.",
             ],
             [
               "2 · Narrow",
-              "Eight probes cut the range into nine segments, so a 256-commit range survives at ~28 after one round.",
+              "N probes cut the range into N+1 segments, and the next round goes out by itself as verdicts land.",
             ],
             [
               "3 · Explain",
-              "One commit is named, and a single paragraph from OpenCodeReasoning-Nemotron-14B says why it breaks.",
+              "One commit is named, and NVIDIA Nemotron 3 Super on Nebius Token Factory writes one paragraph on why it breaks.",
             ],
           ].map(([title, body]) => (
             <li key={title} className="rounded-lg border border-line bg-bg px-4 py-4">
@@ -161,14 +212,13 @@ function NoRecording({ reason }: { reason: string }) {
         <div className="mt-8 flex flex-wrap gap-4">
           <a
             href="#start"
-            className="rounded-lg px-4 py-2.5 text-[14px] font-medium"
-            style={{ background: "var(--accent)", color: "var(--on-accent)" }}
+            className="rounded-lg px-4 py-2.5 text-[14px] font-medium cta-accent"
           >
             Run a live hunt instead
           </a>
           <a
             href="/api/integrations/verify"
-            className="rounded-lg border border-line px-4 py-2.5 text-[14px] text-text hover:border-muted"
+            className="btn-quiet rounded-lg border border-line px-4 py-2.5 text-[14px] text-text"
           >
             Inspect the Nebius integration
           </a>

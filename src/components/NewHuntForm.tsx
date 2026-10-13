@@ -57,7 +57,7 @@ function Field({
 }
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-line bg-bg px-3.5 py-2.5 font-mono text-[14px] text-text placeholder:text-unknown focus:border-accent";
+  "field w-full rounded-lg border border-line bg-bg px-3.5 py-2.5 font-mono text-[14px] text-text placeholder:text-unknown";
 
 export function NewHuntForm({ budget }: { budget: HuntBudget | null }) {
   const router = useRouter();
@@ -340,8 +340,7 @@ export function NewHuntForm({ budget }: { budget: HuntBudget | null }) {
         <button
           type="submit"
           disabled={!canSubmit}
-          className="rounded-lg px-5 py-2.5 text-[15px] font-medium transition-opacity duration-150 disabled:cursor-not-allowed disabled:opacity-40"
-          style={{ background: "var(--accent)", color: "var(--on-accent)" }}
+          className="rounded-lg px-5 py-2.5 text-[15px] font-medium transition-opacity duration-150 disabled:cursor-not-allowed disabled:opacity-40 cta-accent"
         >
           {submitting ? "Dispatching round 1…" : "Start hunt"}
         </button>

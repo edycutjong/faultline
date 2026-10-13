@@ -53,8 +53,7 @@ export function PausedView({ hunt, onResume }: { hunt: Hunt; onResume?: () => Pr
             type="button"
             onClick={resume}
             disabled={busy}
-            className="rounded-lg px-5 py-2.5 text-[15px] font-medium transition-opacity duration-150 disabled:cursor-not-allowed disabled:opacity-40"
-            style={{ background: "var(--accent)", color: "var(--on-accent)" }}
+            className="rounded-lg px-5 py-2.5 text-[15px] font-medium transition-opacity duration-150 disabled:cursor-not-allowed disabled:opacity-40 cta-accent"
           >
             {busy ? "Resuming…" : "Resume hunt"}
           </button>

@@ -28,7 +28,7 @@ export async function GET() {
     return NextResponse.json({
       available: false,
       reason:
-        "No recorded hunt has been captured yet. A recording is a real run against live Nebius Serverless AI Jobs, so it cannot be produced until the account can dispatch them.",
+        "No recorded hunt is bundled with this build. A recording is a real hunt against live Nebius Serverless AI Jobs, committed verbatim — never synthesised.",
     });
   }
 }

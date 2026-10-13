@@ -47,14 +47,13 @@ export default function HomePage() {
         <div className="mt-9 flex flex-wrap items-center gap-4">
           <a
             href="#start"
-            className="rounded-lg px-5 py-3 text-[15px] font-medium"
-            style={{ background: "var(--accent)", color: "var(--on-accent)" }}
+            className="rounded-lg px-5 py-3 text-[15px] font-medium cta-accent"
           >
             Run a live hunt
           </a>
           <a
             href="#recorded"
-            className="rounded-lg border border-line px-5 py-3 text-[15px] text-text hover:border-muted"
+            className="btn-quiet rounded-lg border border-line px-5 py-3 text-[15px] text-text"
           >
             Watch the recorded run
           </a>

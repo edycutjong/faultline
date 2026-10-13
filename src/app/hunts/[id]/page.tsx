@@ -86,7 +86,7 @@ export default function HuntPage() {
   return (
     <div className="mx-auto max-w-6xl px-5 py-10">
       <nav aria-label="Breadcrumb" className="mb-6 text-[13px] text-muted">
-        <Link href="/" className="hover:text-text">
+        <Link href="/" className="link-quiet hover:text-text">
           Faultline
         </Link>
         <span aria-hidden="true" className="px-2">
@@ -111,8 +111,7 @@ export default function HuntPage() {
           </p>
           <Link
             href="/"
-            className="mt-8 inline-block rounded-lg px-4 py-2.5 text-[14px] font-medium"
-            style={{ background: "var(--accent)", color: "var(--on-accent)" }}
+            className="mt-8 inline-block rounded-lg px-4 py-2.5 text-[14px] font-medium cta-accent"
           >
             Start a new hunt
           </Link>

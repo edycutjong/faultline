@@ -212,3 +212,54 @@ details > summary::-webkit-details-marker { display: none; }
   .tick-body { width: 46%; height: 100%; margin-inline: auto; transition: width var(--dur-verdict) var(--ease-out); }
   .tick[data-probed="true"] .tick-body { width: 100%; height: 100%; }
 }
+
+/* ==========================================================================
+   Interaction feedback — hover, press, focus.
+   Colours live in these classes, never in inline styles: an inline colour beats any
+   :hover rule, which is how a button ends up with no hover state at all.
+   ========================================================================== */
+.cta-accent {
+  background: var(--accent);
+  color: var(--on-accent);
+  transition:
+    box-shadow var(--dur-verdict) var(--ease-out),
+    transform var(--dur-verdict) var(--ease-out),
+    filter var(--dur-verdict) var(--ease-out);
+}
+.cta-accent:not(:disabled):hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--accent) 75%, transparent);
+}
+.cta-accent:not(:disabled):active { transform: translateY(0) scale(0.98); }
+
+.btn-quiet {
+  transition:
+    border-color var(--dur-verdict) var(--ease-out),
+    background-color var(--dur-verdict) var(--ease-out),
+    transform var(--dur-verdict) var(--ease-out);
+}
+.btn-quiet:hover {
+  border-color: var(--muted);
+  background-color: color-mix(in srgb, var(--text) 5%, transparent);
+}
+.btn-quiet:active { transform: scale(0.98); }
+
+.link-quiet { transition: color var(--dur-verdict) var(--ease-out); }
+.link-quiet:hover { color: var(--text); }
+
+.field { transition: border-color var(--dur-verdict) var(--ease-out), box-shadow var(--dur-verdict) var(--ease-out); }
+.field:hover { border-color: color-mix(in srgb, var(--muted) 60%, var(--border)); }
+.field:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+details > summary { cursor: pointer; transition: color var(--dur-verdict) var(--ease-out); }
+details > summary:hover { color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .cta-accent, .btn-quiet, .link-quiet, .field, details > summary { transition: none; }
+  .cta-accent:not(:disabled):hover, .cta-accent:not(:disabled):active, .btn-quiet:active { transform: none; }
+}
