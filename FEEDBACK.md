@@ -83,8 +83,8 @@ value. A prize that cannot be spent is not a prize.
 
 We initially reported this as our own account trouble. It is not. As of 2026-09-10 the event's
 own discussion board carries a thread — *"Token Factory billing — country (Ghana) not
-selectable, blocking account activation"* — in which **four participants from four countries
-describe the same outcome through four different mechanisms**:
+selectable, blocking account activation"* — in which **four participants in three countries
+describe the same outcome through different mechanisms**:
 
 | Country | Mechanism | Outcome |
 |---|---|---|
