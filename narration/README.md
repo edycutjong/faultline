@@ -1,4 +1,8 @@
-# Narration job
+# Narration job — unused fallback
+
+> **Not on the default path.** Since 2026-10-13 the root-cause paragraph is one call to
+> `nvidia/nemotron-3-super-120b-a12b` on Nebius Token Factory (`src/lib/narrate.ts`). This
+> self-hosted GPU job is kept only as a fallback design and is never dispatched by the app.
 
 One completion from an NVIDIA open model per hunt, run as a **terminating** Nebius Serverless
 AI Job on `gpu-l40s-a` / `1gpu-8vcpu-32gb`.

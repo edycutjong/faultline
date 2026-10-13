@@ -18,9 +18,10 @@ import { newHunt, startHunt, tick } from "@/lib/hunt";
 import { DEFAULT_BAND_SIZE } from "@/lib/planner";
 import { dailyCap, readDailyCount, readHunt, readLiveLock, storeContext } from "@/lib/store";
 import { bypassCodeMatches, publicBaseUrl, tickDue } from "@/lib/runtime";
+import { retickAfterBackoff } from "@/lib/retick";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -39,34 +40,9 @@ export async function POST(request: Request) {
   }
 
   const ctx = storeContext();
-  if (!ctx.backend) {
-    return NextResponse.json(
-      {
-        error:
-          "Live hunts need Nebius credentials, and none are configured on this deployment. The recorded example hunt works without them.",
-      },
-      { status: 503 },
-    );
-  }
-
-  // The cap is visible in the UI on purpose. A demo that quietly burns its credit balance
-  // is a dead link by the time judges arrive. A judge code lifts it; nothing lifts the lock.
-  const cap = dailyCap();
-  const bypass = bypassCodeMatches(accessCode);
-  if (!bypass) {
-    const counter = await readDailyCount(ctx).catch(() => ({ day: "", count: 0 }));
-    if (counter.count >= cap) {
-      return NextResponse.json(
-        {
-          error: `Today's ${cap} live hunts have been used. The recorded example hunt is always available and costs nothing to view.`,
-          capReached: true,
-        },
-        { status: 429 },
-      );
-    }
-  }
 
   try {
+    // Input first: a malformed request is the caller's to fix, whatever the deploy's state.
     const ref = parseRepoUrl(repoUrl);
     const command = validateTestCommand(testCommand);
     const install = validateInstallCommand(typeof installCommand === "string" ? installCommand : "");
@@ -81,6 +57,32 @@ export async function POST(request: Request) {
         );
       }
       band = bandSize;
+    }
+
+    if (!ctx.backend) {
+      return NextResponse.json(
+        {
+          error:
+            "Live hunts need Nebius credentials, and none are configured on this deployment. The recorded example hunt works without them.",
+        },
+        { status: 503 },
+      );
+    }
+
+    // The cap is visible in the UI on purpose. A demo that quietly burns its credit balance
+    // is a dead link by the time judges arrive. A judge code lifts it; nothing lifts the lock.
+    const cap = dailyCap();
+    if (!bypassCodeMatches(accessCode)) {
+      const counter = await readDailyCount(ctx).catch(() => ({ day: "", count: 0 }));
+      if (counter.count >= cap) {
+        return NextResponse.json(
+          {
+            error: `Today's ${cap} live hunts have been used. The recorded example hunt is always available and costs nothing to view.`,
+            capReached: true,
+          },
+          { status: 429 },
+        );
+      }
     }
 
     const range = await resolveHuntRange(ref, goodRef.trim(), head, ctx.fetchImpl);
@@ -111,6 +113,7 @@ export async function POST(request: Request) {
         { status: started.status },
       );
     }
+    retickAfterBackoff(started.hunt);
     return NextResponse.json({ hunt: started.hunt }, { status: 201 });
   } catch (error) {
     if (error instanceof GitRangeError) {
@@ -135,6 +138,7 @@ export async function GET() {
   let liveHuntId: string | null = null;
   if (lock && !lock.released && new Date(lock.expiresAt).getTime() > Date.now()) {
     const hunt = await (tickDue(lock.huntId) ? tick(ctx, lock.huntId) : readHunt(ctx, lock.huntId)).catch(() => null);
+    retickAfterBackoff(hunt);
     if (hunt && (hunt.status === "running" || hunt.status === "planning")) liveHuntId = hunt.id;
   }
 

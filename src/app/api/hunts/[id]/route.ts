@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { tick } from "@/lib/hunt";
 import { readHunt, storeContext } from "@/lib/store";
 import { tickDue } from "@/lib/runtime";
+import { retickAfterBackoff } from "@/lib/retick";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -43,6 +44,7 @@ export async function GET(
 
   try {
     const reconciled = await tick(ctx, id);
+    retickAfterBackoff(reconciled);
     return NextResponse.json({ hunt: reconciled ?? stored });
   } catch (error) {
     // A failed tick must not lose the hunt. Return the last known state and let the next

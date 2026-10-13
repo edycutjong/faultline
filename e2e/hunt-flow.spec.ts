@@ -3,10 +3,10 @@ import { test, expect } from "@playwright/test";
 /**
  * The core journey, as far as it can honestly go without credentials.
  *
- * A hunt cannot dispatch while the tenant is suspended, so this suite stops where reality
- * stops: it drives the form, checks the validation a maintainer would actually hit, and
- * asserts that a rejected hunt produces a stated reason rather than a silent failure. When
- * the tenant clears, the dispatch assertions below become reachable and the guard flips.
+ * The suite runs the app with no credentials, so it stops where that reality stops: it drives
+ * the validation a maintainer would actually hit, and asserts that a hunt that cannot be
+ * dispatched produces a stated reason rather than a silent failure. With credentials, the
+ * dispatch assertions below become reachable and the guard flips.
  */
 test.describe("starting a hunt", () => {
   test("the form rejects a URL that is not a public GitHub repository", async ({ request }) => {
@@ -24,13 +24,12 @@ test.describe("starting a hunt", () => {
   });
 
   /**
-   * bandSize is what makes the sequential baseline measurable rather than derived, so its
-   * bounds are load-bearing for the benchmark. 12 is the eu-north1 concurrent non-GPU VM
-   * quota; above it a "parallel" band would silently queue and the measurement would stop
-   * meaning what it says.
+   * bandSize caps the interior probes per round at 8; what a hunt actually gets is the
+   * backend's capacity (2 VMs per region, measured). Input is validated before anything
+   * touches the backend, so these are refused even on a deploy with no credentials.
    */
-  for (const bad of [0, 13, 2.5, "eight"] as const) {
-    test(`bandSize ${JSON.stringify(bad)} is refused with the quota explained`, async ({ request }) => {
+  for (const bad of [0, 9, 2.5, "eight"] as const) {
+    test(`bandSize ${JSON.stringify(bad)} is refused with the bound explained`, async ({ request }) => {
       const res = await request.post("/api/hunts", {
         data: {
           repoUrl: "https://github.com/faultline-bench/id-mint",
@@ -56,7 +55,7 @@ test.describe("starting a hunt", () => {
     if (res.status() === 201) {
       // Credentials are present and the range resolved: the hunt is real.
       expect(body.hunt.id).toBeTruthy();
-      expect(body.hunt.bandSize).toBe(8);
+      expect(body.hunt.slots).toBeGreaterThan(0);
       expect(body.hunt.commits.length).toBeGreaterThan(0);
     } else {
       // The expected path today. What matters is that the failure is *stated*.

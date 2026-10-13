@@ -76,6 +76,11 @@ export interface InfraFailure {
   region: string | null;
   reason: string;
   at: string;
+  /**
+   * The platform refused for capacity or rate (HTTP 429, QuotaExceeded). Throttling is
+   * waited out with backoff and has its own, longer budget: it says nothing about the probe.
+   */
+  throttled?: boolean;
 }
 
 /**

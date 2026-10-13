@@ -3,8 +3,8 @@ import { test, expect } from "@playwright/test";
 /**
  * The zero-credential cold visit. This is what a judge gets, so it is what is tested.
  *
- * Faultline cannot dispatch a hunt without Nebius credentials, and the tenant is currently
- * suspended. That is a real state, not an error state, and the app is supposed to say so
+ * Faultline cannot dispatch a hunt without Nebius credentials, and this suite runs the app
+ * with none. That is a real state, not an error state, and the app is supposed to say so
  * plainly rather than spin or throw. These tests assert the honest degradation actually
  * works — if it ever regressed into a stack trace or an infinite spinner, the first person
  * to find out would be a judge.
@@ -17,21 +17,20 @@ test.describe("cold visit, no credentials", () => {
     const response = await page.goto("/");
     expect(response?.status()).toBe(200);
 
-    // The h1 is the claim, not the product name — "Your laptop can only be one machine."
-    // The name lives in the header link. Asserting the claim is the stronger test: if the
-    // page ever loses its argument, this fails.
+    // The h1 is the claim, not the product name. The name lives in the header link.
+    // Asserting the claim is the stronger test: if the page ever loses its argument, this fails.
     await expect(page.getByRole("heading", { level: 1 }))
-      .toContainText(/Your laptop can only be one machine/i);
+      .toContainText(/Find the commit that broke it/i);
     await expect(page.getByRole("link", { name: /integration proof/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /run a live hunt/i }).first()).toBeVisible();
 
     expect(errors, `uncaught page errors: ${errors.join(" | ")}`).toEqual([]);
   });
 
-  test("the hunt form is present and asks for exactly three things", async ({ page }) => {
+  test("the hunt form asks for three things, and shows the install command it will run", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByText(/Three fields\. No YAML\./i)).toBeVisible();
-    for (const label of [/Repository/i, /Failing test/i, /Last known good/i]) {
+    for (const label of [/Repository/i, /Failing test/i, /Last known good/i, /Install command/i]) {
       await expect(page.getByText(label).first()).toBeVisible();
     }
   });
@@ -80,7 +79,7 @@ test.describe("metadata a link unfurl depends on", () => {
     await page.goto("/");
     await expect(page).toHaveTitle(/Faultline/i);
     for (const [sel, pattern] of [
-      ['meta[name="description"]', /commit range/i],
+      ['meta[name="description"]', /commit that broke/i],
       ['meta[property="og:title"]', /Faultline/i],
       ['meta[property="og:image"]', /og-image\.png/],
       ['meta[name="twitter:card"]', /summary_large_image/],

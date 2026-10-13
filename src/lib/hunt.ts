@@ -63,8 +63,17 @@ export const PROBE_TIMEOUT_SECONDS = 900;
 /** VM provisioning + image pull, measured at ~4m20s; the platform itself gives up at 30 min. */
 const COLD_START_ALLOWANCE_MS = 25 * 60_000;
 const DEADLINE_MARGIN_MS = 5 * 60_000;
-/** After a quota rejection, wait before trying the same slot again. */
-const QUOTA_BACKOFF_MS = 60_000;
+/**
+ * Throttling — HTTP 429 on job create, or a job ending in QuotaExceeded — is waited out:
+ * 30 s, doubling to a 4 min ceiling. The Jobs API documents no rate limit; on 2026-10-13 a
+ * round's creates were refused with 429 for ~1.5 min after an 8-job burst, then accepted.
+ */
+const THROTTLE_BACKOFF_MS = 30_000;
+const THROTTLE_BACKOFF_MAX_MS = 4 * 60_000;
+/** Consecutive throttled attempts (~25 min of backoff) before the hunt pauses and says so. */
+export const MAX_THROTTLED = 8;
+/** A probe younger than this has nothing to report; polling its job only spends rate limit. */
+const STATUS_POLL_AFTER_MS = 90_000;
 /** A claim with no job ID this old means its owner died mid-dispatch. */
 const DISPATCH_RECOVERY_MS = 3 * 60_000;
 /** A narration claim with no result this old is abandoned; the next attempt may run. */
@@ -297,9 +306,9 @@ async function advance(ctx: StoreContext, hunt: Hunt): Promise<Hunt> {
 
   // #7: a probe that failed to report on every attempt. Nothing was learned, so nothing is
   // concluded — the hunt stops and says so, and can be resumed.
-  const exhausted = probes.find((p) => p.phase === "queued" && p.infraFailures.length > 0 && attemptsUsed(p) >= MAX_ATTEMPTS);
-  if (exhausted) {
-    return { ...next, status: "paused", pause: pauseFor(exhausted, now) };
+  const stuck = probes.find(exhausted);
+  if (stuck) {
+    return { ...next, status: "paused", pause: pauseFor(stuck, now) };
   }
 
   probes = await dispatchQueued(ctx, next, probes, now);
@@ -336,23 +345,53 @@ async function advance(ctx: StoreContext, hunt: Hunt): Promise<Hunt> {
   return { ...next, probes: dispatched };
 }
 
-/** Silent attempts in the current retry budget. */
+/** Silent attempts in the current retry budget. Throttling is counted separately. */
 export function attemptsUsed(probe: Pick<Probe, "infraFailures" | "budgetFrom">): number {
   const from = Number.isInteger(probe.budgetFrom) ? probe.budgetFrom : 1;
-  return probe.infraFailures.filter((f) => f.attempt >= from).length;
+  return probe.infraFailures.filter((f) => f.attempt >= from && !f.throttled).length;
+}
+
+/** Throttled attempts in a row, most recent first — the backoff exponent. */
+export function throttledStreak(probe: Pick<Probe, "infraFailures" | "budgetFrom">): number {
+  const from = Number.isInteger(probe.budgetFrom) ? probe.budgetFrom : 1;
+  let streak = 0;
+  for (let i = probe.infraFailures.length - 1; i >= 0; i -= 1) {
+    const failure = probe.infraFailures[i];
+    if (!failure || failure.attempt < from || !failure.throttled) break;
+    streak += 1;
+  }
+  return streak;
+}
+
+function exhausted(probe: Probe): boolean {
+  return (
+    probe.phase === "queued" &&
+    probe.infraFailures.length > 0 &&
+    (attemptsUsed(probe) >= MAX_ATTEMPTS || throttledStreak(probe) >= MAX_THROTTLED)
+  );
+}
+
+/** Is this failure the platform saying "not now"? */
+export function isThrottle(text: string): boolean {
+  return /\b429\b|too many requests|quotaexceeded|quota exceeded|resource_exhausted|resourceexhausted/i.test(text);
 }
 
 function pauseFor(probe: Probe, now: Date): Pause {
   const last = probe.infraFailures.at(-1);
+  const throttled = throttledStreak(probe) >= MAX_THROTTLED;
+  const attempts = throttled ? throttledStreak(probe) : attemptsUsed(probe);
   return {
     commitSha: probe.commitSha,
     commitIndex: probe.commitIndex,
     round: probe.round,
-    attempts: attemptsUsed(probe),
-    message:
-      `The probe for ${probe.commitSha.slice(0, 7)} never reported, ${attemptsUsed(probe)} times running ` +
-      `(last: ${last?.reason ?? "unknown"}). That is the infrastructure, not the code, so nothing is ` +
-      `concluded from it. Resume to try again.`,
+    attempts,
+    message: throttled
+      ? `Nebius refused to start the probe for ${probe.commitSha.slice(0, 7)} ${attempts} times in a row ` +
+        `(last: ${last?.reason ?? "unknown"}), backing off each time. That is capacity, not the code, so ` +
+        `nothing is concluded from it. Resume to try again.`
+      : `The probe for ${probe.commitSha.slice(0, 7)} never reported, ${attempts} times running ` +
+        `(last: ${last?.reason ?? "unknown"}). That is the infrastructure, not the code, so nothing is ` +
+        `concluded from it. Resume to try again.`,
     at: now.toISOString(),
   };
 }
@@ -397,9 +436,23 @@ function settle(hunt: Hunt, now: Date): Hunt {
 // Probes: refresh and dispatch
 // ---------------------------------------------------------------------------------------------
 
-/** Mark this attempt as having produced no verdict, and queue the next one. */
-function failAttempt(probe: Probe, hunt: Hunt, reason: string, now: Date, backoffMs = 0): Probe {
-  const failure = { attempt: probe.attempt, jobId: probe.jobId, region: probe.region, reason, at: now.toISOString() };
+/**
+ * Mark this attempt as having produced no verdict, and queue the next one. Throttling is
+ * recognised from the reason itself and waited out with exponential backoff.
+ */
+function failAttempt(probe: Probe, hunt: Hunt, reason: string, now: Date): Probe {
+  const throttled = isThrottle(reason);
+  const failure = {
+    attempt: probe.attempt,
+    jobId: probe.jobId,
+    region: probe.region,
+    reason,
+    at: now.toISOString(),
+    ...(throttled ? { throttled: true } : {}),
+  };
+  const backoffMs = throttled
+    ? Math.min(THROTTLE_BACKOFF_MAX_MS, THROTTLE_BACKOFF_MS * 2 ** throttledStreak(probe))
+    : 0;
   const attempt = probe.attempt + 1;
   const key = probeKey(probe.round, probe.commitIndex, probe.commitSha, attempt);
   return {
@@ -444,16 +497,20 @@ async function refreshProbe(ctx: StoreContext, hunt: Hunt, probe: Probe, now: Da
     if (probe.phase === "dispatching") return await adoptClaim(ctx, hunt, probe, now);
 
     if (probe.phase === "done" && probe.jobId && !(probe.jobState && isJobFinal(probe.jobState))) {
-      // The verdict is in; keep reading the job until it ends, for its billed VM time.
-      return withRunStatus(probe, await backend.status(probe.jobId));
+      // The verdict is in; read the job once it has had time to exit, for its billed VM time.
+      const since = probe.finishedAt ? now.getTime() - new Date(probe.finishedAt).getTime() : Infinity;
+      return since < 15_000 ? probe : withRunStatus(probe, await backend.status(probe.jobId));
     }
 
     if (probe.phase !== "running" || !probe.jobId) return probe;
 
     const first = await readVerdict(ctx, hunt.id, probe.key, probe.commitSha);
-    if (first.kind === "valid") {
-      return withRunStatus(applyVerdict(probe, first.result, now), await backend.status(probe.jobId).catch(() => null));
-    }
+    if (first.kind === "valid") return applyVerdict(probe, first.result, now);
+
+    // Nothing can have happened yet: a cold start alone is minutes. Asking anyway only spends
+    // the API's (undocumented) rate limit — which a whole round of ticks can exhaust.
+    const age = probe.dispatchedAt ? now.getTime() - new Date(probe.dispatchedAt).getTime() : Infinity;
+    if (age < STATUS_POLL_AFTER_MS) return probe;
 
     const status = await backend.status(probe.jobId);
     if (status === null) return failAttempt(probe, hunt, "the job no longer exists", now);
@@ -468,11 +525,9 @@ async function refreshProbe(ctx: StoreContext, hunt: Hunt, probe: Probe, now: Da
         second.kind === "invalid"
           ? `the verdict was not a complete document (${second.reason})`
           : `the job ended ${status.state}${status.code ? ` (${status.code})` : ""} without reporting${status.message ? `: ${status.message}` : ""}`;
-      const quota = /quota/i.test(`${status.code ?? ""} ${status.message ?? ""}`);
-      return failAttempt(updated, hunt, reason, now, quota ? QUOTA_BACKOFF_MS : 0);
+      return failAttempt(updated, hunt, reason, now);
     }
 
-    const age = probe.dispatchedAt ? now.getTime() - new Date(probe.dispatchedAt).getTime() : 0;
     if (age > probeDeadlineMs(hunt)) {
       await backend.cancel(probe.jobId).catch(() => undefined);
       return failAttempt(updated, hunt, `no verdict within ${Math.round(probeDeadlineMs(hunt) / 60_000)} minutes`, now);
@@ -507,7 +562,7 @@ async function adoptClaim(ctx: StoreContext, hunt: Hunt, probe: Probe, now: Date
   if (claim.runId) {
     return { ...probe, phase: "running", region: claim.region, jobId: claim.runId, dispatchedAt: claim.claimedAt };
   }
-  if (claim.error) return failAttempt({ ...probe, region: claim.region }, hunt, `dispatch failed: ${claim.error}`, now, quotaBackoff(claim.error));
+  if (claim.error) return failAttempt({ ...probe, region: claim.region }, hunt, `dispatch failed: ${claim.error}`, now);
 
   if (now.getTime() - new Date(claim.claimedAt).getTime() < DISPATCH_RECOVERY_MS) return probe;
   // The owner died between claiming and recording. The job name is deterministic, so the
@@ -518,10 +573,6 @@ async function adoptClaim(ctx: StoreContext, hunt: Hunt, probe: Probe, now: Date
     return { ...probe, phase: "running", region: claim.region, jobId: found.runId, dispatchedAt: claim.claimedAt };
   }
   return failAttempt({ ...probe, region: claim.region }, hunt, "dispatch never completed", now);
-}
-
-function quotaBackoff(message: string): number {
-  return /quota/i.test(message) ? QUOTA_BACKOFF_MS : 0;
 }
 
 export function jobName(hunt: Pick<Hunt, "id">, key: string): string {
@@ -557,14 +608,36 @@ async function dispatchQueued(ctx: StoreContext, hunt: Hunt, probes: Probe[], no
     assignments.push({ position, region });
   });
 
+  // Creates go out four at a time: a create takes ~11 s server-side, and a burst of them is
+  // what the API throttles. Four keeps a round's dispatch under half a minute.
   const out = [...probes];
-  await Promise.all(
-    assignments.map(async ({ position, region }) => {
-      const probe = out[position];
-      if (probe) out[position] = await dispatchOne(ctx, backend, hunt, probe, region, now);
-    }),
-  );
+  for (let i = 0; i < assignments.length; i += DISPATCH_CONCURRENCY) {
+    await Promise.all(
+      assignments.slice(i, i + DISPATCH_CONCURRENCY).map(async ({ position, region }) => {
+        const probe = out[position];
+        if (probe) out[position] = await dispatchOne(ctx, backend, hunt, probe, region, now);
+      }),
+    );
+  }
   return out;
+}
+
+const DISPATCH_CONCURRENCY = 4;
+
+/**
+ * When the hunt next has something to do that no probe will tick it for: the earliest
+ * backoff among queued probes. A tick that leaves one behind waits it out and ticks again,
+ * so a throttled round does not stall until someone happens to look.
+ */
+export function nextWakeAt(hunt: Hunt): Date | null {
+  if (hunt.status !== "running") return null;
+  let earliest: number | null = null;
+  for (const probe of hunt.probes) {
+    if (probe.phase !== "queued" || !probe.notBefore) continue;
+    const at = new Date(probe.notBefore).getTime();
+    if (earliest === null || at < earliest) earliest = at;
+  }
+  return earliest === null ? null : new Date(earliest);
 }
 
 async function dispatchOne(
@@ -602,7 +675,7 @@ async function dispatchOne(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await recordDispatch(ctx, hunt.id, { ...claim, error: message }).catch(() => undefined);
-    return failAttempt({ ...probe, region }, hunt, `dispatch failed: ${message}`, now, quotaBackoff(message));
+    return failAttempt({ ...probe, region }, hunt, `dispatch failed: ${message}`, now);
   }
 }
 

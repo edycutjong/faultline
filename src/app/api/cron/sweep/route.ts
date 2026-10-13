@@ -9,6 +9,7 @@
 import { NextResponse } from "next/server";
 import { tick } from "@/lib/hunt";
 import { readLiveLock, storeContext } from "@/lib/store";
+import { retickAfterBackoff } from "@/lib/retick";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -21,5 +22,6 @@ export async function GET() {
   if (!lock || lock.released) return NextResponse.json({ swept: null });
 
   const hunt = await tick(ctx, lock.huntId).catch(() => null);
+  retickAfterBackoff(hunt);
   return NextResponse.json({ swept: lock.huntId, status: hunt?.status ?? "unreadable" });
 }

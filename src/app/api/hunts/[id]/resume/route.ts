@@ -8,9 +8,10 @@
 import { NextResponse } from "next/server";
 import { resumeHunt } from "@/lib/hunt";
 import { storeContext } from "@/lib/store";
+import { retickAfterBackoff } from "@/lib/retick";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(
   _request: Request,
@@ -24,5 +25,6 @@ export async function POST(
       { status: result.status },
     );
   }
+  retickAfterBackoff(result.hunt);
   return NextResponse.json({ hunt: result.hunt });
 }

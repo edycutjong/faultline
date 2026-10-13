@@ -4,31 +4,10 @@
 #
 # One container = one git commit = one verdict.
 #
-# READS (environment variables, supplied by the Nebius Jobs API via
-# `spec.environmentVariables`):
-#
-#   FAULTLINE_HUNT_ID          required  hunt this probe belongs to
-#   FAULTLINE_REPO_URL         required  git URL to fetch from
-#   FAULTLINE_COMMIT_SHA       required  the ONE commit to test (full SHA)
-#   FAULTLINE_TEST_COMMAND     required  shell-style command, run in the checkout root
-#   FAULTLINE_OUTPUT_PATH      required  mount point of the S3 volume, e.g. /out
-#   FAULTLINE_TIMEOUT_SECONDS  optional  total budget, default 900
-#
-# GUARANTEES (write):
-#
-#   $FAULTLINE_OUTPUT_PATH/$FAULTLINE_HUNT_ID/probes/$FAULTLINE_COMMIT_SHA.json
-#
-#   A `faultline.probe.v1` ProbeResult document, written atomically (temp file +
-#   os.replace), ALWAYS — including when the clone, the dependency install, or the
-#   probe itself fails. The Jobs API exposes no exit code and no logs over REST, so
-#   this file is the only channel by which a verdict reaches the application. A
-#   missing file is indistinguishable from a still-running job and stalls the hunt.
-#
-#   The same JSON is also printed to stdout on one line, so `nebius ai job logs`
-#   shows a human the exact verdict the application acted on.
-#
-# EXIT CODE: 0 for a pass/fail verdict, 1 for an error verdict, 2 if the verdict file
-# could not be written. Nebius does not surface this; it is for local runs.
+# NOT ON THE DEFAULT PATH. The deployed app runs every probe on the stock `python:3.11`
+# image and injects probe.py at job creation (spec.injectedFiles). This image is the later
+# optimisation: smaller pull, non-root, uv, pre-seeded pytest. See probe/README.md for the
+# contract — environment variables in, one verdict PUT to a presigned URL out.
 # =====================================================================================
 
 FROM python:3.11.16-slim-bookworm
@@ -46,7 +25,7 @@ RUN apt-get update \
 # of a probe.
 COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /usr/local/bin/uv
 
-# Non-root. The probe writes only to /tmp (the checkout) and to the mounted volume.
+# Non-root. The probe writes only to /tmp (the checkout); its verdict leaves over HTTPS.
 RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin probe
 
 # A virtualenv owned by the probe user, so `uv pip install -e .` of the commit under

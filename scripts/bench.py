@@ -1,43 +1,41 @@
 #!/usr/bin/env python3
-"""FAULTBENCH — measure what Faultline claims, against a baseline measured the same way.
+"""FAULTBENCH — Faultline against `git bisect run`, on two axes: is the answer right, and how
+long does it take.
 
-Faultline's headline is structural: N probes cut a range into N+1 segments, so eight probes
-narrow a 256-commit range in 3 rounds where sequential bisection needs 8. The arithmetic is
-not in question. What needs measuring is whether the *wall-clock* follows, because a parallel
-round is only as fast as its slowest container and cold starts are paid every round.
+Three baselines, on the same history, the same test command and the same install command:
 
-This script answers that with numbers a judge can reproduce:
+    naive       `git bisect run` in ONE environment, built once and reused for every step —
+                what a maintainer gets by running bisect in the virtualenv they already have.
+                Run twice: with the environment built at the known-good ref, and at the
+                failing ref.
+    fresh-venv  `git bisect run` with a step script that builds a FRESH virtualenv at every
+                step and installs that commit's own declared dependencies. Correct by
+                construction, and the honest local competitor.
+    faultline   one hunt through a deployed Faultline: every probe a fresh Nebius container
+                with that commit's own dependencies, both ends tested, rounds in parallel.
 
-    parallel   band = 8   the product as shipped
-    sequential band = 1   literally `git bisect`, on the SAME infrastructure
+HONESTY RULES, enforced in code:
 
-Running the baseline through the same API, the same container image and the same cold-start
-behaviour is the whole point. A comparison against a laptop would measure the laptop.
+  * Nothing is estimated. Every figure in a results file came from a run recorded in the same
+    file. A run that fails is recorded as a failure; it is never replaced by a model of what
+    it would have done.
+  * Correctness is judged against the answer key passed with --truth, never inferred.
+  * Distributions always carry their sample size, and a p95 over fewer than 20 samples is
+    flagged as not meaningful rather than silently printed.
+  * Local baselines run with a WARM pip cache — the favourable case for the baseline, and the
+    report says so.
 
-HONESTY RULES, enforced in code, not by convention:
-
-  * Nothing is estimated. Every figure in the output JSON came back from a real hunt. If a
-    hunt fails, it is recorded as a failure and excluded from the statistics; it is never
-    replaced by a model of what it would have done.
-  * If no hunt completes, this script writes NO results file and exits non-zero. An empty
-    benchmark is a fact about the run, and it must not be paperable-over.
-  * The output records the FAULTBENCH manifest's `historySha256` per repo, so a judge can
-    prove they benchmarked the identical histories rather than a re-roll.
-  * `costUsd` and every duration are read from the hunt the API returns, not computed here.
-
-COLD START. The spec asked for ~50 throwaway jobs to characterise cold start. That is not
-needed and would waste budget: every probe already reports `dispatchedAt`, `startedAt` and
-`finishedAt`, so each one is a cold-start sample taken under real conditions. A single
-FAULTBENCH-3 pass yields several hundred, which clears LESSONS rule 36 (N >= 50 MEASUREMENTS)
-many times over without dispatching a single job that does no work.
-
-Stdlib only. No third-party dependency, so a judge needs nothing but python3.
+Stdlib only; shells out to git, python3 -m venv and pip.
 
 Usage:
-    python scripts/bench.py --manifest /tmp/faultbench/FAULTBENCH.json --api http://localhost:3000
-    python scripts/bench.py --manifest ... --trials 3 --out benchmarks/results.json
-    python scripts/bench.py --manifest ... --dry-run          # plan only, dispatches nothing
-    python scripts/bench.py --manifest ... --only retry-lib --modes parallel
+    python3 scripts/bench.py local --repo /tmp/faultbench/tzdata-pipeline --good <sha> --bad <sha> \\
+        --test "python -m pytest -q tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone" \\
+        --install "pip install -e .[test]" --truth <sha> --trials 5 --out evidence/bench/hero-local.json
+    python3 scripts/bench.py faultline --api https://faultline-edy-cus-projects.vercel.app \\
+        --repo-url https://github.com/edycutjong/faultbench-tzdata-pipeline --good v0.1.0 --bad main \\
+        --test "..." --install "pip install -e .[test]" --truth <sha> --out evidence/bench/hero-faultline-1.json
+    python3 scripts/bench.py report evidence/bench/*.json
+    python3 scripts/bench.py step --install "..." --test "..."     # the fresh-venv bisect step
 """
 
 from __future__ import annotations
@@ -46,25 +44,206 @@ import argparse
 import json
 import math
 import os
+import shlex
+import shutil
 import statistics
+import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
-SCHEMA = "faultbench.results.v1"
-PARALLEL_BAND = 8          # DEFAULT_BAND_SIZE in src/lib/planner.ts
-SEQUENTIAL_BAND = 1        # one probe per round == git bisect
-POLL_SECONDS = 2.0         # matches the UI's reconcile cadence
-TERMINAL = {"done", "inconclusive", "error"}
+SCHEMA = "faultbench.results.v2"
+TERMINAL = {"done", "inconclusive", "error", "paused"}
 
 
 # ----------------------------------------------------------------------------------------
-# HTTP — stdlib only, and deliberately loud about failure
+# statistics — percentiles the way a reader expects, with the sample size always attached
 # ----------------------------------------------------------------------------------------
 
-def request(method, url, payload=None, timeout=60):
+def pct(values, q):
+    """Nearest-rank percentile. Explicit, so nobody has to ask which interpolation this is."""
+    if not values:
+        return None
+    ordered = sorted(values)
+    rank = max(1, math.ceil(q / 100.0 * len(ordered)))
+    return ordered[min(rank, len(ordered)) - 1]
+
+
+def summarise(values, unit):
+    clean = [v for v in values if v is not None]
+    if not clean:
+        return {"n": 0, "unit": unit, "note": "no samples"}
+    return {
+        "n": len(clean),
+        "unit": unit,
+        "min": round(min(clean), 2),
+        "p50": round(pct(clean, 50), 2),
+        "p95": round(pct(clean, 95), 2),
+        "max": round(max(clean), 2),
+        "mean": round(statistics.fmean(clean), 2),
+        "p95_meaningful": len(clean) >= 20,
+    }
+
+
+def now_iso():
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def iso_ms(text):
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).timestamp() * 1000.0
+    except (ValueError, AttributeError):
+        return None
+
+
+# ----------------------------------------------------------------------------------------
+# commands
+# ----------------------------------------------------------------------------------------
+
+def run(argv, cwd=None, env=None, timeout=3600):
+    return subprocess.run(argv, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                          text=True, errors="replace", timeout=timeout)
+
+
+def in_env(command, python):
+    """Point a `python ...` / `pytest ...` / `pip ...` command at a specific interpreter."""
+    argv = shlex.split(command)
+    head = os.path.basename(argv[0]) if argv else ""
+    if head in ("python", "python3"):
+        return [python] + argv[1:]
+    if head in ("pytest", "py.test"):
+        return [python, "-m", "pytest"] + argv[1:]
+    if head in ("pip", "pip3"):
+        return [python, "-m", "pip"] + argv[1:]
+    return argv
+
+
+def make_venv(path, python=None):
+    proc = run([python or sys.executable, "-m", "venv", path])
+    if proc.returncode != 0:
+        raise RuntimeError("venv creation failed: %s" % proc.stdout[-400:])
+    return os.path.join(path, "bin", "python")
+
+
+# ----------------------------------------------------------------------------------------
+# the fresh-venv bisect step (invoked by `git bisect run`)
+# ----------------------------------------------------------------------------------------
+
+def cmd_step(args):
+    """One `git bisect run` step: fresh venv, this commit's install, the test.
+
+    Exit 125 when the commit cannot be installed — `git bisect skip` — so an unbuildable
+    commit is never blamed or cleared.
+    """
+    scratch = tempfile.mkdtemp(prefix="fl-bisect-step-")
+    try:
+        python = make_venv(os.path.join(scratch, "venv"), args.python)
+        install = run(in_env(args.install, python), cwd=os.getcwd()) if args.install else None
+        if install is not None and install.returncode != 0:
+            return 125
+        test = run(in_env(args.test, python), cwd=os.getcwd())
+        return 0 if test.returncode == 0 else 1
+    except RuntimeError:
+        return 125
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+
+
+# ----------------------------------------------------------------------------------------
+# local baselines
+# ----------------------------------------------------------------------------------------
+
+def bisect(repo, good, bad, run_argv):
+    """`git bisect run` from scratch. Returns (named sha or None, steps, seconds, log tail)."""
+    run(["git", "bisect", "reset"], cwd=repo)
+    run(["git", "checkout", "-q", bad], cwd=repo)
+    started = time.monotonic()
+    start = run(["git", "bisect", "start", bad, good], cwd=repo)
+    if start.returncode != 0:
+        raise RuntimeError("git bisect start failed: %s" % start.stdout[-400:])
+    proc = run(["git", "bisect", "run"] + run_argv, cwd=repo, timeout=7200)
+    seconds = time.monotonic() - started
+    named = None
+    for line in proc.stdout.splitlines():
+        if line.endswith("is the first bad commit"):
+            named = line.split()[0]
+            break
+    log = run(["git", "bisect", "log"], cwd=repo).stdout
+    steps = sum(1 for line in log.splitlines() if line.startswith("git bisect good") or line.startswith("git bisect bad") or line.startswith("git bisect skip"))
+    run(["git", "bisect", "reset"], cwd=repo)
+    return named, steps, seconds, proc.stdout[-600:]
+
+
+def subject(repo, sha):
+    if not sha:
+        return None
+    return run(["git", "log", "-1", "--format=%s", sha], cwd=repo).stdout.strip()
+
+
+def cmd_local(args):
+    repo = os.path.abspath(args.repo)
+    good = run(["git", "rev-parse", args.good], cwd=repo).stdout.strip()
+    bad = run(["git", "rev-parse", args.bad], cwd=repo).stdout.strip()
+    truth = run(["git", "rev-parse", args.truth], cwd=repo).stdout.strip()
+    trials = []
+    scratch = tempfile.mkdtemp(prefix="fl-bench-")
+    try:
+        for flavour, ref in (("naive (env built at known-good ref)", good), ("naive (env built at failing ref)", bad)):
+            run(["git", "bisect", "reset"], cwd=repo)
+            run(["git", "checkout", "-q", ref], cwd=repo)
+            t0 = time.monotonic()
+            python = make_venv(os.path.join(scratch, "env-%s" % ref[:8]), args.python)
+            install = run(in_env(args.install, python), cwd=repo)
+            setup_s = time.monotonic() - t0
+            if install.returncode != 0:
+                trials.append({"baseline": flavour, "error": "environment install failed", "tail": install.stdout[-400:]})
+                continue
+            for _ in range(args.trials):
+                named, steps, seconds, tail = bisect(repo, good, bad, in_env(args.test, python))
+                trials.append({
+                    "baseline": flavour, "named": named, "namedSubject": subject(repo, named),
+                    "correct": named == truth, "steps": steps, "seconds": round(seconds, 2),
+                    "envSetupSeconds": round(setup_s, 2), "tail": None if named == truth else tail,
+                })
+                sys.stderr.write("%s: %s in %.1fs\n" % (flavour, (named or "none")[:12], seconds))
+
+        step = [sys.executable, os.path.abspath(__file__), "step", "--install", args.install, "--test", args.test]
+        if args.python:
+            step += ["--python", args.python]
+        for _ in range(args.trials):
+            named, steps, seconds, tail = bisect(repo, good, bad, step)
+            trials.append({
+                "baseline": "fresh-venv", "named": named, "namedSubject": subject(repo, named),
+                "correct": named == truth, "steps": steps, "seconds": round(seconds, 2),
+                "tail": None if named == truth else tail,
+            })
+            sys.stderr.write("fresh-venv: %s in %.1fs\n" % ((named or "none")[:12], seconds))
+    finally:
+        run(["git", "bisect", "reset"], cwd=repo)
+        shutil.rmtree(scratch, ignore_errors=True)
+
+    result = {
+        "schema": SCHEMA, "kind": "local", "label": args.label, "ranAt": now_iso(),
+        "machine": {"platform": sys.platform, "python": run([args.python or sys.executable, "--version"]).stdout.strip(),
+                    "git": run(["git", "--version"]).stdout.strip(), "pipCache": "warm"},
+        "repo": args.repo_url or repo, "good": good, "bad": bad, "truth": truth, "truthSubject": subject(repo, truth),
+        "commits": int(run(["git", "rev-list", "--count", "%s..%s" % (good, bad)], cwd=repo).stdout.strip() or 0),
+        "testCommand": args.test, "installCommand": args.install, "trials": trials,
+    }
+    write(args.out, result)
+    return 0
+
+
+# ----------------------------------------------------------------------------------------
+# faultline
+# ----------------------------------------------------------------------------------------
+
+def request(method, url, payload=None, timeout=120):
     data = json.dumps(payload).encode() if payload is not None else None
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Accept", "application/json")
@@ -83,358 +262,166 @@ def request(method, url, payload=None, timeout=60):
         return 0, {"error": "%s: %s" % (type(exc).__name__, exc)}
 
 
-def iso_ms(text):
-    """ISO-8601 -> epoch milliseconds. Returns None rather than guessing."""
-    if not text:
-        return None
-    try:
-        return datetime.fromisoformat(text.replace("Z", "+00:00")).timestamp() * 1000.0
-    except (ValueError, AttributeError):
-        return None
+def cmd_faultline(args):
+    api = args.api.rstrip("/")
+    payload = {"repoUrl": args.repo_url, "testCommand": args.test, "installCommand": args.install,
+               "goodRef": args.good, "badRef": args.bad}
+    code_file = os.path.expanduser(args.access_code_file) if args.access_code_file else None
+    if code_file and os.path.isfile(code_file):
+        payload["accessCode"] = open(code_file).read().strip()
 
+    if args.hunt_id:
+        hunt_id = args.hunt_id
+    else:
+        status, body = request("POST", api + "/api/hunts", payload)
+        if status != 201:
+            sys.stderr.write("could not start the hunt: %s %s\n" % (status, body))
+            return 1
+        hunt_id = body["hunt"]["id"]
+    sys.stderr.write("hunt %s\n" % hunt_id)
 
-# ----------------------------------------------------------------------------------------
-# statistics — percentiles the way a reader expects, with the sample size always attached
-# ----------------------------------------------------------------------------------------
+    deadline = time.monotonic() + args.timeout_minutes * 60
+    hunt = None
+    while time.monotonic() < deadline:
+        status, body = request("GET", "%s/api/hunts/%s" % (api, hunt_id))
+        if status == 200 and body.get("hunt"):
+            hunt = body["hunt"]
+            if hunt["status"] in TERMINAL:
+                break
+        time.sleep(args.poll_seconds)
 
-def pct(values, q):
-    """Nearest-rank percentile. Explicit, so nobody has to ask which interpolation this is."""
-    if not values:
-        return None
-    ordered = sorted(values)
-    rank = max(1, math.ceil(q / 100.0 * len(ordered)))
-    return ordered[min(rank, len(ordered)) - 1]
-
-
-def summarise(values, unit):
-    """A distribution is never reported without n. A p95 over 3 samples is not a p95."""
-    clean = [v for v in values if v is not None]
-    if not clean:
-        return {"n": 0, "unit": unit, "note": "no samples"}
-    return {
-        "n": len(clean),
-        "unit": unit,
-        "min": round(min(clean), 1),
-        "p50": round(pct(clean, 50), 1),
-        "p95": round(pct(clean, 95), 1),
-        "max": round(max(clean), 1),
-        "mean": round(statistics.fmean(clean), 1),
-        # A p95 drawn from fewer than 20 samples is arithmetic, not a tail estimate. Say so
-        # in the artifact rather than trusting the reader to remember.
-        "p95_meaningful": len(clean) >= 20,
-    }
-
-
-# ----------------------------------------------------------------------------------------
-# one hunt, start to terminal state
-# ----------------------------------------------------------------------------------------
-
-def run_hunt(api, repo, band, timeout_s, verbose):
-    """Dispatch one hunt and poll to a terminal state. Returns a measurement record."""
-    url = "%s/api/hunts" % api.rstrip("/")
-    body = {
-        "repoUrl": repo["repoUrl"],
-        "testCommand": repo["testCommand"],
-        "goodRef": repo["goodRef"],
-        "badRef": repo["badRef"],
-        "bandSize": band,
-    }
-    started = time.monotonic()
-    status, payload = request("POST", url, body)
-    if status != 201 or "hunt" not in payload:
-        return {"ok": False, "stage": "dispatch", "httpStatus": status,
-                "error": payload.get("error", "unexpected response")}
-
-    hunt = payload["hunt"]
-    hunt_id = hunt["id"]
-    simulated = bool(hunt.get("simulated"))
-    poll_url = "%s/api/hunts/%s" % (api.rstrip("/"), hunt_id)
-    warnings = []
-
-    while hunt.get("status") not in TERMINAL:
-        if time.monotonic() - started > timeout_s:
-            return {"ok": False, "stage": "timeout", "huntId": hunt_id,
-                    "error": "still %s after %ds" % (hunt.get("status"), timeout_s),
-                    "lastStatus": hunt.get("status")}
-        time.sleep(POLL_SECONDS)
-        status, payload = request("GET", poll_url)
-        if status != 200 or "hunt" not in payload:
-            return {"ok": False, "stage": "poll", "huntId": hunt_id, "httpStatus": status,
-                    "error": payload.get("error", "unexpected response")}
-        if payload.get("warning"):
-            # A reconcile tick can fail transiently and retry. Record it: a run with many
-            # warnings measured a degraded service, and the reader should be able to see that.
-            warnings.append(payload["warning"])
-        hunt = payload["hunt"]
-
-    observed = (time.monotonic() - started) * 1000.0
-    probes = hunt.get("probes") or []
-
-    # Cold start = dispatch -> container actually running. Execution = running -> finished.
-    cold = []
-    exec_ms = []
-    for p in probes:
-        d, s, f = iso_ms(p.get("dispatchedAt")), iso_ms(p.get("startedAt")), iso_ms(p.get("finishedAt"))
-        if d is not None and s is not None and s >= d:
-            cold.append(s - d)
-        if s is not None and f is not None and f >= s:
-            exec_ms.append(f - s)
-        elif p.get("durationMs") is not None:
-            exec_ms.append(float(p["durationMs"]))
-
-    culprit = (hunt.get("report") or {}).get("culpritSha")
-    correct = None
-    if hunt.get("status") == "done" and culprit:
-        correct = culprit == repo["plantedSha"]
-
-    record = {
-        "ok": True,
-        "simulated": simulated,
-        "huntId": hunt_id,
-        "repo": repo["name"],
-        "bandSize": band,
-        "status": hunt.get("status"),
-        "rounds": hunt.get("round"),
-        "jobRuns": len(probes),
-        "jobIds": [p.get("jobId") for p in probes if p.get("jobId")],
-        # Reported by the API (measured server-side) AND observed by this client. They should
-        # agree closely; a wide gap means polling latency is being counted as hunt time, and a
-        # reader deserves to see both numbers rather than one that hides the other.
-        "wallClockMsReported": hunt.get("wallClockMs"),
-        "wallClockMsObserved": round(observed, 1),
-        "costUsd": hunt.get("costUsd"),
-        "culpritSha": culprit,
-        "expectedSha": repo["plantedSha"],
-        "correct": correct,
-        "coldStartMs": cold,
-        "execMs": exec_ms,
-        "inconclusiveReason": (hunt.get("inconclusive") or {}).get("reason"),
-        "warnings": warnings,
-    }
-    if verbose:
-        sys.stderr.write("    %-11s band=%-2d %-12s rounds=%s jobs=%s correct=%s %s\n" % (
-            repo["name"], band, hunt.get("status"), record["rounds"], record["jobRuns"],
-            correct, "warn x%d" % len(warnings) if warnings else ""))
-    return record
-
-
-# ----------------------------------------------------------------------------------------
-# aggregation
-# ----------------------------------------------------------------------------------------
-
-def aggregate(records):
-    """Statistics over completed hunts only. Simulated hunts are counted and flagged, never
-    quietly folded into a figure that will be read as measurement."""
-    good = [r for r in records if r.get("ok") and r.get("status") == "done"]
-    wall = [r["wallClockMsReported"] for r in good if r.get("wallClockMsReported") is not None]
-    if not wall:
-        wall = [r["wallClockMsObserved"] for r in good]
-    cold, ex = [], []
-    for r in good:
-        cold.extend(r["coldStartMs"])
-        ex.extend(r["execMs"])
-    costs = [r["costUsd"] for r in good if r.get("costUsd") is not None]
-    correct = [r["correct"] for r in good if r.get("correct") is not None]
-    return {
-        "simulatedHunts": sum(1 for r in good if r.get("simulated")),
-        "hunts": {"dispatched": len(records),
-                  "completed": len(good),
-                  "failed": len(records) - len(good)},
-        "accuracy": {"checked": len(correct),
-                     "correct": sum(1 for c in correct if c),
-                     # The number that matters most: a fast wrong answer is worth nothing.
-                     "allCorrect": bool(correct) and all(correct)},
-        "rounds": summarise([r["rounds"] for r in good], "rounds"),
-        "jobRuns": summarise([r["jobRuns"] for r in good], "jobs"),
-        "wallClock": summarise(wall, "ms"),
-        "coldStart": summarise(cold, "ms"),
-        "probeExecution": summarise(ex, "ms"),
-        "costUsd": ({"n": len(costs), "unit": "usd", "total": round(sum(costs), 4),
-                     "perHuntP50": round(pct(costs, 50), 4)} if costs
-                    else {"n": 0, "unit": "usd", "note": "no cost reported"}),
-    }
-
-
-def compare(par, seq):
-    """Speedup, stated only when BOTH sides actually produced completed hunts."""
-    a = (par or {}).get("wallClock", {})
-    b = (seq or {}).get("wallClock", {})
-    if not a.get("n") or not b.get("n"):
-        return {"available": False,
-                "reason": "both modes must have at least one completed hunt to compare"}
-    return {
-        "available": True,
-        "wallClockSpeedupP50": round(b["p50"] / a["p50"], 2) if a["p50"] else None,
-        "wallClockSpeedupP95": round(b["p95"] / a["p95"], 2) if a["p95"] else None,
-        "roundsParallelP50": par["rounds"].get("p50"),
-        "roundsSequentialP50": seq["rounds"].get("p50"),
-        # Parallelism trades total job-runs for wall-clock. Reporting the speedup without
-        # this ratio would be telling half the story.
-        "jobRunsParallelP50": par["jobRuns"].get("p50"),
-        "jobRunsSequentialP50": seq["jobRuns"].get("p50"),
-        "note": ("Both modes ran through the same API, the same probe image and the same "
-                 "infrastructure. The only difference is probes per round."),
-    }
-
-
-# ----------------------------------------------------------------------------------------
-
-def main():
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--manifest", required=True, help="FAULTBENCH.json from scripts/seed.py")
-    ap.add_argument("--api", default="http://localhost:3000", help="Faultline base URL")
-    ap.add_argument("--repo-base", default=None,
-                    help="Base URL the seeded repos are served from, e.g. "
-                         "https://github.com/<org>. Required unless the manifest carries repoUrl.")
-    ap.add_argument("--trials", type=int, default=2, help="hunts per repo per mode")
-    ap.add_argument("--modes", default="parallel,sequential")
-    ap.add_argument("--only", default=None, help="restrict to one repo by name")
-    ap.add_argument("--timeout", type=int, default=1800, help="per-hunt seconds")
-    ap.add_argument("--out", default="benchmarks/results.json")
-    ap.add_argument("--dry-run", action="store_true", help="print the plan, dispatch nothing")
-    ap.add_argument("--quiet", action="store_true")
-    args = ap.parse_args()
-
-    verbose = not args.quiet
-    with open(args.manifest, encoding="utf-8") as fh:
-        manifest = json.load(fh)
-    if manifest.get("schema") != "faultbench.v1":
-        sys.stderr.write("error: %s is not a faultbench.v1 manifest\n" % args.manifest)
-        return 2
-
-    repos = [r for r in manifest["repos"] if not args.only or r["name"] == args.only]
-    if not repos:
-        sys.stderr.write("error: no repo named %r in the manifest\n" % args.only)
-        return 2
-
-    for r in repos:
-        if "repoUrl" not in r:
-            if not args.repo_base:
-                sys.stderr.write(
-                    "error: %s has no repoUrl and --repo-base was not given.\n"
-                    "  The seeded histories are local; Faultline clones over https, so they must\n"
-                    "  be pushed somewhere reachable first. Pass --repo-base https://github.com/<org>.\n"
-                    % r["name"])
-                return 2
-            r["repoUrl"] = "%s/%s" % (args.repo_base.rstrip("/"), r["name"])
-
-    modes = {"parallel": PARALLEL_BAND, "sequential": SEQUENTIAL_BAND}
-    chosen = [m.strip() for m in args.modes.split(",") if m.strip()]
-    for m in chosen:
-        if m not in modes:
-            sys.stderr.write("error: unknown mode %r (parallel, sequential)\n" % m)
-            return 2
-
-    total = len(repos) * len(chosen) * args.trials
-    if verbose:
-        sys.stderr.write("FAULTBENCH: %d hunts (%d repos x %d modes x %d trials) against %s\n"
-                         % (total, len(repos), len(chosen), args.trials, args.api))
-        for r in repos:
-            sys.stderr.write("  %-11s %4d commits  culprit %s  %s\n"
-                             % (r["name"], r["commits"], r["plantedSha"][:12], r["repoUrl"]))
-    if args.dry_run:
-        sys.stderr.write("dry run: nothing dispatched.\n")
-        return 0
-
-    status, health = request("GET", "%s/api/hunts" % args.api.rstrip("/"), timeout=15)
-    if status != 200:
-        sys.stderr.write("error: %s is not answering (%s). Start the app first.\n"
-                         % (args.api, health.get("error", status)))
-        return 2
-
-    results = {m: [] for m in chosen}
-    t0 = time.time()
-    for trial in range(args.trials):
-        for repo in repos:
-            for mode in chosen:
-                if verbose:
-                    sys.stderr.write("  trial %d/%d\n" % (trial + 1, args.trials)
-                                     if repo is repos[0] and mode == chosen[0] else "")
-                results[mode].append(run_hunt(args.api, repo, modes[mode], args.timeout, verbose))
-
-    agg = {m: aggregate(results[m]) for m in chosen}
-    completed = sum(a["hunts"]["completed"] for a in agg.values())
-
-    if completed == 0:
-        # The one thing this script must never do is produce a results file from a run in
-        # which nothing ran. R8/R10: absent beats estimated.
-        sys.stderr.write(
-            "\nFAILED: %d hunts dispatched, 0 completed. No results file written.\n" % total)
-        for m in chosen:
-            for r in results[m][:3]:
-                if not r.get("ok"):
-                    sys.stderr.write("  %s/%s: %s\n" % (m, r.get("stage"), r.get("error")))
+    if not hunt or hunt["status"] not in TERMINAL:
+        sys.stderr.write("hunt did not finish within %d minutes\n" % args.timeout_minutes)
+        write(args.out, {"schema": SCHEMA, "kind": "faultline", "label": args.label, "huntId": hunt_id,
+                         "error": "timeout", "hunt": hunt})
         return 1
 
-    simulated_total = sum(a.get("simulatedHunts", 0) for a in agg.values())
-    out = {
-        "schema": SCHEMA,
-        "generatedAt": datetime.now(timezone.utc).isoformat(),
-        "api": args.api,
-        "durationSeconds": round(time.time() - t0, 1),
-        "manifest": {
-            "path": os.path.abspath(args.manifest),
-            "generator": manifest.get("generator"),
-            # The proof a judge benchmarked the same histories, not a re-roll.
-            "repos": [{"name": r["name"], "commits": r["commits"],
-                       "historySha256": r.get("historySha256"),
-                       "plantedSha": r.get("plantedSha")} for r in repos],
-        },
-        # A results file produced against the stub harness must be impossible to mistake for a
-        # measurement. The stub marks every hunt it returns; that mark is carried here, at the
-        # top of the artifact, where nobody reading it can miss it.
-        "SIMULATED": simulated_total > 0,
-        "simulatedHunts": simulated_total,
-        "warning": ("THESE NUMBERS ARE SIMULATED. They came from scripts/bench_stub.py, which "
-                    "emits fixed synthetic timings so bench.py can be exercised without Nebius. "
-                    "They are NOT measurements and must not appear on any judged surface.")
-                   if simulated_total else None,
-        "config": {"trials": args.trials, "modes": chosen,
-                   "bands": {m: modes[m] for m in chosen}, "timeoutSeconds": args.timeout},
-        "summary": agg,
-        "comparison": (compare(agg.get("parallel"), agg.get("sequential"))
-                       if {"parallel", "sequential"} <= set(chosen) else
-                       {"available": False, "reason": "both modes were not run"}),
-        "hunts": results,
+    named = (hunt.get("report") or {}).get("culpritSha")
+    probes = hunt.get("probes", [])
+    cold = [iso_ms(p.get("startedAt")) - iso_ms(p.get("dispatchedAt")) for p in probes
+            if iso_ms(p.get("startedAt")) is not None and iso_ms(p.get("dispatchedAt")) is not None]
+    rounds = []
+    for r in range(1, hunt.get("round", 0) + 1):
+        rp = [p for p in probes if p.get("round") == r]
+        starts = [iso_ms(p.get("dispatchedAt")) for p in rp if p.get("dispatchedAt")]
+        ends = [iso_ms(p.get("finishedAt")) for p in rp if p.get("finishedAt")]
+        rounds.append({"round": r, "probes": len(rp),
+                       "seconds": round((max(ends) - min(starts)) / 1000, 1) if starts and ends else None})
+    result = {
+        "schema": SCHEMA, "kind": "faultline", "label": args.label, "ranAt": now_iso(), "api": api,
+        "huntId": hunt_id, "repo": args.repo_url, "truth": args.truth,
+        "named": named, "correct": bool(named and args.truth and named.startswith(args.truth[:12])),
+        "status": hunt["status"], "inconclusive": hunt.get("inconclusive"),
+        "seconds": round((hunt.get("wallClockMs") or 0) / 1000, 1) if hunt.get("wallClockMs") else None,
+        "rounds": hunt.get("round"), "probes": len(probes), "slots": hunt.get("slots"),
+        "regions": hunt.get("regions"), "costUsd": hunt.get("costUsd"),
+        "jobIds": [p.get("jobId") for p in probes],
+        "infraRetries": sum(len(p.get("infraFailures") or []) for p in probes),
+        "perRound": rounds,
+        "coldStartSeconds": summarise([c / 1000 for c in cold], "s"),
+        "inContainerSeconds": summarise([(p.get("durationMs") or 0) / 1000 for p in probes if p.get("durationMs")], "s"),
+        "narration": {"model": (hunt.get("report") or {}).get("modelId"),
+                      "requestId": (hunt.get("report") or {}).get("narrationRequestId"),
+                      "error": (hunt.get("report") or {}).get("narrationError")},
+        "hunt": hunt,
     }
-
-    os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
-    with open(args.out, "w", encoding="utf-8") as fh:
-        json.dump(out, fh, indent=2)
-        fh.write("\n")
-
-    if verbose:
-        sys.stderr.write("\n")
-        if simulated_total:
-            sys.stderr.write(
-                "!! %d of these hunts are SIMULATED (bench_stub.py). The results file is stamped\n"
-                "!! SIMULATED:true. These are not measurements and must not be published.\n\n"
-                % simulated_total)
-        for m in chosen:
-            a = agg[m]
-            w = a["wallClock"]
-            sys.stderr.write(
-                "%-11s %d/%d completed  rounds p50 %s  wall p50 %s ms  p95 %s ms%s\n" % (
-                    m, a["hunts"]["completed"], a["hunts"]["dispatched"],
-                    a["rounds"].get("p50"), w.get("p50"), w.get("p95"),
-                    "" if w.get("p95_meaningful") else "  (p95 over <20 samples)"))
-        c = out["comparison"]
-        if c.get("available"):
-            sys.stderr.write("speedup p50 %sx  p95 %sx  (job-runs %s vs %s)\n" % (
-                c["wallClockSpeedupP50"], c["wallClockSpeedupP95"],
-                c["jobRunsParallelP50"], c["jobRunsSequentialP50"]))
-        acc = [agg[m]["accuracy"] for m in chosen]
-        if not all(a["allCorrect"] for a in acc if a["checked"]):
-            sys.stderr.write("WARNING: not every completed hunt named the planted commit.\n")
-        sys.stderr.write("wrote %s\n" % args.out)
-
-    # A benchmark that was fast and wrong is a failed benchmark.
-    for m in chosen:
-        a = agg[m]["accuracy"]
-        if a["checked"] and not a["allCorrect"]:
-            return 1
+    write(args.out, result)
+    sys.stderr.write("faultline: %s (%s) in %ss, %s rounds, %s probes\n" % (
+        (named or "none")[:12], "correct" if result["correct"] else "WRONG/none", result["seconds"], result["rounds"], result["probes"]))
     return 0
+
+
+# ----------------------------------------------------------------------------------------
+# report
+# ----------------------------------------------------------------------------------------
+
+def cmd_report(args):
+    rows = {}
+    faultline = []
+    for path in args.files:
+        with open(path) as fh:
+            data = json.load(fh)
+        if data.get("kind") == "local":
+            for t in data["trials"]:
+                if "error" in t:
+                    continue
+                key = (data["label"], t["baseline"])
+                rows.setdefault(key, []).append(t)
+        elif data.get("kind") == "faultline" and not data.get("error"):
+            faultline.append(data)
+
+    out = {"schema": SCHEMA, "kind": "report", "ranAt": now_iso(), "baselines": [], "faultline": []}
+    lines = ["| Repo | Baseline | Named the culprit | Wall-clock p50 (s) | p95 (s) | N |", "|---|---|---|---|---|---|"]
+    for (label, baseline), trials in sorted(rows.items()):
+        secs = summarise([t["seconds"] for t in trials], "s")
+        right = sum(1 for t in trials if t["correct"])
+        named = sorted({(t["named"] or "none")[:7] + " " + (t.get("namedSubject") or "") for t in trials})
+        out["baselines"].append({"label": label, "baseline": baseline, "correct": right, "n": len(trials), "seconds": secs, "named": named})
+        verdict = "%d/%d" % (right, len(trials)) + ("" if right == len(trials) else " — named " + "; ".join(named))
+        lines.append("| %s | %s | %s | %s | %s | %d |" % (label, baseline, verdict, secs["p50"], secs["p95"] if secs["p95_meaningful"] else "%s (n<20)" % secs["p95"], len(trials)))
+    by_label = {}
+    for f in faultline:
+        by_label.setdefault(f["label"], []).append(f)
+    for label, runs in sorted(by_label.items()):
+        secs = summarise([r["seconds"] for r in runs], "s")
+        right = sum(1 for r in runs if r["correct"])
+        out["faultline"].append({"label": label, "correct": right, "n": len(runs), "seconds": secs,
+                                 "rounds": [r["rounds"] for r in runs], "probes": [r["probes"] for r in runs],
+                                 "costUsd": [r["costUsd"] for r in runs], "huntIds": [r["huntId"] for r in runs]})
+        lines.append("| %s | Faultline (%s slots) | %d/%d | %s | %s | %d |" % (
+            label, runs[0].get("slots"), right, len(runs), secs["p50"],
+            secs["p95"] if secs["p95_meaningful"] else "%s (n<20)" % secs["p95"], len(runs)))
+    out["markdown"] = "\n".join(lines)
+    print(out["markdown"])
+    if args.out:
+        write(args.out, out)
+    return 0
+
+
+def write(path, data):
+    if not path:
+        print(json.dumps(data, indent=2))
+        return
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "w") as fh:
+        json.dump(data, fh, indent=2)
+        fh.write("\n")
+    sys.stderr.write("wrote %s\n" % path)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    step = sub.add_parser("step", help="one fresh-venv `git bisect run` step (internal)")
+    step.add_argument("--install", default="")
+    step.add_argument("--test", required=True)
+    step.add_argument("--python")
+
+    local = sub.add_parser("local", help="naive and fresh-venv git bisect run, N trials")
+    for name in ("--repo", "--good", "--bad", "--test", "--truth", "--out", "--label"):
+        local.add_argument(name, required=True)
+    local.add_argument("--install", default="")
+    local.add_argument("--repo-url")
+    local.add_argument("--trials", type=int, default=3)
+    local.add_argument("--python", help="interpreter for the venvs (default: this one)")
+
+    fl = sub.add_parser("faultline", help="one hunt through a deployed Faultline")
+    for name in ("--api", "--repo-url", "--good", "--bad", "--test", "--out", "--label"):
+        fl.add_argument(name, required=True)
+    fl.add_argument("--install", default="")
+    fl.add_argument("--truth")
+    fl.add_argument("--hunt-id", help="measure an already-started hunt instead of starting one")
+    fl.add_argument("--access-code-file", help="file holding the judge access code (never pass it inline)")
+    fl.add_argument("--poll-seconds", type=float, default=5.0)
+    fl.add_argument("--timeout-minutes", type=int, default=75)
+
+    report = sub.add_parser("report", help="merge result files into a summary")
+    report.add_argument("files", nargs="+")
+    report.add_argument("--out")
+
+    args = parser.parse_args(argv)
+    return {"step": cmd_step, "local": cmd_local, "faultline": cmd_faultline, "report": cmd_report}[args.command](args)
 
 
 if __name__ == "__main__":

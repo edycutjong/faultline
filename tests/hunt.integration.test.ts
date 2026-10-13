@@ -49,7 +49,6 @@ function fakeNebius(oracle: Oracle) {
   let jobCounter = 0;
   let cancelCalls = 0;
   let tfCalls = 0;
-  const clock = { ms: Date.parse("2026-10-13T10:00:00Z") };
 
   function put(key: string, body: string): string {
     version += 1;
@@ -113,14 +112,17 @@ function fakeNebius(oracle: Oracle) {
       for (const pair of body.spec?.environmentVariables ?? []) env[pair.name] = pair.value;
       jobCounter += 1;
       const jobId = `aijob-e01${String(jobCounter).padStart(6, "0")}`;
-      jobs.set(jobId, {
+      const job: FakeJob = {
         state: "PROVISIONING",
         env,
         parentId: body.metadata.parentId,
         name: body.metadata.name,
-        createdAt: new Date(clock.ms).toISOString(),
+        createdAt: new Date(Date.now()).toISOString(),
         finishedAt: null,
-      });
+      };
+      jobs.set(jobId, job);
+      // The container runs and reports at once; the engine sees it on its next tick.
+      runProbe(job);
       return json({ resourceId: jobId, status: { code: "OK" } });
     }
 
@@ -137,7 +139,6 @@ function fakeNebius(oracle: Oracle) {
       const id = jobMatch[1] ?? "";
       const job = jobs.get(id);
       if (!job) return new Response("not found", { status: 404 });
-      if (job.state === "PROVISIONING") runProbe(job);
       return json({
         metadata: { id, parentId: job.parentId, name: job.name, createdAt: job.createdAt },
         status: {
@@ -183,9 +184,6 @@ function fakeNebius(oracle: Oracle) {
     jobBodies,
     objects,
     stats: () => ({ createCalls: jobBodies.length, cancelCalls, tfCalls }),
-    advanceClock: (ms: number) => {
-      clock.ms += ms;
-    },
   };
 }
 
@@ -213,12 +211,16 @@ async function startLive(commitCount: number): Promise<Hunt> {
   return started.hunt;
 }
 
-/** Tick until the hunt stops, as the probes' own ticks and the page's poll would. */
+/**
+ * Tick until the hunt stops, as the probes' own ticks and the page's poll would — a minute
+ * of simulated time apart, because the engine does not poll a job younger than 90 s.
+ */
 async function runToCompletion(huntId: string, maxTicks = 60): Promise<Hunt> {
   const ctx = storeContext();
   let current = must(await readHunt(ctx, huntId));
   for (let i = 0; i < maxTicks; i += 1) {
     if (["done", "inconclusive", "error", "paused"].includes(current.status)) return current;
+    vi.setSystemTime(Date.now() + 60_000);
     current = must(await tick(ctx, huntId));
   }
   throw new Error(`hunt did not settle within ${maxTicks} ticks (status ${current.status})`);
@@ -242,6 +244,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   globalThis.fetch = originalFetch;
   delete process.env.FAULTLINE_EXTRA_REGIONS;
   delete process.env.TOKENFACTORY_API_KEY;

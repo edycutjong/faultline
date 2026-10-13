@@ -88,6 +88,8 @@ export class FakeBackend implements ProbeBackend {
   /** Highest number of live runs ever seen in one region at once. */
   readonly peakPerRegion = new Map<string, number>();
   dispatchFailures = 0;
+  /** Creates refused with HTTP 429, as the Jobs API did on 2026-10-13. */
+  throttledCreates = 0;
   private counter = 0;
 
   constructor(
@@ -111,6 +113,10 @@ export class FakeBackend implements ProbeBackend {
   }
 
   async dispatch(launch: ProbeLaunch): Promise<{ runId: string }> {
+    if (this.throttledCreates > 0) {
+      this.throttledCreates -= 1;
+      throw new Error("POST /ai/v1/jobs failed: 429 Too Many Requests");
+    }
     if (this.dispatchFailures > 0) {
       this.dispatchFailures -= 1;
       throw new Error("POST /ai/v1/jobs failed: 503 Service Unavailable");

@@ -8,7 +8,17 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { newHunt, resumeHunt, startHunt, tick, MAX_ATTEMPTS, PROBE_TIMEOUT_SECONDS } from "@/lib/hunt";
+import {
+  isThrottle,
+  newHunt,
+  nextWakeAt,
+  resumeHunt,
+  startHunt,
+  tick,
+  MAX_ATTEMPTS,
+  MAX_THROTTLED,
+  PROBE_TIMEOUT_SECONDS,
+} from "@/lib/hunt";
 import { readHunt, readLiveLock, readDailyCount, type StoreContext } from "@/lib/store";
 import type { Hunt } from "@/lib/types";
 import { indexOf, memoryContext, must, shaFor, syntheticCommits, type Behaviour } from "./helpers";
@@ -260,6 +270,50 @@ describe("#7 — a missing verdict is infrastructure: retried, then a pause, nev
     const done = await drive(env, (await started(env)).id);
     expect(done.report?.culpritSha).toBe(shaFor(30));
     expect(done.probes.some((p) => p.infraFailures.some((f) => /dispatch failed/.test(f.reason)))).toBe(true);
+  });
+
+  it("waits out a throttled create with backoff, without spending the retry budget", async () => {
+    const env = memoryContext(regression(30));
+    env.backend.throttledCreates = 3;
+    const h = await started(env);
+    const queued = h.probes.filter((p) => p.phase === "queued");
+    expect(queued.length).toBeGreaterThan(0);
+    for (const p of queued) {
+      expect(p.infraFailures[0]?.throttled).toBe(true);
+      expect(p.notBefore).not.toBeNull();
+    }
+    // The hunt says when it next has work no probe will tick it for.
+    expect(nextWakeAt(h)?.toISOString()).toBe(queued.map((p) => p.notBefore).sort()[0]);
+
+    // Ticking before the backoff ends dispatches nothing new.
+    const before = env.backend.launches.length;
+    await tick(env.ctx, h.id);
+    expect(env.backend.launches.length).toBe(before);
+
+    const done = await drive(env, h.id);
+    expect(done.status).toBe("done");
+    expect(done.report?.culpritSha).toBe(shaFor(30));
+  });
+
+  it(`pauses after ${MAX_THROTTLED} throttled creates in a row, and says it was capacity`, async () => {
+    const env = memoryContext(regression(30));
+    env.backend.throttledCreates = 1_000;
+    const h = await started(env);
+    let current = h;
+    for (let i = 0; i < 40 && current.status === "running"; i += 1) {
+      env.advance(5 * 60_000);
+      current = must(await tick(env.ctx, h.id));
+    }
+    expect(current.status).toBe("paused");
+    expect(current.pause?.message).toMatch(/refused to start/);
+    expect(current.pause?.attempts).toBe(MAX_THROTTLED);
+  });
+
+  it("recognises throttling from the API's words, and nothing else", () => {
+    expect(isThrottle("dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests")).toBe(true);
+    expect(isThrottle("the job ended ERROR (QuotaExceeded) without reporting")).toBe(true);
+    expect(isThrottle("dispatch failed: POST /ai/v1/jobs failed: 503 Service Unavailable")).toBe(false);
+    expect(isThrottle("the job ended FAILED (ContainerFailed) without reporting")).toBe(false);
   });
 
   it("never runs more than the per-region quota at once", async () => {

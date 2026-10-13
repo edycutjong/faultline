@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { tick } from "@/lib/hunt";
 import { storeContext } from "@/lib/store";
 import { tickDue } from "@/lib/runtime";
+import { retickAfterBackoff } from "@/lib/retick";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -27,5 +28,6 @@ export async function POST(
     tickDue(id);
   }
   const hunt = await tick(storeContext(), id).catch(() => null);
+  retickAfterBackoff(hunt);
   return new NextResponse(null, { status: hunt ? 204 : 404 });
 }
