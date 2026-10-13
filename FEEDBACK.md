@@ -1,7 +1,8 @@
 # Feedback for Nebius and the hackathon organisers
 
 **Send by: 2026-10-01.** Written 2026-09-04, updated 2026-09-10 and 2026-10-13, while building
-[Faultline](./README.md), which runs entirely on Nebius AI Cloud Serverless AI Jobs.
+[Faultline](./README.md), which runs its probes on Nebius AI Cloud Serverless AI Jobs and its
+narration on Nebius Token Factory.
 
 Everything below is reproducible and dated. Where something blocked us, we say what we did
 next, because a report that only complains is less useful than one that shows the workaround.
@@ -67,8 +68,13 @@ not attach a card — which, for a global hackathon with a large student entry, 
 fraction of the field.
 
 This directly changed what we built. Our first project design used Token Factory Sandboxes as
-its engine; we dropped it the day we found the wall and rebuilt on AI Cloud Serverless AI Jobs,
-which we verified reachable without a payment method.
+its engine; we dropped it the day we found the wall and rebuilt on AI Cloud Serverless AI Jobs.
+
+**Update 2026-10-13.** With a card attached, Token Factory inference works, and Faultline now
+makes its one narration call there (`nvidia/nemotron-3-super-120b-a12b`). Sandboxes is still
+closed to us: `GET /sandboxes/v1/whoami` answers 200 with every permission `false` (`import`,
+`spawn`, `spawn_disposable`, `list`, `cancel`, `set_image_tag`) while the beta-access request is
+pending — a clear, honest answer, which we appreciated.
 
 **Suggestion:** let a promo activation code stand in for the card, at least up to the credit
 value. A prize that cannot be spent is not a prize.
@@ -125,9 +131,12 @@ This is a genuine API design gap, and it shaped our architecture.
   operation in those documents has a REST tab; logs do not.
 
 Together these mean **a job cannot report a result to a programmatic caller through the Jobs
-API at all.** Our workaround is to mount an Object Storage bucket into every job and have the
-container write a JSON verdict file, treating the object's existence as the completion signal.
-That works, and we would defend it as a good design anyway — but we arrived at it by
+API at all.** Our first workaround mounted an Object Storage bucket into every job, read-write,
+and had the container write a JSON verdict file. We replaced it on 2026-10-13: a probe runs a
+stranger's test suite, so anything mounted into it is the stranger's — including every other
+hunt's records. Each probe now gets one **presigned PUT URL** for its own verdict object and no
+credential at all. That works across regions too (a `uk-south1` job writes into an `eu-west1`
+bucket over HTTPS), and we would defend it as the right design — but we arrived at it by
 elimination, not by choice.
 
 **Suggestion:** expose the container's exit code on `JobStatus`. It is one integer, the
@@ -150,6 +159,24 @@ Measured 2026-10-13, all in one session, reproducible with `nebius ai job create
 count for new tenants where the quota is documented. On the jobs quickstart, say both halves of the
 cold start: `STARTING` (~2m05s here) is fixed platform overhead, while image pull (~1m35s for a
 ~1 GB image, about 37% of the total) grows with image size and is the part a user can shrink.
+
+## 4c. Job creation is throttled, and the limit is not documented
+
+Measured 2026-10-13 on hunt `295a5c3c`: eight jobs were created at 15:42 UTC (two in each of
+four regions, all accepted). About 4½ minutes later the next two creates returned
+**`429 Too Many Requests`** — three times over ~1½ minutes, from separate requests — and a
+create at 15:48:36 was accepted. The docs state no rate limit for the Jobs API, and the 429
+carried no `Retry-After` header. A single accepted create also took **11.6 s** server-side
+(`x-envoy-upstream-service-time: 11635`).
+
+We now treat 429 as backoff (30 s, doubling to 4 min) and dispatch at most four creates at a
+time. **Suggestions:** document the create rate limit, send `Retry-After` with a 429, and
+consider a batch create — a fan-out workload creates its jobs in bursts by definition.
+
+A smaller observation from the same hunt: job `aijob-e01gr1yzxzwky378sp` still reported
+`state: IMAGE_PULLING` 14 s after its `status.startedAt` had been set, by which time the
+container had already uploaded its result. Consumers should not treat `state` as current to the
+second.
 
 ## 5. `--volume s3://bucket:/path:rw:profile` — the `profile` argument is undocumented
 
@@ -187,13 +214,22 @@ is what the quickstart teaches.
 
 ## What we would keep exactly as it is
 
-- **Per-second billing.** This is the feature the whole project is built on. Fanning 8 short
-  probes out in parallel is only rational because a 40-second container costs 40 seconds.
-  Per-minute rounding would have killed the design.
+- **Per-second billing.** A probe's VM lives ~4½ minutes for ~5 seconds of work, so a round of
+  probes costs cents only because billing is per second. Per-minute rounding would have
+  doubled it for nothing.
+- **`spec.injectedFiles`.** It let us run every probe on the stock `python:3.11` image with our
+  22 KB probe script written into the container at launch — no image build, no registry, no
+  credentials for either. A small field that removed a whole step.
+- **`GET /ai/v1/jobs/get-by-name`.** With deterministic job names it gives a crashed dispatcher
+  a way to find the job it may have created, instead of creating a second one.
+- **Conditional writes in Object Storage.** `If-None-Match: "*"` and `If-Match` behave exactly as
+  documented: in 20 races of 2 to 8 concurrent creators on one key, exactly one won every time.
+  Our whole control loop — no daemon, no database — rests on that.
 - **Job lifecycle states are well chosen.** `PROVISIONING → STARTING → IMAGE_PULLING → RUNNING
   → COMPLETED` gave us exactly the granularity we needed for a progress UI, and the
   `NotEnoughResources` / `TimeoutExceeded` / `ContainerFailed` cause codes are genuinely
   actionable.
 - **The docs are unusually complete.** We wrote a full REST client for Jobs, IAM token
   exchange and Object Storage entirely offline from the documentation, with no live API access
-  — and the only things we got wrong were the five gaps listed above. That is a good ratio.
+  — and when the account opened, the client worked against the real API first time. The gaps
+  above are the exceptions. That is a good ratio.

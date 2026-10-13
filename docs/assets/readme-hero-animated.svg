@@ -80,11 +80,11 @@
     </rect>
   </g>
 
-  <text x="48" y="154" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="18" fill="#8B8B93">Parallel bisection over commit history.</text>
+  <text x="48" y="154" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="18" fill="#8B8B93">Find the commit that broke it — in a clean room.</text>
   <line x1="48" y1="176" x2="500" y2="176" stroke="#2E2E36" stroke-width="1"/>
-  <text x="48" y="210" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="23" fill="#10B981">3 rounds · ≤24 job-runs</text>
-  <text x="48" y="234" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#8B8B93">where sequential bisect needs 8</text>
-  <text x="48" y="268" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8B8B93">Nebius Serverless Jobs · NVIDIA Nemotron · Next.js</text>
+  <text x="48" y="210" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="23" fill="#10B981">a fresh container per commit</text>
+  <text x="48" y="234" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#8B8B93">both ends tested · skips never blamed</text>
+  <text x="48" y="268" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8B8B93">Nebius Serverless AI Jobs · Token Factory · Nemotron</text>
 
   <!-- ================= STORY LAYER (right) ================= -->
   <text x="560" y="76" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#8B8B93">N probes cut a range into N+1 segments</text>
@@ -179,8 +179,8 @@
           pathLength="100" stroke-dasharray="100"><animate attributeName="stroke-dashoffset" dur="8s" repeatCount="indefinite" keyTimes="0;0.58;0.72;1" values="100;100;0;0"/></path>
   </g>
     <text x="560" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" fill="#8B8B93" opacity="1"><animate attributeName="opacity" dur="8s" repeatCount="indefinite" keyTimes="0;0.06;0.10;0.94;0.98;1" values="1;1;0;0;1;1"/>a range of suspect commits · one failing test</text>
-    <text data-story="beat-2" x="560" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" fill="#EDEDEF" opacity="0"><animate attributeName="opacity" dur="8s" repeatCount="indefinite" keyTimes="0;0.10;0.14;0.22;0.26;1" values="0;0;1;1;0;0"/>8 probes dispatched — in the same instant</text>
+    <text data-story="beat-2" x="560" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" fill="#EDEDEF" opacity="0"><animate attributeName="opacity" dur="8s" repeatCount="indefinite" keyTimes="0;0.10;0.14;0.22;0.26;1" values="0;0;1;1;0;0"/>8 probes · a fresh container each</text>
     <text data-story="beat-3" x="560" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" fill="#EDEDEF" opacity="0"><animate attributeName="opacity" dur="8s" repeatCount="indefinite" keyTimes="0;0.26;0.32;0.54;0.60;1" values="0;0;1;1;0;0"/>8 verdicts in · 5 passed, 3 failed</text>
-    <text data-story="beat-4" x="560" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" fill="#EDEDEF" opacity="0"><animate attributeName="opacity" dur="8s" repeatCount="indefinite" keyTimes="0;0.60;0.66;0.76;0.80;1" values="0;0;1;1;0;0"/>round 1 · range ÷ 9 → 4 commits left</text>
-    <text data-story="beat-5" x="560" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" fill="#EDEDEF" opacity="0"><animate attributeName="opacity" dur="8s" repeatCount="indefinite" keyTimes="0;0.80;0.86;0.94;0.98;1" values="0;0;1;1;0;0"/>3 rounds · one commit named</text>
+    <text data-story="beat-4" x="560" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" fill="#EDEDEF" opacity="0"><animate attributeName="opacity" dur="8s" repeatCount="indefinite" keyTimes="0;0.60;0.66;0.76;0.80;1" values="0;0;1;1;0;0"/>8 probes · range ÷ 9 → 4 commits left</text>
+    <text data-story="beat-5" x="560" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" fill="#EDEDEF" opacity="0"><animate attributeName="opacity" dur="8s" repeatCount="indefinite" keyTimes="0;0.80;0.86;0.94;0.98;1" values="0;0;1;1;0;0"/>one commit named · its diff explained</text>
 </svg>
