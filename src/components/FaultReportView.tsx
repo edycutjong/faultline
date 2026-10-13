@@ -114,7 +114,7 @@ export function FaultReportView({ hunt }: { hunt: Hunt }) {
 
         {report.rootCauseMd ? (
           <>
-            <p className="max-w-[68ch] text-[16px] leading-relaxed text-text">
+            <p className="max-w-[68ch] text-[16px] leading-relaxed text-text [overflow-wrap:anywhere]">
               {report.rootCauseMd.trim()}
             </p>
             <p className="mt-3 max-w-[68ch] text-[13px] text-muted">

@@ -7,6 +7,7 @@ import { test, expect } from "@playwright/test";
  * the failure a judge notices within a second of opening it on a phone.
  */
 const WIDTHS = [
+  { name: "small phone", width: 320, height: 568 },
   { name: "mobile", width: 375, height: 812 },
   { name: "tablet", width: 768, height: 1024 },
   { name: "desktop", width: 1440, height: 900 },
