@@ -1,6 +1,6 @@
 {
   "name": "faultline",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Parallel N-ary bisection of a broken commit range across Nebius Serverless AI Jobs.",
   "license": "MIT",
