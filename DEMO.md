@@ -13,7 +13,7 @@ built, it says so.
 npm install
 npm test            # 283 unit + integration tests
 npm run test:probe  # 7 tests: the real probe.py against a local repo and HTTP server
-npm run build && npm run e2e   # 48 checks: the production build with NO environment, desktop and mobile
+npm run build && npm run e2e   # 50 checks: the production build with NO environment, desktop and mobile
 ```
 
 The integration suite drives a whole hunt through the production code path — service-account

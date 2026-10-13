@@ -10,6 +10,7 @@ Faultline bisects a broken commit range by testing each suspect in a fresh Nebiu
 <img src="docs/assets/readme-hero-animated.svg" width="100%" alt="Faultline — a range of suspect commits narrows to the one that broke the test, each probe a fresh container.">
 
 [![Live Demo](https://img.shields.io/badge/🚀_Live-Demo-6057F7?style=for-the-badge)](https://faultline-edy-cus-projects.vercel.app)
+[![Pitch Deck](https://img.shields.io/badge/📊_Pitch-Deck-f59e0b?style=for-the-badge)](https://faultline-edy-cus-projects.vercel.app/pitch)
 [![Feedback](https://img.shields.io/badge/📝_Nebius-Feedback-76B900?style=for-the-badge)](FEEDBACK.md)
 [![Built for Nebius](https://img.shields.io/badge/Nebius-Global_AI_Hackathon-8b5cf6?style=for-the-badge)](https://nebiusglobalaihackathon.devpost.com/)
 
@@ -195,7 +196,7 @@ hunts need the Nebius and Token Factory credentials listed in [`.env.example`](.
 
 ## 🧪 Testing & CI
 
-**283 unit and integration tests**, **7 probe contract tests** and **48 end-to-end checks**
+**283 unit and integration tests**, **7 probe contract tests** and **50 end-to-end checks**
 (`npm test`, `npm run test:probe`, and `npm run build && npm run e2e`).
 
 | Suite | What it pins down |
@@ -208,6 +209,7 @@ hunts need the Nebius and Token Factory credentials listed in [`.env.example`](.
 
 ### More
 
+- [The story](https://faultline-edy-cus-projects.vercel.app/about) and the [pitch deck](https://faultline-edy-cus-projects.vercel.app/pitch) — the recorded hunt drawn as strata, every number sourced
 - [`DEMO.md`](DEMO.md) — every measurement, with the command that reproduces it
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — written from the code, every claim naming its file
 - [`FEEDBACK.md`](FEEDBACK.md) — what building on Nebius taught us, including an undocumented create throttle
