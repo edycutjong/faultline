@@ -129,9 +129,9 @@ to try one.
 culprit, with the culprit's diff and the failing test's output. It writes one paragraph: the
 mechanism, the lines responsible, and the fix if there is an obvious one. On the first live hunt
 it explained that `replace(tzinfo=...)` skips pytz's zone rules and lands at 06:37 UTC instead of
-06:00 ([`evidence/first-live-hunt.json`](evidence/first-live-hunt.json)). Across the three recorded
-hunts the culprit was right every time; the paragraph was right once and partly wrong twice
-([`DEMO.md`](DEMO.md) §4 and §5 say which) — which is why the UI labels it as generated.
+06:00 ([`evidence/first-live-hunt.json`](evidence/first-live-hunt.json)). Across the four hunts
+that named a culprit the culprit was right every time; the paragraph was right twice and partly wrong
+twice ([`DEMO.md`](DEMO.md) §4 and §5 say which) — which is why the UI labels it as generated.
 
 It is a reasoning model, and with a small budget it can return its reasoning and no answer — so the call
 asks for low reasoning effort with room to answer, reads `content` only, and treats an empty
@@ -153,6 +153,10 @@ command that reproduces each run. Costs are the Nebius VM time of every probe jo
 | `git bisect run`, one env built at the failing ref | `acebfbfa` docs(changelog): … | **0 / 5** | 1.5 s p50 |
 | `git bisect run`, fresh venv at every step | `4e133d6c` | 5 / 5 | 57.4 s p50 |
 | **Faultline**, 8 slots in 4 regions | `4e133d6c` | 1 / 1 | 957 s — 3 rounds, 19 jobs, $0.09 |
+
+A second Faultline hunt on the same range, started from the app's own form and screen-recorded for
+the demo video (`94efded1`, [`evidence/video-hunt.json`](evidence/video-hunt.json)), named `4e133d6c`
+again in 923 s — 3 rounds, 19 jobs, $0.09: Faultline is 2 / 2 on this history.
 
 That fixture was built to drift, so the reused-environment failures are by construction; what it
 shows is the mechanism. **A real regression** — [python-attrs/attrs](https://github.com/python-attrs/attrs)

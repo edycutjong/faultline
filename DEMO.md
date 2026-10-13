@@ -135,6 +135,16 @@ Nemotron's paragraph on this hunt (request `chatcmpl-988d2b477be0c269`) has the 
 daylight saving time since October 2022, which is the very change this fixture's drift is about.
 UTC−6 is simply standard time.
 
+**The same range again, on camera.** [`evidence/video-hunt.json`](evidence/video-hunt.json) — hunt
+`94efded1`, started from the app's own form on 2026-10-13 at 21:58 UTC and screen-recorded start to finish
+for the demo video: the same 255 commits, the same test, `v0.1.0` as the known-good ref. It named `4e133d6c`
+again — 3 rounds, 19 jobs across the four regions (6 eu-west1, 5 uk-south1, 4 uk-south2, 4 me-west1),
+923 s, 5,047 VM-seconds = $0.0925 at list price; 12 creates were refused with `429` and retried. Faultline
+is 2 / 2 on this history (957 s and 923 s). Nemotron's paragraph (request `chatcmpl-a5fbc7ddf16c7f81`) says
+the change swaps `localize()` for `replace(tzinfo=...)`, which attaches the zone without applying its offset
+rules, so midnight lands at 06:37 UTC instead of 06:00, and that the fix is to restore `localize()`. We read
+it against the diff and found nothing in it wrong.
+
 ### A real regression — `python-attrs/attrs` 22.1.0 → 22.2.0, 135 commits
 
 Culprit `89a890a3` ("Change `__getstate__` and `__setstate__` to use a dict"), named by the fix
@@ -186,7 +196,7 @@ paragraph as generated, and the hunt record keeps the request ID so it can be ch
 
 - **Correctness.** On the drifting history, `git bisect run` in one reused environment named the
   wrong commit in 10 of 10 runs; a fresh environment per step named the right one in 8 of 8 local
-  runs (5 on the fixture, 3 on attrs) and in both Faultline hunts (one per repository). On attrs,
+  runs (5 on the fixture, 3 on attrs) and in all three Faultline hunts (two on the fixture, one on attrs). On attrs,
   where nothing drifts, every method is right.
 - **Wall-clock.** Faultline is slower than both local methods on both repositories. A probe's VM
   takes about 4 min 20 s to start for ~5 s of work, and Nebius throttled job creation during these
