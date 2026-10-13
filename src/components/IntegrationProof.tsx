@@ -27,7 +27,10 @@ interface RecentCall {
 
 interface VerifyResponse {
   nebiusConfigured: boolean;
+  tokenFactoryConfigured?: boolean;
   region: string | null;
+  probeRegions?: string[];
+  probeCapacity?: number;
   surfaces: Surface[];
   recentCalls: RecentCall[];
 }
@@ -63,7 +66,7 @@ export function IntegrationProof() {
           {data === null
             ? "loading…"
             : data.nebiusConfigured
-              ? `credentials configured · region ${data.region ?? "—"}`
+              ? `credentials configured · probes in ${(data.probeRegions ?? [data.region ?? "—"]).join(", ")} · ${data.probeCapacity ?? "—"} slots`
               : "no credentials on this deploy · surfaces listed from the code path"}
         </p>
       </header>

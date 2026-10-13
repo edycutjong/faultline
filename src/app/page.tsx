@@ -12,7 +12,6 @@ import { useEffect, useState } from "react";
 import { NewHuntForm, type HuntBudget } from "@/components/NewHuntForm";
 import { RecordedExample } from "@/components/RecordedExample";
 import { IntegrationProof } from "@/components/IntegrationProof";
-import { DEFAULT_BAND_SIZE } from "@/lib/planner";
 
 export default function HomePage() {
   const [budget, setBudget] = useState<HuntBudget | null>(null);
@@ -34,12 +33,15 @@ export default function HomePage() {
     <div className="mx-auto max-w-6xl px-5">
       {/* ---------------------------------------------------------------- hero */}
       <section className="pt-16 pb-12 md:pt-24 md:pb-16">
-        <h1 className="max-w-[16ch] text-[42px] font-semibold leading-[1.05] tracking-[-0.02em] md:text-[64px]">
-          Your laptop can only be one machine.
+        <h1 className="max-w-[18ch] text-[42px] font-semibold leading-[1.05] tracking-[-0.02em] md:text-[64px]">
+          Find the commit that broke it — in a clean room.
         </h1>
-        <p className="mt-6 max-w-[62ch] text-[18px] leading-relaxed text-muted md:text-[20px]">
-          Faultline bisects a broken commit range across {DEFAULT_BAND_SIZE} cloud machines at
-          once — and tells you why it broke.
+        <p className="mt-6 max-w-[64ch] text-[18px] leading-relaxed text-muted md:text-[20px]">
+          An unattended <code className="font-mono text-[0.9em] text-text">git bisect run</code> in
+          one reused environment can blame the wrong commit when dependencies drift across the
+          range. Faultline tests every suspect in a fresh Nebius container built from that
+          commit&rsquo;s own dependencies, proves both ends first, refuses to guess when the
+          verdicts disagree — and has NVIDIA Nemotron explain the culprit.
         </p>
 
         <div className="mt-9 flex flex-wrap items-center gap-4">
@@ -59,19 +61,21 @@ export default function HomePage() {
           <LiveCounter budget={budget} />
         </div>
 
-        {/* The arithmetic, stated plainly. N probes cut a range into N+1 segments. */}
+        {/* The three properties, stated plainly. */}
         <dl className="mt-14 grid gap-6 border-t border-line pt-8 sm:grid-cols-3">
           <Fact
-            term={`${DEFAULT_BAND_SIZE} probes per round`}
-            detail="One Nebius Serverless AI Job per candidate commit, dispatched together, terminating when the test answers."
+            term="Each commit, its own environment"
+            detail={`One terminating Nebius Serverless AI Job per probe, installing that commit's own declared dependencies.${
+              budget?.slots ? ` A round runs up to ${budget.slots} of them in parallel.` : ""
+            }`}
           />
           <Fact
-            term={`Range ÷ ${DEFAULT_BAND_SIZE + 1} each round`}
-            detail={`${DEFAULT_BAND_SIZE} probes placed inside a range cut it into ${DEFAULT_BAND_SIZE + 1} segments — not ${DEFAULT_BAND_SIZE}, and emphatically not 2.`}
+            term="Both ends tested, not assumed"
+            detail="Round 1 runs your known-good ref and your failing ref in clean containers. If the failing ref passes there, the bug is in your environment — and Faultline says so."
           />
           <Fact
             term="Or no answer at all"
-            detail="If the verdicts contradict each other, no single commit explains them and Faultline refuses to name one."
+            detail="If the verdicts contradict each other, no single commit explains them and Faultline refuses to name one. Commits that will not build are skipped, never blamed."
           />
         </dl>
       </section>
@@ -91,7 +95,7 @@ export default function HomePage() {
         <SectionHeading
           eyebrow="Start a hunt"
           title="Three fields. No YAML."
-          blurb="Point Faultline at a public repository, a failing test, and the last ref where it passed."
+          blurb="Point Faultline at a public repository, a failing test, and the last ref where it passed. It resolves the install command from the repository — check it, edit it, start."
         />
         <div className="rounded-card border border-line bg-surface px-6 py-8">
           <NewHuntForm budget={budget} />
@@ -103,7 +107,7 @@ export default function HomePage() {
         <SectionHeading
           eyebrow="Sponsor integration"
           title="Nebius is the engine, not a badge"
-          blurb="Every probe is a container on Nebius Serverless AI Jobs, and every verdict travels through a mounted Object Storage bucket."
+          blurb="Every probe is a container on Nebius Serverless AI Jobs; every verdict comes back through a presigned Object Storage URL, so no credential ever enters a probe; every explanation is one Token Factory call to NVIDIA Nemotron."
         />
         <IntegrationProof />
       </section>

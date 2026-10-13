@@ -3,10 +3,10 @@
 /**
  * The inconclusive screen.
  *
- * Amber, not red. This is a refusal, not a failure: the verdicts collected contradict each
- * other, so no single commit explains them, and naming one anyway would be a guess dressed
- * as an answer. Both strings on screen come from the hunt record — this component never
- * writes an explanation of its own.
+ * Amber, not red. This is a refusal, not a failure: an endpoint did not behave as claimed,
+ * the verdicts contradict each other, or untestable commits hide which one is first-bad —
+ * and naming a single commit anyway would be a guess dressed as an answer. Every string on
+ * screen comes from the hunt record; this component never writes an explanation of its own.
  */
 
 import type { Hunt, Inconclusive } from "@/lib/types";
@@ -15,9 +15,11 @@ import { ProbeList } from "./ProbeList";
 
 const REASON_LABEL: Record<Inconclusive["reason"], string> = {
   contradiction: "contradictory verdicts",
-  all_fail: "every probe failed",
-  all_pass: "every probe passed",
-  probe_errors: "too many probe errors",
+  good_fails: "the known-good ref fails",
+  bad_passes: "the failing ref passes",
+  good_unbuildable: "the known-good ref will not build",
+  bad_unbuildable: "the failing ref will not build",
+  skipped_range: "a run of untestable commits",
 };
 
 export function InconclusiveView({ hunt }: { hunt: Hunt }) {
@@ -74,9 +76,23 @@ export function InconclusiveView({ hunt }: { hunt: Hunt }) {
           </div>
         ) : null}
 
+        {state.range ? (
+          <ol className="mt-6 flex flex-col gap-1.5 rounded-lg border border-line bg-bg px-4 py-3 font-mono text-[14px]">
+            {state.range.shas.map((sha) => {
+              const commit = hunt.commits.find((c) => c.sha === sha);
+              return (
+                <li key={sha} className="flex flex-wrap gap-x-3">
+                  <span style={{ color: "var(--inconclusive)" }}>{shortSha(sha)}</span>
+                  <span className="text-muted">{commit?.subject.slice(0, 72) ?? ""}</span>
+                </li>
+              );
+            })}
+          </ol>
+        ) : null}
+
         <p className="mt-6 max-w-[68ch] text-[14px] text-muted">
-          Faultline stopped here on purpose and cancelled the probes still in flight. No commit
-          is named, and nothing further was billed.
+          Faultline stopped here on purpose. No single commit is named, and no further probe was
+          dispatched.
         </p>
       </div>
 

@@ -15,10 +15,18 @@ import { EM_DASH, formatDuration, shortSha } from "./format";
 const VERDICT_STYLE: Record<Verdict, { color: string; label: string }> = {
   pass: { color: "var(--innocent)", label: "pass" },
   fail: { color: "var(--guilty)", label: "fail" },
-  error: { color: "var(--inconclusive)", label: "error" },
+  error: { color: "var(--inconclusive)", label: "skip" },
 };
 
-export function VerdictPill({ verdict }: { verdict: Verdict | null }) {
+const PHASE_LABEL: Record<Probe["phase"], string> = {
+  queued: "waiting for a slot",
+  dispatching: "dispatching",
+  running: "running",
+  done: "done",
+  cancelled: "cancelled",
+};
+
+export function VerdictPill({ verdict, phase = "running" }: { verdict: Verdict | null; phase?: Probe["phase"] }) {
   if (verdict === null) {
     return (
       <span className="inline-flex items-center gap-1.5 text-muted">
@@ -26,7 +34,7 @@ export function VerdictPill({ verdict }: { verdict: Verdict | null }) {
           aria-hidden="true"
           className="inline-block h-2 w-2 animate-pulse rounded-full bg-unknown"
         />
-        running
+        {PHASE_LABEL[phase] ?? "running"}
       </span>
     );
   }
@@ -44,7 +52,14 @@ export function VerdictPill({ verdict }: { verdict: Verdict | null }) {
 }
 
 function subjectFor(hunt: Hunt, probe: Probe): string {
+  if (probe.role === "good") return `known-good ref ${hunt.goodRef}`;
   return hunt.commits.find((c) => c.sha === probe.commitSha)?.subject ?? "";
+}
+
+function roleTag(probe: Probe): string | null {
+  if (probe.role === "good") return "good end";
+  if (probe.role === "bad") return "failing end";
+  return null;
 }
 
 export function ProbeList({
@@ -68,7 +83,7 @@ export function ProbeList({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[640px] border-collapse text-left text-[14px]">
+      <table className="w-full min-w-[720px] border-collapse text-left text-[14px]">
         <caption className="sr-only">{caption}</caption>
         <thead>
           <tr className="border-b border-line text-[12px] uppercase tracking-wider text-muted">
@@ -80,6 +95,9 @@ export function ProbeList({
             </th>
             <th scope="col" className="py-2 pr-4 font-medium">
               Nebius job ID
+            </th>
+            <th scope="col" className="py-2 pr-4 font-medium">
+              Region
             </th>
             <th scope="col" className="py-2 pr-4 font-medium">
               Duration
@@ -95,18 +113,29 @@ export function ProbeList({
               <td className="py-2.5 pr-4 tabular-nums text-muted">{probe.round}</td>
               <td className="py-2.5 pr-4">
                 <span className="font-mono">{shortSha(probe.commitSha)}</span>
+                {roleTag(probe) ? (
+                  <span className="ml-2 rounded-full border border-line px-2 py-0.5 text-[11px] text-muted">
+                    {roleTag(probe)}
+                  </span>
+                ) : null}
                 <span className="ml-2 hidden text-muted md:inline">
                   {subjectFor(hunt, probe).slice(0, 48)}
                 </span>
               </td>
               <td className="py-2.5 pr-4 font-mono text-[13px] text-muted">
                 {probe.jobId ?? EM_DASH}
+                {probe.infraFailures.length > 0 ? (
+                  <span className="ml-2 text-[11px]" title={probe.infraFailures.map((f) => `attempt ${f.attempt}: ${f.reason}`).join("\n")}>
+                    attempt {probe.attempt}
+                  </span>
+                ) : null}
               </td>
+              <td className="py-2.5 pr-4 font-mono text-[13px] text-muted">{probe.region ?? EM_DASH}</td>
               <td className="py-2.5 pr-4 font-mono tabular-nums">
                 {formatDuration(probe.durationMs)}
               </td>
               <td className="py-2.5">
-                <VerdictPill verdict={probe.verdict} />
+                <VerdictPill verdict={probe.verdict} phase={probe.phase} />
                 {probe.detail ? (
                   <span className="ml-2 text-[12px] text-muted">{probe.detail.slice(0, 90)}</span>
                 ) : null}

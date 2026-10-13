@@ -17,11 +17,11 @@ const jetbrainsMono = JetBrains_Mono({
 
 const SITE = "https://faultline-edy-cus-projects.vercel.app";
 const DESCRIPTION =
-  "Your laptop can only be one machine. Faultline bisects a broken commit range across eight Nebius cloud machines at once — and tells you why it broke.";
+  "Faultline finds the commit that broke your test by running each suspect in a fresh Nebius container built from that commit's own dependencies — both ends proven, contradictions refused, the culprit explained by NVIDIA Nemotron.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
-  title: "Faultline — parallel bisection of a broken commit range",
+  title: "Faultline — find the commit that broke it, in a clean room",
   description: DESCRIPTION,
   applicationName: "Faultline",
   icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }] },
@@ -32,13 +32,13 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Faultline",
     url: SITE,
-    title: "Faultline — parallel bisection of a broken commit range",
+    title: "Faultline — find the commit that broke it, in a clean room",
     description: DESCRIPTION,
-    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Faultline — 3 rounds, ≤24 job-runs" }],
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Faultline — the commit that broke it, found in clean environments" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Faultline — parallel bisection of a broken commit range",
+    title: "Faultline — find the commit that broke it, in a clean room",
     description: DESCRIPTION,
     images: ["/og-image.png"],
   },

@@ -4,12 +4,11 @@
  * The status line above the timeline.
  *
  * Shape:
- *   Round 2 of ~3 · 8 probes complete · ~28 commits remaining · $0.0041 so far
+ *   Round 2 of ~3 · 10 probes complete · ~37 commits remaining · $0.0041 so far
  *
- * The round estimate is `estimateRounds(commits.length, DEFAULT_BAND_SIZE)` — the same
- * function the search is planned by — so it can never disagree with the search. With 8
- * parallel probes a range divides by N+1 = 9, so 256 -> ~28 -> ~3 -> 1. Nothing here is
- * hard-coded, and a cost that has not been measured renders as an em dash.
+ * The round estimate is the planner's own worst case for this hunt's probe capacity, endpoint
+ * round included, so it can never disagree with the search. Nothing here is hard-coded, and
+ * a cost that has not been measured renders as an em dash.
  */
 
 import type { Hunt } from "@/lib/types";
@@ -53,6 +52,14 @@ export function StatusLine({ hunt }: { hunt: Hunt }) {
     remaining = (
       <>
         ~{f.commitsRemaining} {f.commitsRemaining === 1 ? "commit" : "commits"} remaining
+      </>
+    );
+    costSuffix = "so far";
+  } else if (hunt.status === "paused") {
+    lead = <>Paused in round {f.round}</>;
+    remaining = (
+      <>
+        {f.commitsRemaining} {f.commitsRemaining === 1 ? "commit" : "commits"} still suspect
       </>
     );
     costSuffix = "so far";

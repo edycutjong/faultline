@@ -105,6 +105,7 @@ export function FaultReportView({ hunt }: { hunt: Hunt }) {
           <h3 className="text-[15px] font-semibold">Why it breaks</h3>
           <span className="rounded-full border border-line px-2.5 py-0.5 font-mono text-[11px] text-muted">
             explained by {report.modelId.split("/").pop()}
+            {report.narrationProvider === "nebius-token-factory" ? " · Nebius Token Factory" : ""}
           </span>
         </div>
 

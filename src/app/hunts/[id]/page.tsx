@@ -3,11 +3,10 @@
 /**
  * A hunt in progress — the hero screen.
  *
- * The driver is a 2-second poll of `GET /api/hunts/{id}`, not SSE. That route *is* the
- * reconcile tick: each call collects landed verdicts, narrows the range and dispatches the
- * next band, so polling is not a way of watching the search — it is what advances it. The
- * poll stops the moment the hunt reaches a terminal state, because a finished hunt has
- * nothing left to reconcile and every extra tick is a wasted request.
+ * The view is a 2-second poll of `GET /api/hunts/{id}`, not SSE. Each poll that is due runs
+ * one reconcile tick, but the hunt does not depend on it: every probe ticks the hunt itself
+ * when its verdict is stored, so closing this tab does not stop the search. The poll stops
+ * when the hunt stops (finished, refused or paused), and a resume starts it again.
  */
 
 import Link from "next/link";
@@ -32,7 +31,16 @@ export default function HuntPage() {
   const [hunt, setHunt] = useState<Hunt | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [generation, setGeneration] = useState(0);
   const stopped = useRef(false);
+
+  async function resume() {
+    const response = await fetch(`/api/hunts/${id}/resume`, { method: "POST" });
+    const payload = (await response.json()) as HuntResponse;
+    if (!response.ok || !payload.hunt) throw new Error(payload.error ?? "Could not resume the hunt.");
+    setHunt(payload.hunt);
+    setGeneration((g) => g + 1); // restart polling
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -73,7 +81,7 @@ export default function HuntPage() {
       stopped.current = true;
       if (timer) clearTimeout(timer);
     };
-  }, [id]);
+  }, [id, generation]);
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-10">
@@ -97,9 +105,9 @@ export default function HuntPage() {
           </h1>
           <p className="mt-3 max-w-[68ch] text-[15px] leading-relaxed text-muted">{error}</p>
           <p className="mt-3 max-w-[68ch] text-[15px] leading-relaxed text-muted">
-            Hunts live in the same Object Storage bucket the probe jobs mount. Without Nebius
-            credentials they are held in process memory instead, and a server restart ends
-            them — a hunt that outlives the jobs backing it would be worth nothing anyway.
+            Hunts live in Nebius Object Storage. Without Nebius credentials they are held in
+            process memory instead, and a server restart ends them — a hunt that outlives the
+            jobs backing it would be worth nothing anyway.
           </p>
           <Link
             href="/"
@@ -128,19 +136,23 @@ export default function HuntPage() {
               {hunt.status === "done"
                 ? "One commit explains every verdict."
                 : hunt.status === "inconclusive"
-                  ? "Faultline will not name a culprit."
+                  ? "Faultline will not name a single culprit."
                   : hunt.status === "error"
                     ? "The hunt stopped early."
-                    : hunt.status === "narrating"
-                      ? "Culprit named. Explaining it now."
-                      : "Eliminating suspects."}
+                    : hunt.status === "paused"
+                      ? "Paused: a probe never reported."
+                      : hunt.status === "narrating"
+                        ? "Culprit named. Explaining it now."
+                        : "Eliminating suspects."}
             </h1>
             <p className="mt-2 max-w-[70ch] text-[15px] leading-relaxed text-muted">
               {hunt.status === "narrating"
-                ? "The search is over — the commit below is final. A single explanatory paragraph is being generated from its diff."
-                : isActive(hunt.status)
-                  ? "Each band goes out together. Every two seconds this page collects the verdicts that landed, narrows the range, and dispatches the next band."
-                  : "The search is finished. Every probe below ran as a real Nebius Serverless AI Job."}
+                ? "The search is over — the commit below is final. NVIDIA Nemotron on Nebius Token Factory is writing one explanatory paragraph from its diff."
+                : hunt.status === "paused"
+                  ? "Nothing was concluded from the missing probe. Everything already learned is kept."
+                  : isActive(hunt.status)
+                    ? "Each round goes out together, one fresh container per commit. Probes report as they finish and the next round is dispatched automatically — you can close this tab."
+                    : "The search is finished. Every probe below ran as a real Nebius Serverless AI Job."}
             </p>
           </header>
 
@@ -157,7 +169,7 @@ export default function HuntPage() {
             </p>
           ) : null}
 
-          <HuntView hunt={hunt} />
+          <HuntView hunt={hunt} onResume={resume} />
         </>
       )}
     </div>

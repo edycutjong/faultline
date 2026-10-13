@@ -1,47 +1,51 @@
 /**
  * GET /api/integrations/verify — judge-facing proof that the Nebius integration is real.
  *
- * Per the sponsor-defence requirement this is a *view*, not a subsystem: it renders the job
- * IDs, states and durations already stored in hunt records, plus the recent API call log.
- * A judge can confirm in thirty seconds that jobs were really created, without reading code.
+ * A *view*, not a subsystem: the surfaces Faultline calls, where each is configured, and the
+ * recent API call log from this instance. A judge can confirm in thirty seconds that jobs were
+ * really created, without reading code. No credential or credential-shaped value is returned.
  */
 
 import { NextResponse } from "next/server";
 import { recentCalls } from "@/lib/nebius/jobs";
-import {
-  NARRATION_PLATFORM,
-  NARRATION_PRESET,
-  PROBE_PLATFORM,
-  PROBE_PRESET,
-} from "@/lib/nebius/config";
+import { PROBE_PLATFORM, PROBE_PRESET } from "@/lib/nebius/config";
 import { storeContext } from "@/lib/store";
+import { PROBE_SHA256 } from "@/lib/probe-source";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const ctx = storeContext();
+  const regions = ctx.config?.probeRegions.map((r) => r.region) ?? [];
 
   return NextResponse.json({
     nebiusConfigured: ctx.config !== null,
+    tokenFactoryConfigured: ctx.tokenFactory !== null,
     region: ctx.config?.region ?? null,
+    probeRegions: regions,
+    slotsPerRegion: ctx.config?.slotsPerRegion ?? null,
+    probeCapacity: ctx.backend?.capacity() ?? 0,
+    probeImage: ctx.config?.probeImage ?? null,
+    probeSha256: PROBE_SHA256,
     surfaces: [
       {
         surface: "Serverless AI Jobs (CPU)",
-        api: "POST /ai/v1/jobs, GET /ai/v1/jobs/{id}, POST /ai/v1/jobs/cancel",
-        usedFor: "every probe — one container per commit, N concurrent, terminating",
+        api: "POST /ai/v1/jobs, GET /ai/v1/jobs/{id}, GET /ai/v1/jobs/get-by-name, POST /ai/v1/jobs/cancel",
+        usedFor:
+          "every probe — one terminating container per commit, probe.py injected as a file into a stock image, at most two per region",
         platform: `${PROBE_PLATFORM} / ${PROBE_PRESET}`,
       },
       {
-        surface: "Serverless AI Jobs (GPU)",
-        api: "POST /ai/v1/jobs",
-        usedFor: "the NVIDIA narration model, one terminating job per hunt",
-        platform: `${NARRATION_PLATFORM} / ${NARRATION_PRESET}`,
+        surface: "Object Storage (S3 API)",
+        api: "SigV4 GET/PUT, conditional PUT (If-None-Match / If-Match), presigned PUT URLs",
+        usedFor:
+          "hunt records and every coordination decision (compare-and-swap). Each probe gets one presigned URL for its own verdict object — no credential and no bucket mount ever enters a job.",
+        platform: null,
       },
       {
-        surface: "Object Storage (mounted volume)",
-        api: "S3 GET/PUT/LIST, and spec.volumes[].s3Config on every job",
-        usedFor:
-          "hunt state and probe verdicts. The Jobs API exposes no exit code and no logs over REST, so this mount is the only channel a verdict travels.",
+        surface: "Token Factory inference",
+        api: "POST /v1/chat/completions",
+        usedFor: "one root-cause paragraph per hunt from nvidia/nemotron-3-super-120b-a12b, after the culprit is found",
         platform: null,
       },
       {

@@ -1,16 +1,19 @@
 /**
- * GET /api/hunts/{id} — the reconcile tick.
+ * GET /api/hunts/{id} — the hunt, after a reconcile tick.
  *
- * This is the only moving part of the control loop. The client polls it every two seconds;
- * each call collects landed verdicts, narrows the range, and dispatches the next band when a
- * round completes. There is no worker to keep alive between calls.
+ * The page polls this every two seconds, and each call that is due runs one tick: collect
+ * landed verdicts, narrow the range, dispatch the next band. Probes also tick the hunt
+ * themselves (POST /tick), so this is what keeps the view fresh — not what keeps the hunt
+ * alive.
  */
 
 import { NextResponse } from "next/server";
-import { reconcile } from "@/lib/hunt";
+import { tick } from "@/lib/hunt";
 import { readHunt, storeContext } from "@/lib/store";
+import { tickDue } from "@/lib/runtime";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 120;
 
 export async function GET(
   _request: Request,
@@ -19,8 +22,8 @@ export async function GET(
   const { id } = await params;
   const ctx = storeContext();
 
-  const hunt = await readHunt(ctx, id);
-  if (!hunt) {
+  const stored = await readHunt(ctx, id).catch(() => null);
+  if (!stored) {
     // Without Nebius credentials hunts live in process memory, which is not shared between
     // serverless instances or across a dev-server reload. Say that, rather than implying the
     // hunt never existed — the distinction is the difference between a bug and a boundary.
@@ -36,18 +39,17 @@ export async function GET(
     );
   }
 
+  if (!tickDue(id)) return NextResponse.json({ hunt: stored });
+
   try {
-    const reconciled = await reconcile(ctx, hunt);
-    return NextResponse.json({ hunt: reconciled });
+    const reconciled = await tick(ctx, id);
+    return NextResponse.json({ hunt: reconciled ?? stored });
   } catch (error) {
     // A failed tick must not lose the hunt. Return the last known state and let the next
     // poll retry, rather than turning a transient API error into a dead page.
-    return NextResponse.json(
-      {
-        hunt,
-        warning: error instanceof Error ? error.message : "Reconcile failed; retrying.",
-      },
-      { status: 200 },
-    );
+    return NextResponse.json({
+      hunt: stored,
+      warning: error instanceof Error ? error.message : "Reconcile failed; retrying.",
+    });
   }
 }

@@ -14,12 +14,14 @@ import { Timeline, TimelineLegend } from "./Timeline";
 import { ProbeList } from "./ProbeList";
 import { FaultReportView } from "./FaultReportView";
 import { InconclusiveView } from "./InconclusiveView";
+import { PausedView } from "./PausedView";
 import { formatDuration, isActive } from "./format";
 
 function StatusBadge({ hunt }: { hunt: Hunt }) {
   const map: Record<Hunt["status"], { text: string; color: string }> = {
     planning: { text: "planning", color: "var(--muted)" },
     running: { text: "running", color: "var(--accent)" },
+    paused: { text: "paused", color: "var(--inconclusive)" },
     narrating: { text: "narrating", color: "var(--accent)" },
     done: { text: "culprit found", color: "var(--guilty)" },
     inconclusive: { text: "inconclusive", color: "var(--inconclusive)" },
@@ -42,14 +44,18 @@ export function HuntView({
   hunt,
   label,
   showProbeList = true,
+  onResume,
 }: {
   hunt: Hunt;
   /** e.g. "recorded run, 2026-08-29" — rendered above the timeline. Never omitted for replays. */
   label?: React.ReactNode;
   showProbeList?: boolean;
+  /** Offered only on a live paused hunt; a replay has nothing to resume. */
+  onResume?: () => Promise<void>;
 }) {
   const showReport = hunt.report !== null;
   const showInconclusive = hunt.inconclusive !== null;
+  const showPaused = hunt.status === "paused" && hunt.pause !== null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -88,6 +94,7 @@ export function HuntView({
         </div>
       </section>
 
+      {showPaused ? <PausedView hunt={hunt} onResume={onResume} /> : null}
       {showInconclusive ? <InconclusiveView hunt={hunt} /> : null}
       {showReport ? <FaultReportView hunt={hunt} /> : null}
 
@@ -101,8 +108,8 @@ export function HuntView({
               Probes
             </h2>
             <p className="text-[13px] text-muted">
-              The Nebius job ID is on screen because it is the proof each probe was a cloud
-              container.
+              Each row is a real Nebius job — its ID and region are on screen because they are
+              the proof a probe was a cloud container.
             </p>
           </div>
           <ProbeList hunt={hunt} />

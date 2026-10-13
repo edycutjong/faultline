@@ -6,16 +6,17 @@
  */
 
 import type { Commit, Hunt, Probe, Verdict } from "@/lib/types";
-import { DEFAULT_BAND_SIZE, estimateRounds } from "@/lib/planner";
+import { expectedRounds } from "@/lib/planner";
 
 export const EM_DASH = "—";
 
 export type TickState = "unknown" | "innocent" | "guilty" | "error" | "pending";
 
+/** `error` is shown as "skip": the commit could not be tested, which proves nothing about it. */
 export const VERDICT_LABEL: Record<Verdict, string> = {
   pass: "pass",
   fail: "fail",
-  error: "error",
+  error: "skip",
 };
 
 export function shortSha(sha: string): string {
@@ -102,13 +103,14 @@ export interface StatusFacts {
 }
 
 /**
- * Every number in the status line, derived. The round estimate comes from the same
- * `estimateRounds` the search itself is planned by, so the UI can never disagree with it.
+ * Every number in the status line, derived. The round estimate comes from the same planner
+ * the search runs on, with this hunt's own probe capacity and endpoint round, so the UI can
+ * never disagree with it.
  */
 export function statusFacts(hunt: Hunt): StatusFacts {
   return {
     round: Math.max(hunt.round, 1),
-    totalRounds: estimateRounds(hunt.commits.length, DEFAULT_BAND_SIZE),
+    totalRounds: Math.max(expectedRounds(hunt), Math.max(hunt.round, 1)),
     probesComplete: hunt.probes.filter((p) => p.verdict !== null).length,
     probesTotal: hunt.probes.length,
     commitsRemaining: Math.max(hunt.highIndex - hunt.lowIndex, 0),
