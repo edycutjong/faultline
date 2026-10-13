@@ -9,7 +9,7 @@ name: Uptime
 
 on:
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "17 */2 * * *"
   workflow_dispatch:
 
 permissions:
@@ -45,6 +45,15 @@ jobs:
               fail=1
             fi
           done
+
+          # The sweep: reconcile whichever hunt holds the live slots. A probe whose job died
+          # never sends its own tick, and nobody may be watching — this is the backstop.
+          code=$(curl -sS -o /tmp/sweep -w "%{http_code}" --max-time 120 "${BASE_URL}/api/cron/sweep" || echo 000)
+          echo "/api/cron/sweep -> ${code}: $(head -c 200 /tmp/sweep)"
+          if [ "$code" != "200" ]; then
+            echo "::error::/api/cron/sweep returned ${code}"
+            fail=1
+          fi
 
           exit $fail
 
