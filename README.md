@@ -131,7 +131,7 @@ mechanism, the lines responsible, and the fix if there is an obvious one. On the
 it explained that `replace(tzinfo=...)` skips pytz's zone rules and lands at 06:37 UTC instead of
 06:00 ([`evidence/first-live-hunt.json`](evidence/first-live-hunt.json)). Across the three recorded
 hunts the culprit was right every time; the paragraph was right once and partly wrong twice
-([`DEMO.md`](DEMO.md) §5 says where) — which is why the UI labels it as generated.
+([`DEMO.md`](DEMO.md) §4 and §5 say which) — which is why the UI labels it as generated.
 
 It is a reasoning model, and with a small budget it can return its reasoning and no answer — so the call
 asks for low reasoning effort with room to answer, reads `content` only, and treats an empty

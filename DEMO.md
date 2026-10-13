@@ -68,7 +68,8 @@ The `pass` is a real run of itsdangerous at `672971d6`. Inside the container the
 [`evidence/first-live-hunt.json`](evidence/first-live-hunt.json) — hunt `295a5c3c` on a
 15-commit slice of the hero fixture. Ten jobs across four regions; culprit `4e133d6c`, which
 matches the fixture's answer key; Nemotron's paragraph (Token Factory request
-`chatcmpl-b5427963b682a6b8`) explains the `localize()` → `replace(tzinfo=...)` change.
+`chatcmpl-b5427963b682a6b8`) explains the `localize()` → `replace(tzinfo=...)` change. We read it
+against the diff and found nothing in it wrong.
 
 What it also showed, recorded rather than smoothed over:
 
@@ -216,7 +217,7 @@ One field in the file is stale: the `costUsd` stored inside the hunt records —
 used the list price from before 1 October 2026. The records are kept as they came; the app prices a hunt
 from its probes' `vmMs` whenever it renders one (`huntCostUsd` in `src/lib/pricing.ts`), `bench.py` does
 the same, and `GET /api/examples/recorded` now serves the recorded hunt with that figure ($0.0948), so the
-JSON and the UI agree. The two `evidence/bench/*-faultline-1.json` files still carry the stored figure.
+JSON and the UI agree. The `hunt.costUsd` nested inside the two `evidence/bench/*-faultline-1.json` files still carries the old figure; their top-level `costUsd` (0.0948 and 0.0830) is re-priced.
 
 ## 7. The app, cold, with no environment variables
 
