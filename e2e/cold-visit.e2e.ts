@@ -56,6 +56,7 @@ test.describe("cold visit, no credentials", () => {
     expect(typeof body.nebiusConfigured).toBe("boolean");
     expect(Array.isArray(body.surfaces)).toBe(true);
     expect(Array.isArray(body.recentCalls)).toBe(true);
+    expect(Array.isArray(body.latestJobs.jobs)).toBe(true);
     // The surfaces list is a claim about which APIs the product uses. It must never be empty,
     // because the README and the submission both point a judge at this endpoint.
     expect(body.surfaces.length).toBeGreaterThan(0);

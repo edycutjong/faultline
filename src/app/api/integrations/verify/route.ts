@@ -2,13 +2,16 @@
  * GET /api/integrations/verify — judge-facing proof that the Nebius integration is real.
  *
  * A *view*, not a subsystem: the surfaces Faultline calls, where each is configured, and the
- * recent API call log from this instance. A judge can confirm in thirty seconds that jobs were
- * really created, without reading code. No credential or credential-shaped value is returned.
+ * latest probe jobs read live from the Nebius Jobs API (`latestJobs`). A judge can confirm in
+ * thirty seconds that jobs were really created, without reading code. `recentCalls` is this
+ * instance's own log, so it is usually empty. No credential or credential-shaped value is
+ * returned.
  */
 
 import { NextResponse } from "next/server";
 import { recentCalls } from "@/lib/nebius/jobs";
-import { PROBE_PLATFORM, PROBE_PRESET } from "@/lib/nebius/config";
+import { NARRATION_MODEL, PROBE_PLATFORM, PROBE_PRESET } from "@/lib/nebius/config";
+import { recentProbeJobs } from "@/lib/nebius/recent-jobs";
 import { storeContext } from "@/lib/store";
 import { PROBE_SHA256 } from "@/lib/probe-source";
 
@@ -17,6 +20,8 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const ctx = storeContext();
   const regions = ctx.config?.probeRegions.map((r) => r.region) ?? [];
+  const latest = ctx.config ? await recentProbeJobs(ctx.config) : null;
+  const model = ctx.tokenFactory?.model ?? NARRATION_MODEL;
 
   return NextResponse.json({
     nebiusConfigured: ctx.config !== null,
@@ -30,7 +35,7 @@ export async function GET() {
     surfaces: [
       {
         surface: "Serverless AI Jobs (CPU)",
-        api: "POST /ai/v1/jobs, GET /ai/v1/jobs/{id}, GET /ai/v1/jobs/get-by-name, POST /ai/v1/jobs/cancel",
+        api: "POST /ai/v1/jobs, GET /ai/v1/jobs/{id}, GET /ai/v1/jobs/get-by-name, POST /ai/v1/jobs/cancel, GET /ai/v1/jobs (this view)",
         usedFor:
           "every probe — one terminating container per commit, probe.py injected as a file into a stock image, at most two per region",
         platform: `${PROBE_PLATFORM} / ${PROBE_PRESET}`,
@@ -45,7 +50,7 @@ export async function GET() {
       {
         surface: "Token Factory inference",
         api: "POST /v1/chat/completions",
-        usedFor: "one root-cause paragraph per hunt from nvidia/nemotron-3-super-120b-a12b, after the culprit is found",
+        usedFor: `one root-cause paragraph per hunt from ${model}, after the culprit is found`,
         platform: null,
       },
       {
@@ -55,6 +60,12 @@ export async function GET() {
         platform: null,
       },
     ],
+    latestJobs: {
+      source: "GET /ai/v1/jobs in every probe region, read live (cached for up to 60 s)",
+      readAt: latest?.readAt ?? null,
+      jobs: latest?.jobs ?? [],
+      unavailableRegions: latest?.unavailable ?? [],
+    },
     recentCalls: recentCalls(),
   });
 }

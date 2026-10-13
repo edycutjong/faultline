@@ -5,8 +5,9 @@
  *
  * A judge should be able to confirm in thirty seconds that Nebius is the engine and not a
  * badge, without reading code. Everything here is read from `GET /api/integrations/verify`,
- * which reports the surfaces actually used and the most recent API calls made — including
- * the case where no credentials are configured, which it states rather than hides.
+ * which reports the surfaces actually used and the latest probe jobs, read live from the Nebius
+ * Jobs API — including the case where no credentials are configured, which it states rather
+ * than hides.
  */
 
 import { useEffect, useState } from "react";
@@ -18,11 +19,11 @@ interface Surface {
   platform: string | null;
 }
 
-interface RecentCall {
-  method?: string;
-  path?: string;
-  status?: number;
-  at?: string;
+interface LatestJob {
+  id: string;
+  region: string;
+  state: string;
+  createdAt: string | null;
 }
 
 interface VerifyResponse {
@@ -32,7 +33,12 @@ interface VerifyResponse {
   probeRegions?: string[];
   probeCapacity?: number;
   surfaces: Surface[];
-  recentCalls: RecentCall[];
+  latestJobs?: { readAt: string | null; jobs: LatestJob[] };
+}
+
+/** `2026-10-13 16:22 UTC` — the API's own timestamp, not the visitor's clock. */
+function utcMinute(iso: string | null): string {
+  return iso ? `${iso.slice(0, 16).replace("T", " ")} UTC` : "—";
 }
 
 export function IntegrationProof() {
@@ -92,11 +98,26 @@ export function IntegrationProof() {
       </ul>
 
       <footer className="border-t border-line px-6 py-4">
-        <p className="text-[13px] text-muted">
-          {data && data.recentCalls.length > 0
-            ? `${data.recentCalls.length} recent Nebius API calls are logged at /api/integrations/verify.`
-            : "The full report, including the recent Nebius API call log, is at /api/integrations/verify."}
-        </p>
+        {data?.latestJobs && data.latestJobs.jobs.length > 0 ? (
+          <>
+            <p className="text-[13px] text-muted">
+              Latest probe jobs, read from the Nebius Jobs API at {utcMinute(data.latestJobs.readAt)}:
+            </p>
+            <ul className="mt-2 grid gap-1 font-mono text-[12px] text-muted">
+              {data.latestJobs.jobs.slice(0, 4).map((job) => (
+                <li key={job.id} className="flex flex-wrap gap-x-3">
+                  <span className="text-text">{job.id}</span>
+                  <span>{job.region}</span>
+                  <span>{job.state.toLowerCase()}</span>
+                  <span>{utcMinute(job.createdAt)}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-[13px] text-muted">The full report is at /api/integrations/verify.</p>
+          </>
+        ) : (
+          <p className="text-[13px] text-muted">The full report is at /api/integrations/verify.</p>
+        )}
       </footer>
     </section>
   );
