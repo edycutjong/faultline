@@ -134,8 +134,13 @@ function SectionHeading({
 function Fact({ n, term, detail }: { n: string; term: string; detail: string }) {
   return (
     <div className="plate plate-hover p-5">
-      <p className="font-mono text-[12px] tracking-[0.16em] text-drift">{n}</p>
-      <dt className="mt-3 font-display text-[18px] font-bold leading-snug tracking-[-0.01em] text-text">{term}</dt>
+      {/* A <dl> group may hold only <dt>/<dd>, so the card number lives inside the term (axe: definition-list). */}
+      <dt className="font-display text-[18px] font-bold leading-snug tracking-[-0.01em] text-text">
+        <span aria-hidden="true" className="mb-3 block font-mono text-[12px] font-normal leading-normal tracking-[0.16em] text-drift">
+          {n}
+        </span>
+        {term}
+      </dt>
       <dd className="mt-2 text-[15px] leading-relaxed text-muted">{detail}</dd>
     </div>
   );
