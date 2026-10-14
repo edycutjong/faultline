@@ -20,7 +20,7 @@ Faultline bisects a broken commit range by testing each suspect in a fresh Nebiu
 [![Nebius Token Factory](https://img.shields.io/badge/Nebius-Token%20Factory-6057F7?style=flat)](https://docs.tokenfactory.nebius.com)
 [![NVIDIA Nemotron](https://img.shields.io/badge/NVIDIA-Nemotron%203%20Super-76B900?style=flat)](https://huggingface.co/nvidia)
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=flat&logo=next.js)](https://nextjs.org)
-[![Tests](https://img.shields.io/badge/tests-516%20passing-10B981?style=flat)](#-testing--ci) [![Coverage](https://img.shields.io/badge/coverage-100%25-10B981?style=flat)](#-testing--ci)
+[![Tests](https://img.shields.io/badge/tests-532%20passing-10B981?style=flat)](#-testing--ci) [![Coverage](https://img.shields.io/badge/coverage-100%25-10B981?style=flat)](#-testing--ci)
 [![CI/CD](https://img.shields.io/github/actions/workflow/status/edycutjong/faultline/ci.yml?branch=main&style=flat&label=CI%2FCD)](https://github.com/edycutjong/faultline/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/edycutjong/faultline?style=flat)](https://github.com/edycutjong/faultline/releases)
 [![License](https://img.shields.io/badge/license-MIT-yellow?style=flat)](LICENSE)
@@ -211,7 +211,7 @@ hunts need the Nebius and Token Factory credentials listed in [`.env.example`](.
 
 ## 🧪 Testing & CI
 
-**516 unit and integration tests**, **7 probe contract tests** and **50 end-to-end checks**
+**532 unit and integration tests**, **9 probe contract tests** and **50 end-to-end checks**
 (`npm test`, `npm run test:probe`, and `npm run build && npm run e2e`). The engine (`src/lib`) is at **100 %
 statement, branch, function and line coverage**, and `vitest.config.ts` fails the build if any of the four drops;
 the handful of `v8 ignore` comments each sit on a provably unreachable fallback with the reason beside it.
@@ -220,7 +220,7 @@ the handful of `v8 ignore` comments each sit on a provably unreachable fallback 
 |---|---|
 | `tests/engine.test.ts` | each required behaviour through the real tick: endpoints, racing ticks, retries and pauses, throttling, skips, the lock, one narration call |
 | `tests/hunt.integration.test.ts` | a full hunt through auth, Jobs REST, SigV4 storage with conditional writes and Token Factory, Nebius simulated at the HTTP boundary — including that no job is ever given a credential or a mount |
-| `probe/test_probe.py` | the real `probe.py` against a local git repository and HTTP server: pass, fail, unbuildable, its own deadline, an undeliverable verdict |
+| `probe/test_probe.py` | the real `probe.py` against a local git repository and HTTP server: pass, fail, unbuildable, "tested nothing" exits (125, pytest 4/5), its own deadline, an undeliverable verdict |
 | `tests/planner.test.ts`, `tests/bandsize.test.ts` | the N+1 divisor and worst-case round counts, simulated over every culprit position |
 | `tests/sigv4.test.ts` | the signer, including presigned URLs, against AWS's own published vectors |
 
