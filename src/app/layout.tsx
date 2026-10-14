@@ -34,7 +34,7 @@ const kodeMono = localFont({
 const SITE = "https://faultline.edycu.dev";
 // Search and link previews clip long descriptions: meta ≤ 160 characters, og/twitter ≤ 125.
 const DESCRIPTION =
-  "Faultline finds the commit that broke a test: each probe is a fresh Nebius container with that commit's own dependencies. Both ends proven, culprit explained.";
+  "Find the commit that broke your test. Each probe is a fresh Nebius container with that commit’s own dependencies; Nemotron explains the culprit.";
 const SHARE_DESCRIPTION =
   "Finds the commit that broke your test: each probe a fresh Nebius container, both ends proven, the culprit explained.";
 
