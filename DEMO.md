@@ -151,8 +151,9 @@ screen-recorded start to finish for the demo video, on the redesigned app. It na
 jobs to uk-south1 within two seconds; the third, `aijob-e03s3sxfzvv3mqk2ay`, exceeded the two-per-region quota and Nebius
 ended it `ERROR (QuotaExceeded)` without running the test. The hunt counted that as an infrastructure failure — not a
 verdict — and re-dispatched commit 173 in eu-west1 (`aijob-e01e1sv0979rwsx4mq`), which cost about two minutes: 20 jobs
-for 19 probes. The engine's slot count is meant to stop a third job in a region; that it did not here is an open bug, and
-the failure path is what kept the result right. Faultline is 3 / 3 on this history (957 s, 923 s and 1,032 s).
+for 19 probes. The engine's slot count is meant to stop a third job in a region; that it did not here was a bug (two ticks on the same hunt record could fill the same last slot), and
+the failure path is what kept the result right. It is fixed in `9d35f5f` — each launch into a region now claims its number with
+`If-None-Match` — and a fresh run on the fix (`evidence/p7-hunt.json`, hunt `9d33fada`) named `4e133d6c` in 932 s with 19 probes, 10 `429`s retried and no `QuotaExceeded` job. Faultline is 3 / 3 on this history (957 s, 923 s and 1,032 s).
 Nemotron's paragraph (request `chatcmpl-a81f7f4ec15855e1`) names the swapped line, says `replace` attaches the zone
 without applying its offset rules for that date, and gives 06:37 UTC instead of 06:00 — the probe's own assertion reads
 `datetime(2023, 7, 1, 6, 37, …)` against `datetime(2023, 7, 1, 6, 0, …)`. Its fixes — restore `localize()` on line 78,
