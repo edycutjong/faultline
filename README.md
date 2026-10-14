@@ -12,6 +12,7 @@ Faultline bisects a broken commit range by testing each suspect in a fresh Nebiu
 [![Live Demo](https://img.shields.io/badge/🚀_Live-Demo-6057F7?style=for-the-badge)](https://faultline.edycu.dev)
 [![The Story](https://img.shields.io/badge/〰️_The-Story-FF4A2B?style=for-the-badge)](https://faultline.edycu.dev/about)
 [![Pitch Deck](https://img.shields.io/badge/📊_Pitch-Deck-f59e0b?style=for-the-badge)](https://faultline.edycu.dev/pitch)
+[![Demo Video](https://img.shields.io/badge/▶️_Demo-Video-FF0000?style=for-the-badge)](https://youtu.be/Run-JvgkCy4)
 [![Feedback](https://img.shields.io/badge/📝_Nebius-Feedback-76B900?style=for-the-badge)](FEEDBACK.md)
 [![Built for Nebius](https://img.shields.io/badge/Nebius-Global_AI_Hackathon-8b5cf6?style=for-the-badge)](https://nebiusglobalaihackathon.devpost.com/)
 
