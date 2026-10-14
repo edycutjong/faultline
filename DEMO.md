@@ -1,7 +1,7 @@
 # Demo — every number, and the command that produced it
 
 Everything below was run on 2026-10-13 against the live deployment
-(https://faultline-edy-cus-projects.vercel.app) and real Nebius infrastructure. The raw output of
+(https://faultline.edycu.dev) and real Nebius infrastructure. The raw output of
 every run is committed under [`evidence/`](evidence). Where a figure is a property of a fixture we
 built, it says so.
 
@@ -94,7 +94,7 @@ python3 scripts/bench.py local --repo <clone of faultbench-tzdata-pipeline> --go
   --install "pip install -e .[test]" --trials 5 --label tzdata-pipeline --out evidence/bench/hero-local.json
 
 # Faultline: one hunt through the deployed app, polled to the end
-python3 scripts/bench.py faultline --api https://faultline-edy-cus-projects.vercel.app \
+python3 scripts/bench.py faultline --api https://faultline.edycu.dev \
   --repo-url https://github.com/edycutjong/faultbench-tzdata-pipeline --good v0.1.0 --bad main \
   --test "python -m pytest -q tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone" \
   --install "pip install -e .[test]" --truth 4e133d6c856c2e756fce5a328896f20fecfc62eb \
@@ -166,7 +166,7 @@ python3 scripts/bench.py local --repo <clone of python-attrs/attrs> \
   --truth 89a890a3262273514619d1881c6a8b0fe26c66ac --install "pip install -e ." --trials 3 --label attrs \
   --test "python -c \"assert (lambda C: (lambda i: (i.__setstate__((1, 2)), (i.x, i.y))[1])(C.__new__(C)))(__import__('attr').make_class('C', ['x', 'y'], slots=True)) == (1, 2)\"" \
   --out evidence/bench/attrs-local.json
-python3 scripts/bench.py faultline --api https://faultline-edy-cus-projects.vercel.app \
+python3 scripts/bench.py faultline --api https://faultline.edycu.dev \
   --repo-url https://github.com/python-attrs/attrs --good b3dfebe2e10b44437c4f97d788fb5220d790efd0 \
   --bad a9960de98d0f58ccb2880d03c97dafba3fc1111c --install "pip install -e ." \
   --truth 89a890a3262273514619d1881c6a8b0fe26c66ac --label attrs --test "<the same command>" \

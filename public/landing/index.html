@@ -10,14 +10,14 @@
 <meta property="og:site_name" content="Faultline">
 <meta property="og:title" content="Faultline — the bisect that refuses to blame the innocent">
 <meta property="og:description" content="git bisect run in one reused environment named the wrong commit 10 times out of 10. Faultline gives every commit it tests its own fresh Nebius container and named the real culprit in 3 rounds, 19 jobs, $0.0948.">
-<meta property="og:url" content="https://faultline-edy-cus-projects.vercel.app/about">
-<meta property="og:image" content="https://faultline-edy-cus-projects.vercel.app/landing/media/og-about.png?v=v0.3.0">
+<meta property="og:url" content="https://faultline.edycu.dev/about">
+<meta property="og:image" content="https://faultline.edycu.dev/landing/media/og-about.png?v=v0.3.0">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="A seismogram of hunt 827dfe7e: three rounds of probes and one red spike at commit 173, 4e133d6c">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Faultline — the bisect that refuses to blame the innocent">
 <meta name="twitter:description" content="git bisect run in one reused environment named the wrong commit 10 times out of 10. Faultline gives every commit it tests its own fresh Nebius container and named the real culprit in 3 rounds, 19 jobs, $0.0948.">
-<meta name="twitter:image" content="https://faultline-edy-cus-projects.vercel.app/landing/media/og-about.png?v=v0.3.0">
+<meta name="twitter:image" content="https://faultline.edycu.dev/landing/media/og-about.png?v=v0.3.0">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="preload" href="/landing/fonts/syne.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/landing/fonts/familjengrotesk.woff2" as="font" type="font/woff2" crossorigin>
@@ -497,7 +497,7 @@ footer a:hover{color:var(--scratch)}
       </div>
       <figure style="margin:0">
         <div class="shot">
-          <div class="shot-bar"><span class="url">faultline-edy-cus-projects.vercel.app · Fault Report</span></div>
+          <div class="shot-bar"><span class="url">faultline.edycu.dev · Fault Report</span></div>
           <a href="/landing/media/report-culprit.webp" aria-label="Open the full Fault Report screenshot"><img class="crop" src="/landing/media/report-head.webp" width="1500" height="330" loading="lazy" alt="Fault Report header from the live app: normalize: attach the zone directly instead of localize(); commit 4e133d6c856c2e756fce5a328896f20fecfc62eb, verified by executed tests"><img class="crop" src="/landing/media/report-code.webp" width="1000" height="158" loading="lazy" alt="The diff lines from the same report: moment = zone_for(zone).localize(moment) replaced by moment = moment.replace(tzinfo=zone_for(zone))"></a>
         </div>
         <figcaption class="cap"><b>The live app's Fault Report</b> for the recorded hunt — the diff is the bug: <code>localize()</code> became <code>replace(tzinfo=…)</code>.</figcaption>

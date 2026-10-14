@@ -31,7 +31,7 @@ Usage:
     python3 scripts/bench.py local --repo /tmp/faultbench/tzdata-pipeline --good <sha> --bad <sha> \\
         --test "python -m pytest -q tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone" \\
         --install "pip install -e .[test]" --truth <sha> --trials 5 --out evidence/bench/hero-local.json
-    python3 scripts/bench.py faultline --api https://faultline-edy-cus-projects.vercel.app \\
+    python3 scripts/bench.py faultline --api https://faultline.edycu.dev \\
         --repo-url https://github.com/edycutjong/faultbench-tzdata-pipeline --good v0.1.0 --bad main \\
         --test "..." --install "pip install -e .[test]" --truth <sha> --out evidence/bench/hero-faultline-1.json
     python3 scripts/bench.py report evidence/bench/*.json

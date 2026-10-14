@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { bypassCodeMatches, publicBaseUrl, resetTickThrottle, tickDue } from "@/lib/runtime";
 
 describe("publicBaseUrl", () => {
-  const request = new Request("https://faultline-abc123-team.vercel.app/api/hunts");
+  const request = new Request("https://preview-abc123.faultline.example/api/hunts");
 
   it("prefers an explicit public URL", () => {
     expect(publicBaseUrl(request, { FAULTLINE_PUBLIC_URL: "https://faultline.example/" } as unknown as NodeJS.ProcessEnv)).toBe(
@@ -14,13 +14,13 @@ describe("publicBaseUrl", () => {
     expect(
       publicBaseUrl(request, {
         VERCEL_ENV: "production",
-        VERCEL_PROJECT_PRODUCTION_URL: "faultline-edy-cus-projects.vercel.app",
+        VERCEL_PROJECT_PRODUCTION_URL: "faultline.edycu.dev",
       } as unknown as NodeJS.ProcessEnv),
-    ).toBe("https://faultline-edy-cus-projects.vercel.app");
+    ).toBe("https://faultline.edycu.dev");
   });
 
   it("falls back to the request origin elsewhere", () => {
-    expect(publicBaseUrl(request, {} as NodeJS.ProcessEnv)).toBe("https://faultline-abc123-team.vercel.app");
+    expect(publicBaseUrl(request, {} as NodeJS.ProcessEnv)).toBe("https://preview-abc123.faultline.example");
   });
 });
 

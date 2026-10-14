@@ -15,7 +15,7 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-const SITE = "https://faultline-edy-cus-projects.vercel.app";
+const SITE = "https://faultline.edycu.dev";
 // Search and link previews clip long descriptions: meta ≤ 160 characters, og/twitter ≤ 125.
 const DESCRIPTION =
   "Faultline finds the commit that broke a test: each probe is a fresh Nebius container with that commit's own dependencies. Both ends proven, culprit explained.";
