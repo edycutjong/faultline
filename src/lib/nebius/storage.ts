@@ -266,7 +266,7 @@ export async function putJsonConditional(
  * This is what a probe receives instead of a credential: visitor code runs inside the probe,
  * so the probe can be no more trusted than the repository it tests. The worst a hostile test
  * suite can do with this URL is rewrite its own verdict, which it controls anyway by choosing
- * its exit code.
+ * its exit code; the document's shape and size are checked on read (`parseVerdict`).
  */
 export function presignPut(config: NebiusConfig, key: string, expiresSeconds: number, date?: Date): string {
   const url = new URL(objectUrl(config, key));
