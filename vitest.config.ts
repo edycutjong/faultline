@@ -6,6 +6,11 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
-    coverage: { provider: "v8", include: ["src/lib/**/*.ts"] },
+    coverage: {
+      provider: "v8",
+      include: ["src/lib/**/*.ts"],
+      // Every line, branch and function of the engine is exercised; a drop fails the build.
+      thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 },
+    },
   },
 });

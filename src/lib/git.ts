@@ -181,6 +181,8 @@ export async function resolveHuntRange(
   const commits = collected.map((commit, index) => ({
     sha: commit.sha,
     index: index + 1, // index 0 is the known-good ref itself, which is not a suspect.
+    // unreachable: String.split always yields at least one element, so the trailing `?? ""` never fires
+    /* v8 ignore next */
     subject: (commit.commit.message ?? "").split("\n")[0]?.slice(0, 200) ?? "",
     author: commit.commit.author?.name ?? "unknown",
     date: commit.commit.author?.date ?? "",
@@ -219,6 +221,8 @@ export function validateInstallCommand(command: string): string {
     throw new GitRangeError("Shell metacharacters are not allowed in the install command.", 400);
   }
   const words = trimmed.split(/\s+/);
+  // unreachable: trimmed is non-empty here, so split yields a non-empty first word
+  /* v8 ignore next */
   const head = words[0] ?? "";
   const viaPython = (head === "python" || head === "python3") && words[1] === "-m" && words[2] === "pip";
   if (!(head === "pip" || head === "pip3" || viaPython)) {

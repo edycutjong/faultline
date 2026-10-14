@@ -143,6 +143,8 @@ function req(env: NodeJS.ProcessEnv, key: string): string {
   const v = env[key];
   // Unreachable: `missing` is checked before this runs. Present so the type is string, not
   // string | undefined, without a non-null assertion.
+  // unreachable: loadConfig rejects blank/missing keys before req() runs
+  /* v8 ignore next */
   if (!v) throw new Error(`missing required env var ${key}`);
   return v.trim();
 }

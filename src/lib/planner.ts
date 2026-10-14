@@ -92,6 +92,8 @@ export function planBand(
     if (skipped.size === 0) {
       const index = lowIndex + Math.round((k * candidates) / (band + 1));
       // Probing a bound re-proves what we already know, so clamp strictly inside.
+      // unreachable: testable.length > band forces C >= band + 2, so round(k*C/(band+1)) lies in [1, C-1]
+      /* v8 ignore else */
       if (index > lowIndex && index < highIndex) picked.add(index);
       continue;
     }
@@ -108,6 +110,8 @@ export function planBand(
       const bestD = Math.abs(best - ideal);
       if (d < bestD || (d === bestD && index > best)) best = index;
     }
+    // unreachable: picked.size < band < testable.length, so an untaken testable commit always exists
+    /* v8 ignore else */
     if (best !== null) picked.add(best);
   }
 
@@ -183,9 +187,13 @@ export function estimateRounds(rangeSize: number, n: number): number {
 
   while (remaining > 1) {
     const largest = worstRemaining(remaining, band);
+    // unreachable: remaining > 1 and band >= 1 always places at least one probe
+    /* v8 ignore next */
     if (largest === null) return rounds;
 
     rounds += 1;
+    // unreachable: a probe strictly inside (0, remaining) always leaves largest < remaining
+    /* v8 ignore next */
     if (largest >= remaining) return rounds; // no progress; refuse to spin
     remaining = largest;
   }
@@ -217,7 +225,12 @@ export function estimateHuntRounds(rangeSize: number, slots: number, bandSize: n
   if (!Number.isFinite(rangeSize) || rangeSize < 1) return 0;
   let remaining = Math.floor(rangeSize);
   const first = firstRoundInterior(slots, bandSize);
-  if (first > 0 && remaining > 1) remaining = worstRemaining(remaining, first) ?? remaining;
+  if (first > 0 && remaining > 1) {
+    const worst = worstRemaining(remaining, first);
+    // unreachable fallback: remaining > 1 and first > 0 always places a probe, so worst is never null
+    /* v8 ignore next */
+    remaining = worst ?? remaining;
+  }
   return 1 + estimateRounds(remaining, effectiveBand(slots, bandSize));
 }
 

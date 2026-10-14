@@ -18,7 +18,7 @@ Faultline bisects a broken commit range by testing each suspect in a fresh Nebiu
 [![Nebius Token Factory](https://img.shields.io/badge/Nebius-Token%20Factory-6057F7?style=flat)](https://docs.tokenfactory.nebius.com)
 [![NVIDIA Nemotron](https://img.shields.io/badge/NVIDIA-Nemotron%203%20Super-76B900?style=flat)](https://huggingface.co/nvidia)
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=flat&logo=next.js)](https://nextjs.org)
-[![Tests](https://img.shields.io/badge/tests-283%20passing-10B981?style=flat)](#-testing--ci)
+[![Tests](https://img.shields.io/badge/tests-513%20passing-10B981?style=flat)](#-testing--ci) [![Coverage](https://img.shields.io/badge/coverage-100%25-10B981?style=flat)](#-testing--ci)
 [![CI](https://github.com/edycutjong/faultline/actions/workflows/ci.yml/badge.svg)](https://github.com/edycutjong/faultline/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/edycutjong/faultline?style=flat)](https://github.com/edycutjong/faultline/releases)
 [![License](https://img.shields.io/badge/license-MIT-yellow?style=flat)](LICENSE)
@@ -204,8 +204,10 @@ hunts need the Nebius and Token Factory credentials listed in [`.env.example`](.
 
 ## 🧪 Testing & CI
 
-**283 unit and integration tests**, **7 probe contract tests** and **50 end-to-end checks**
-(`npm test`, `npm run test:probe`, and `npm run build && npm run e2e`).
+**513 unit and integration tests**, **7 probe contract tests** and **50 end-to-end checks**
+(`npm test`, `npm run test:probe`, and `npm run build && npm run e2e`). The engine (`src/lib`) is at **100 %
+statement, branch, function and line coverage**, and `vitest.config.ts` fails the build if any of the four drops;
+the handful of `v8 ignore` comments each sit on a provably unreachable fallback with the reason beside it.
 
 | Suite | What it pins down |
 |---|---|

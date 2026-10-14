@@ -186,6 +186,8 @@ function refusal(reason: Inconclusive["reason"], headline: string, explanation: 
 }
 
 function firstLine(text: string | null): string {
+  // unreachable: String.split always yields at least one element, so [0] is never undefined
+  /* v8 ignore next */
   const line = (text ?? "no detail reported").split("\n")[0]?.trim() ?? "";
   return line.length > 160 ? `${line.slice(0, 157)}...` : line;
 }
