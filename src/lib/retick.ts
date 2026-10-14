@@ -27,12 +27,26 @@ export function retickDelayMs(hunt: Hunt | null, now = Date.now()): number | nul
   return Math.max(1_000, Math.min(MAX_WAIT_MS, wake.getTime() - now + 1_000));
 }
 
-export function retickAfterBackoff(hunt: Hunt | null): void {
-  const waitMs = retickDelayMs(hunt);
+/** Wake-ups pending on this instance, by hunt: every route that saw a backoff used to start its own chain. */
+const pending = new Map<string, number>();
+/** A pending entry this far past its time belongs to a chain that died without clearing it. */
+const PENDING_STALE_MS = 5_000;
+
+export function retickAfterBackoff(hunt: Hunt | null, now = Date.now()): void {
+  const waitMs = retickDelayMs(hunt, now);
   if (!hunt || waitMs === null) return;
   const { tickUrl, id } = hunt;
+  const wakeAt = now + waitMs;
+  const existing = pending.get(id);
+  // An earlier wake-up here will tick, and that tick re-arms if it still has to wait.
+  if (existing !== undefined && existing <= wakeAt && existing > now - PENDING_STALE_MS) return;
+  pending.set(id, wakeAt);
   after(async () => {
-    await new Promise((resolve) => setTimeout(resolve, waitMs));
+    try {
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    } finally {
+      if (pending.get(id) === wakeAt) pending.delete(id); // hand over first, so the tick below may re-arm
+    }
     if (tickUrl) {
       const res = await fetch(tickUrl, { method: "POST", signal: AbortSignal.timeout(TICK_REQUEST_TIMEOUT_MS) }).catch(() => null);
       // 404: the hunt is gone, there is nothing to wake. Anything else that is not a success
@@ -42,4 +56,9 @@ export function retickAfterBackoff(hunt: Hunt | null): void {
     }
     await tick(storeContext(), id).catch(() => undefined);
   });
+}
+
+/** Test seam: forget every pending wake-up on this instance. */
+export function resetRetick(): void {
+  pending.clear();
 }

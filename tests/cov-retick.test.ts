@@ -6,10 +6,10 @@ vi.mock("next/server", () => ({ after: (cb: () => Promise<void>) => { h.afterCb.
 vi.mock("@/lib/hunt", async (orig) => ({ ...(await orig<typeof import("@/lib/hunt")>()), tick: h.tick }));
 vi.mock("@/lib/store", () => ({ storeContext: () => h.ctx }));
 
-import { retickAfterBackoff, retickDelayMs } from "@/lib/retick";
+import { resetRetick, retickAfterBackoff, retickDelayMs } from "@/lib/retick";
 import { newHunt } from "@/lib/hunt";
 import type { Hunt } from "@/lib/types";
-import { probe, shaFor, syntheticCommits } from "./helpers";
+import { must, probe, shaFor, syntheticCommits } from "./helpers";
 
 const NOW = "2026-10-13T16:00:00Z";
 
@@ -37,6 +37,7 @@ describe("retickAfterBackoff", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW));
     h.afterCb.length = 0;
+    resetRetick();
     h.tick.mockReset().mockResolvedValue(undefined);
     fetchMock.mockReset();
     vi.stubGlobal("fetch", fetchMock);
@@ -45,6 +46,47 @@ describe("retickAfterBackoff", () => {
 
   it("uses the current time by default", () => {
     expect(retickDelayMs(running("2026-10-13T16:00:05Z"))).toBe(6_000);
+  });
+
+  it("keeps one pending wake-up per hunt per instance, not one per route that saw the backoff (a2a r06)", async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 200 });
+    const hunt = running("2026-10-13T16:00:10Z", "https://x.test/tick");
+    retickAfterBackoff(hunt);
+    retickAfterBackoff(hunt); // a viewer's poll two seconds later, same backoff
+    expect(h.afterCb).toHaveLength(1);
+    // A different hunt has its own chain.
+    retickAfterBackoff(running("2026-10-13T16:00:10Z", "https://x.test/other"));
+    expect(h.afterCb).toHaveLength(2);
+    h.afterCb.pop();
+    // Once the first wake-up has slept, the tick it sends may re-arm.
+    const cb = h.afterCb.shift();
+    if (!cb) throw new Error("no after callback");
+    const p = cb();
+    await vi.advanceTimersByTimeAsync(11_000);
+    await p;
+    retickAfterBackoff(hunt, Date.parse("2026-10-13T16:00:11Z"));
+    expect(h.afterCb).toHaveLength(1);
+  });
+
+  it("re-arms over an entry long past its time, and a sooner wake-up replaces a later one", async () => {
+    const later = running("2026-10-13T16:00:40Z");
+    const queued = must(later.probes[0]);
+    retickAfterBackoff(later);
+    expect(h.afterCb).toHaveLength(1);
+    // Same hunt, now with a sooner backoff: schedule the sooner one too.
+    retickAfterBackoff({ ...later, probes: [{ ...queued, notBefore: "2026-10-13T16:00:05Z" }] });
+    expect(h.afterCb).toHaveLength(2);
+    // Its chain died without clearing the entry (no callback ran): a minute on, it is stale.
+    retickAfterBackoff({ ...later, probes: [{ ...queued, notBefore: "2026-10-13T16:01:30Z" }] }, Date.parse("2026-10-13T16:01:00Z"));
+    expect(h.afterCb).toHaveLength(3);
+    // The superseded first chain still wakes; it leaves the newer entry alone.
+    const first = h.afterCb.shift();
+    if (!first) throw new Error("no after callback");
+    const p = first();
+    await vi.advanceTimersByTimeAsync(60_000);
+    await p;
+    retickAfterBackoff({ ...later, probes: [{ ...queued, notBefore: "2026-10-13T16:01:30Z" }] }, Date.parse("2026-10-13T16:01:00Z"));
+    expect(h.afterCb).toHaveLength(2);
   });
 
   it("schedules nothing for a null hunt or one with no backoff", () => {
