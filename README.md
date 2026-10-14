@@ -10,6 +10,7 @@ Faultline bisects a broken commit range by testing each suspect in a fresh Nebiu
 <img src="docs/assets/readme-hero-animated.svg" width="100%" alt="Faultline — a range of suspect commits narrows to the one that broke the test, each probe a fresh container.">
 
 [![Live Demo](https://img.shields.io/badge/🚀_Live-Demo-6057F7?style=for-the-badge)](https://faultline.edycu.dev)
+[![The Story](https://img.shields.io/badge/〰️_The-Story-FF4A2B?style=for-the-badge)](https://faultline.edycu.dev/about)
 [![Pitch Deck](https://img.shields.io/badge/📊_Pitch-Deck-f59e0b?style=for-the-badge)](https://faultline.edycu.dev/pitch)
 [![Feedback](https://img.shields.io/badge/📝_Nebius-Feedback-76B900?style=for-the-badge)](FEEDBACK.md)
 [![Built for Nebius](https://img.shields.io/badge/Nebius-Global_AI_Hackathon-8b5cf6?style=for-the-badge)](https://nebiusglobalaihackathon.devpost.com/)
@@ -68,6 +69,8 @@ You can close the tab: each probe ticks the hunt when it reports, so it finishes
 watching.
 
 ## 🏗️ Architecture & Tech Stack
+
+<a href="docs/assets/architecture.png"><img src="docs/assets/architecture.png" width="100%" alt="Faultline architecture: you post a broken range to the Next.js app on Vercel, which holds every key; it creates one Nebius Serverless AI Job per probe across four regions (eight slots); each probe fetches one commit, installs its dependencies, runs the test, PUTs its verdict to Object Storage through a presigned URL and sends an empty tick; the tick reads the verdicts, refuses or narrows and starts the next round; once the culprit is named, one Token Factory call to NVIDIA Nemotron 3 Super explains it."></a>
 
 - **A probe holds nothing.** Any public repository's `conftest.py` is arbitrary code, so a probe
   job gets no bucket mount and no key: one presigned URL that can write its own verdict object
