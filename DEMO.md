@@ -172,13 +172,13 @@ verdict — and re-dispatched commit 173 in eu-west1 (`aijob-e01e1sv0979rwsx4mq`
 for 19 probes. The engine's slot count is meant to stop a third job in a region; that it did not here was a bug (two ticks on the same hunt record could fill the same last slot), and
 the failure path is what kept the result right. It is fixed in `9d35f5f` — each launch into a region now claims its number with
 `If-None-Match` — and a fresh run on the fix (`evidence/p7-hunt.json`, hunt `9d33fada`) named `4e133d6c` in 932 s with 19 probes, 10 `429`s retried and no `QuotaExceeded` job. On Jobs, Faultline is 4 / 4 on this history (957 s, 923 s, 1,032 s and 932 s); the Sandboxes hunt below makes it 5 / 5.
-Hunt `9d33fada`'s paragraph (request `chatcmpl-84f55213a6a6f7b8`) names the swapped line, gives 06:37 UTC instead of
-06:00 and restores `localize()`; all of it holds; its aside about DST adjustments is generic, as above.
-Nemotron's paragraph (request `chatcmpl-a81f7f4ec15855e1`) names the swapped line, says `replace` attaches the zone
+Hunt `69542695`'s paragraph (request `chatcmpl-a81f7f4ec15855e1`) names the swapped line, says `replace` attaches the zone
 without applying its offset rules for that date, and gives 06:37 UTC instead of 06:00 — the probe's own assertion reads
 `datetime(2023, 7, 1, 6, 37, …)` against `datetime(2023, 7, 1, 6, 0, …)`. Its fixes — restore `localize()` on line 78,
 or call `localize(moment, is_dst=None)` — both hold. Its "(the zone's base or wrong DST offset)" is a hedge: the offset
 `replace` attaches is pytz's first entry for the zone, local mean time (−6:37), and no DST applied in July 2023.
+Hunt `9d33fada`'s paragraph (request `chatcmpl-84f55213a6a6f7b8`) names the swapped line, gives 06:37 UTC instead of
+06:00 and restores `localize()`; all of it holds; its aside about DST adjustments is generic, as above.
 
 ### A real regression — `python-attrs/attrs` 22.1.0 → 22.2.0, 135 commits
 
