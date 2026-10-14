@@ -664,7 +664,12 @@ async function dispatchQueued(ctx: StoreContext, hunt: Hunt, probes: Probe[], no
           for (let n = launch; outcome === "spent" && n < launch + MAX_SLOT_SKIPS; n += 1) {
             outcome = await claimSlot(ctx, hunt.id, region, n, probe.key, launched, now);
           }
-          if (outcome !== "won") return; // a live rival holds this slot (or the skips ran out): stay queued
+          if (outcome !== "won") {
+            // A live rival holds this slot (or the skips ran out): stay queued, but ask to be woken.
+            // Nothing else may tick for this probe until its siblings report, minutes away.
+            out[position] = { ...probe, notBefore: new Date(now.getTime() + REWAKE_MIN_MS).toISOString() };
+            return;
+          }
         }
         out[position] = await dispatchOne(ctx, backend, hunt, probe, region, now);
       }),

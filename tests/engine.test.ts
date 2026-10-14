@@ -570,6 +570,15 @@ describe("region slots under concurrent ticks", () => {
       if (!result.ok) throw new Error(result.error);
       expect(env.backend.launches.length).toBe(dispatched ? 1 : 0);
       expect(env.kv.keys().includes(`hunts/${h.id}/claims/slot-eu-west1-2.json`)).toBe(dispatched);
+      if (!dispatched) {
+        // Held back by a live rival, it asks to be woken rather than wait for its siblings' reports (a2a r07).
+        const waiting = must(result.hunt.probes.find((p) => p.phase === "queued" && p.notBefore !== null));
+        expect(waiting.notBefore).toBe(new Date(env.ctx.now().getTime() + 10_000).toISOString());
+        expect(nextWakeAt(result.hunt, env.ctx.now())?.toISOString()).toBe(waiting.notBefore);
+        env.advance(4 * 60_000); // the rival's claim settles
+        const next = must(await tick(env.ctx, h.id));
+        expect(next.probes.some((p) => p.phase === "running")).toBe(true);
+      }
     }
   });
 
