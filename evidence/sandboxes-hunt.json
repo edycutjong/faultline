@@ -1,0 +1,2618 @@
+{
+ "schema": 1,
+ "kind": "live-hunt",
+ "ranAt": "2026-10-14T12:55:29.158Z",
+ "api": "https://faultline.edycu.dev",
+ "huntId": "89cf7952-20eb-4f2e-a684-a4151c67f250",
+ "startedFrom": "POST /api/hunts on the deployed build 51b61c2 with FAULTLINE_PROBE_BACKEND=sandboxes (Token Factory Sandboxes backend, 16 slots); polled GET /api/hunts/{id} every ~3 s as a viewer would. Same repo, test, install and refs as evidence/p7-hunt.json.",
+ "summary": {
+  "backend": "nebius-tokenfactory-sandboxes",
+  "repo": "https://github.com/edycutjong/faultbench-tzdata-pipeline",
+  "goodRef": "v0.1.0",
+  "badRef": "HEAD",
+  "commits": 255,
+  "culprit": "4e133d6c856c2e756fce5a328896f20fecfc62eb",
+  "truth": "4e133d6c856c2e756fce5a328896f20fecfc62eb",
+  "correct": true,
+  "rounds": 3,
+  "probes": 20,
+  "slots": 16,
+  "bandSize": 8,
+  "wallClockMs": 46521,
+  "infraFailures": 0,
+  "sandboxOperationSecondsTotal": 220.899,
+  "apiReportedCostTotal": 0.808324,
+  "apiReportedCostNote": "Sum of each operation's metadata.result.resources.cost as GET /sandboxes/v1/operations/{id} returns it. Its unit is not documented and Sandboxes publishes no list price, so no USD cost is claimed; the app shows the hunt's cost as unknown.",
+  "costUsd": null,
+  "narrationRequestId": "chatcmpl-bdc1d9b0eabda9c2",
+  "comparison": {
+   "jobsHuntsWallClockSeconds": {
+    "827dfe7e (P1 hero)": 957,
+    "9d33fada (P7, evidence/p7-hunt.json)": 932.3,
+    "69542695 (P6 video)": 1032,
+    "rule threshold (fastest Jobs hunt quoted)": 923
+   },
+   "sandboxesWallClockSeconds": 46.5,
+   "decisionRule": "switch the production default only if correct (names 4e133d6c) AND faster than 923 s",
+   "decision": "correct and faster → Sandboxes becomes the production default; Jobs remains selectable (FAULTLINE_PROBE_BACKEND=jobs)"
+  },
+  "observations": [
+   "Every sandbox reached a terminal state; 0 dispatch failures, 0 throttled creates (Jobs hunts on this history retried 10 throttled creates each).",
+   "Per probe: dispatch to verdict 8.3–10.7 s; operation duration 8.6–13.4 s (vmMs); the probe itself (clone + install + test) 6.0–7.0 s.",
+   "Round 2 dispatched 6 of 8 probes at once and the other 2 ~15 s later: round 1's 10 sandboxes still counted as holding slots until their status was re-read (the engine's 15 s exit grace), and 10 + 8 > 16 slots."
+  ]
+ },
+ "sandboxOperations": [
+  {
+   "probeKey": "r1-i0-0260b672a5da-a1",
+   "operationId": "01a13a7b-7187-707d-a39a-d9fdf59ba1a4",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:30.963316+00:00",
+   "durationSeconds": 13.38,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.04016505,
+   "consumedCpuSeconds": 3.977795
+  },
+  {
+   "probeKey": "r1-i28-9afe875372a9-a1",
+   "operationId": "01a13a7b-7222-71e3-9171-b1429f734220",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:31.121332+00:00",
+   "durationSeconds": 12.795,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.0404053,
+   "consumedCpuSeconds": 4.001842
+  },
+  {
+   "probeKey": "r1-i57-08536c889350-a1",
+   "operationId": "01a13a7b-7225-709f-a3cf-4c35c8d86c3a",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:31.123470+00:00",
+   "durationSeconds": 12.797,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.03971774,
+   "consumedCpuSeconds": 3.933044
+  },
+  {
+   "probeKey": "r1-i85-6e5a3405684d-a1",
+   "operationId": "01a13a7b-722d-762f-be94-595bd6b7eb25",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:31.151862+00:00",
+   "durationSeconds": 13.086,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.04100088,
+   "consumedCpuSeconds": 4.061358
+  },
+  {
+   "probeKey": "r1-i113-ce1d905a0c88-a1",
+   "operationId": "01a13a7b-7544-74f2-a307-953dd72e8938",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:31.920073+00:00",
+   "durationSeconds": 12.022,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.04163341,
+   "consumedCpuSeconds": 4.124631
+  },
+  {
+   "probeKey": "r1-i142-1497f10bf34b-a1",
+   "operationId": "01a13a7b-752f-7382-a3dd-9e8ca4a0736a",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:31.899336+00:00",
+   "durationSeconds": 12.053,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.04031619,
+   "consumedCpuSeconds": 3.992909
+  },
+  {
+   "probeKey": "r1-i170-bb576e6488c6-a1",
+   "operationId": "01a13a7b-752d-777b-9627-c0c8de3ffad3",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:31.898306+00:00",
+   "durationSeconds": 12.464,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.04074233000000001,
+   "consumedCpuSeconds": 4.035503
+  },
+  {
+   "probeKey": "r1-i198-d240c98e8f76-a1",
+   "operationId": "01a13a7b-75d6-723e-81d3-ef6b19b33323",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:32.066673+00:00",
+   "durationSeconds": 11.229,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.04178822000000001,
+   "consumedCpuSeconds": 4.140112
+  },
+  {
+   "probeKey": "r1-i227-8ac35b29ea14-a1",
+   "operationId": "01a13a7b-789d-75eb-b4a4-b615ae094186",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:32.780440+00:00",
+   "durationSeconds": 11.475,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.03953394,
+   "consumedCpuSeconds": 3.91464
+  },
+  {
+   "probeKey": "r1-i255-43f3528c5fb8-a1",
+   "operationId": "01a13a7b-78a2-7798-9de6-a3e246288143",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:32.784417+00:00",
+   "durationSeconds": 11.441,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.03973263,
+   "consumedCpuSeconds": 3.934509
+  },
+  {
+   "probeKey": "r2-i173-4e133d6c856c-a1",
+   "operationId": "01a13a7b-9c74-760f-aa75-b5c3d75d5418",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:41.952357+00:00",
+   "durationSeconds": 9.623,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.03983599,
+   "consumedCpuSeconds": 3.9448689999999997
+  },
+  {
+   "probeKey": "r2-i176-e0931dbd8d5a-a1",
+   "operationId": "01a13a7b-9c65-7047-8393-ff238b8a808c",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:41.936256+00:00",
+   "durationSeconds": 9.884,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.04009436,
+   "consumedCpuSeconds": 3.9707060000000003
+  },
+  {
+   "probeKey": "r2-i179-bd8ed9c6bff1-a1",
+   "operationId": "01a13a7b-9c3c-736d-9ec4-65172db73cd9",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:41.897449+00:00",
+   "durationSeconds": 9.199,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.039364,
+   "consumedCpuSeconds": 3.89769
+  },
+  {
+   "probeKey": "r2-i182-3142c561d00a-a1",
+   "operationId": "01a13a7b-9c36-709d-a669-5dfc5108b275",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:41.890414+00:00",
+   "durationSeconds": 9.175,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.0396148,
+   "consumedCpuSeconds": 3.922726
+  },
+  {
+   "probeKey": "r2-i186-3a5b1668781e-a1",
+   "operationId": "01a13a7b-9f7f-743d-98df-f3fc0ba486fa",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:42.735061+00:00",
+   "durationSeconds": 9.54,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.04011933,
+   "consumedCpuSeconds": 3.973223
+  },
+  {
+   "probeKey": "r2-i189-297784b8efe1-a1",
+   "operationId": "01a13a7b-9f7a-75d1-bf0b-f2d73b5bd962",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:42.726667+00:00",
+   "durationSeconds": 9.394,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.04324351,
+   "consumedCpuSeconds": 4.285621
+  },
+  {
+   "probeKey": "r2-i192-11bf5c61a303-a1",
+   "operationId": "01a13a7b-d8e8-7646-904f-10856c36943f",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:57.429587+00:00",
+   "durationSeconds": 10.163,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.039583190000000004,
+   "consumedCpuSeconds": 3.919589
+  },
+  {
+   "probeKey": "r2-i195-7c1b5c9d779f-a1",
+   "operationId": "01a13a7b-d84f-753c-a25d-822b48c7bdc1",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:55:57.276616+00:00",
+   "durationSeconds": 9.745,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.040198870000000005,
+   "consumedCpuSeconds": 3.9811769999999997
+  },
+  {
+   "probeKey": "r3-i171-ab7e22449677-a1",
+   "operationId": "01a13a7b-f9ea-71e2-84f3-717ae1132aa3",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:56:05.878416+00:00",
+   "durationSeconds": 8.618,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.04019206,
+   "consumedCpuSeconds": 3.980496
+  },
+  {
+   "probeKey": "r3-i172-bd522cc7c8c9-a1",
+   "operationId": "01a13a7b-fa83-76df-9080-18308f3a3cf2",
+   "status": "SUCCESS",
+   "createdAt": "2026-10-14T12:56:06.030910+00:00",
+   "durationSeconds": 12.816,
+   "exitCode": 0,
+   "timedOut": false,
+   "apiReportedCost": 0.041042369999999995,
+   "consumedCpuSeconds": 4.065491
+  }
+ ],
+ "hunt": {
+  "id": "89cf7952-20eb-4f2e-a684-a4151c67f250",
+  "repoUrl": "https://github.com/edycutjong/faultbench-tzdata-pipeline",
+  "testCommand": "python -m pytest -q tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone",
+  "installCommand": "pip install -e .[test]",
+  "goodRef": "v0.1.0",
+  "goodSha": "0260b672a5da9536b4e661a9ebae19d8fcc6a551",
+  "badRef": "HEAD",
+  "status": "done",
+  "commits": [
+   {
+    "sha": "acebfbfa669fe9d5bae52a1a57e4720a23108241",
+    "index": 1,
+    "subject": "docs(changelog): spell out the units on the public helpers (#104)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T09:30:00Z"
+   },
+   {
+    "sha": "88c005c40e69cd37e9598110870b9006e2bfbd8f",
+    "index": 2,
+    "subject": "docs(changelog): record why the offset table is hand-maintained (#106)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T10:00:00Z"
+   },
+   {
+    "sha": "582e57eec46869a454d1b53457397ee3ea346e23",
+    "index": 3,
+    "subject": "util: add flatten_keys()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T10:30:00Z"
+   },
+   {
+    "sha": "b53733bd75ecae34b48b0bb038accfef8234b37e",
+    "index": 4,
+    "subject": "chore(constants): introduce MAX_BATCH_ROWS",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T11:00:00Z"
+   },
+   {
+    "sha": "263c14d44a1f3332a0b08c80c72febd68cc49a8e",
+    "index": 5,
+    "subject": "util: add coerce_fields()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T11:30:00Z"
+   },
+   {
+    "sha": "5abffa5be0db8368d8875273f14ab173406d97c7",
+    "index": 6,
+    "subject": "chore(constants): introduce DEFAULT_PAGE_SIZE",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T12:00:00Z"
+   },
+   {
+    "sha": "dced04fbd9e45ea527a64d59b3c5a9e6ef81cb04",
+    "index": 7,
+    "subject": "docs(normalize): call out the pure-function invariant in the module header",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T12:30:00Z"
+   },
+   {
+    "sha": "cf1b2086e6ed62cf3de1e8ede9862624289e9012",
+    "index": 8,
+    "subject": "docs(windows): note that the helpers never allocate on the hot path",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T13:00:00Z"
+   },
+   {
+    "sha": "5464c4a183f08ad3b89501ce3b9ab19a7663a37b",
+    "index": 9,
+    "subject": "docs(util): document the failure mode callers actually hit",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T13:30:00Z"
+   },
+   {
+    "sha": "2c925b90eb76c91e3c02cd9f920d99c067f06112",
+    "index": 10,
+    "subject": "docs(normalize): clarify which arguments are keyword-only",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T14:00:00Z"
+   },
+   {
+    "sha": "783aabb30b204bd87977c87188beeed0f605d1e0",
+    "index": 11,
+    "subject": "chore(constants): introduce WARN_AFTER_SECONDS",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T14:30:00Z"
+   },
+   {
+    "sha": "9a97c5638742d20475352aa48f0152c99c94a1a8",
+    "index": 12,
+    "subject": "docs(windows): explain the naming of the private helpers",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T15:00:00Z"
+   },
+   {
+    "sha": "86bc14d473a2ae42fb04004bcf67f76549955cdc",
+    "index": 13,
+    "subject": "docs(util): cross-reference the module that owns this contract",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T15:30:00Z"
+   },
+   {
+    "sha": "db6891a8e02e902e4cd1b464dba3cbaef4ee76f6",
+    "index": 14,
+    "subject": "docs(normalize): mention the assumption the tests encode",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T16:00:00Z"
+   },
+   {
+    "sha": "f2956672e3a3282ee25ecb776f8aaa05a087d043",
+    "index": 15,
+    "subject": "docs(changelog): describe the ordering guarantee callers rely on (#109)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T16:30:00Z"
+   },
+   {
+    "sha": "1bf1b51adfc347d2bf1fe671470a17bb8f4febc9",
+    "index": 16,
+    "subject": "docs(windows): flag the branch that is deliberately not defensive",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T17:00:00Z"
+   },
+   {
+    "sha": "79d90410b61a234fd02b9069da2e02e85df0a6b9",
+    "index": 17,
+    "subject": "docs(changelog): state the precision the caller can count on (#111)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T17:30:00Z"
+   },
+   {
+    "sha": "b6572e1ec1b25480562f53dcdcf911bc2b7f764d",
+    "index": 18,
+    "subject": "util: add compact_labels()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T18:00:00Z"
+   },
+   {
+    "sha": "dba4f0b4d919d103a504b5405f94b4f6c04a17f6",
+    "index": 19,
+    "subject": "chore(constants): introduce MAX_LABEL_CHARS",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T18:30:00Z"
+   },
+   {
+    "sha": "8155e98672ee960234e06646e54e218949ac0107",
+    "index": 20,
+    "subject": "docs(changelog): spell out the units on the public helpers (#115)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T19:00:00Z"
+   },
+   {
+    "sha": "c48d73e8253f025ed485dbdf41a3350fbdffd1a6",
+    "index": 21,
+    "subject": "util: add align_fields()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T19:30:00Z"
+   },
+   {
+    "sha": "3b943ba5149d70e5f219c61132d4736741590fa1",
+    "index": 22,
+    "subject": "docs(util): record why the offset table is hand-maintained",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T20:00:00Z"
+   },
+   {
+    "sha": "c6271bbf8dbf992453a95cfc9ac09219a05252c6",
+    "index": 23,
+    "subject": "docs(normalize): call out the pure-function invariant in the module header",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T20:30:00Z"
+   },
+   {
+    "sha": "509a3e9bc5ee2f2d404d9525b95c3b2b9ee2e35d",
+    "index": 24,
+    "subject": "docs(windows): note that the helpers never allocate on the hot path",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T21:00:00Z"
+   },
+   {
+    "sha": "f71ff978c2fa5ea3832918b85bbd95aa0c9c6b36",
+    "index": 25,
+    "subject": "docs(util): document the failure mode callers actually hit",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T21:30:00Z"
+   },
+   {
+    "sha": "77c7c07bcb82874642d283d1c947410d211d4cbb",
+    "index": 26,
+    "subject": "util: add expand_rows()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T22:00:00Z"
+   },
+   {
+    "sha": "ee5e73e700208e09e6e86f64c9318755030b4779",
+    "index": 27,
+    "subject": "docs(normalize): clarify which arguments are keyword-only",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T22:30:00Z"
+   },
+   {
+    "sha": "9afe875372a9dd5a7c728670b32152af27aca768",
+    "index": 28,
+    "subject": "build: bump version to 0.1.1",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T23:00:00Z"
+   },
+   {
+    "sha": "53ee476655e71fcfde3fbd3a310a65451aa76003",
+    "index": 29,
+    "subject": "docs(windows): explain the naming of the private helpers",
+    "author": "Faultbench Bot",
+    "date": "2024-01-08T23:30:00Z"
+   },
+   {
+    "sha": "7207687926029ec8aa10b6eb1da9a9e1bc26ca62",
+    "index": 30,
+    "subject": "docs(changelog): cross-reference the module that owns this contract (#119)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T00:00:00Z"
+   },
+   {
+    "sha": "12032be884403d18b9a4453138ed9e86f1abd31b",
+    "index": 31,
+    "subject": "docs(util): mention the assumption the tests encode",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T00:30:00Z"
+   },
+   {
+    "sha": "35a9e37c03a3d71b0fb52dc8301e0b7e39b4d155",
+    "index": 32,
+    "subject": "docs(changelog): describe the ordering guarantee callers rely on (#122)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T01:00:00Z"
+   },
+   {
+    "sha": "4404b83418fc1779e240dad64093a623f4553aa2",
+    "index": 33,
+    "subject": "util: add collapse_fields()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T01:30:00Z"
+   },
+   {
+    "sha": "c07fe3b04aff9a7ed90624bda92df5f7b865e0b4",
+    "index": 34,
+    "subject": "docs(changelog): flag the branch that is deliberately not defensive (#124)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T02:00:00Z"
+   },
+   {
+    "sha": "02d64a4393044605df03d19ed33e1f296ce98b29",
+    "index": 35,
+    "subject": "docs(readme): state the precision the caller can count on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T02:30:00Z"
+   },
+   {
+    "sha": "12cd715dab33a8722e2985f63303b5f0b27f40a7",
+    "index": 36,
+    "subject": "util: add coerce_spans()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T03:00:00Z"
+   },
+   {
+    "sha": "24948ad26831ffb3f8768fac6ec8016932c519e0",
+    "index": 37,
+    "subject": "build: bump version to 0.1.2",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T03:30:00Z"
+   },
+   {
+    "sha": "8ccf5eee97dd0e85c4ca87f05f2107227a9c3b6f",
+    "index": 38,
+    "subject": "docs(changelog): spell out the units on the public helpers (#128)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T04:00:00Z"
+   },
+   {
+    "sha": "515e75ad44e886f169ac549f540043b21992c9a7",
+    "index": 39,
+    "subject": "docs(changelog): record why the offset table is hand-maintained (#130)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T04:30:00Z"
+   },
+   {
+    "sha": "42c3c1527f36174f183529c314ac9fcc96f52da5",
+    "index": 40,
+    "subject": "build(deps): require pytest>=7.4 for the test extra",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T05:00:00Z"
+   },
+   {
+    "sha": "c9c6dc10c72022db9de1dce9a8d4060e8556e074",
+    "index": 41,
+    "subject": "build: bump version to 0.1.3",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T05:30:00Z"
+   },
+   {
+    "sha": "cb3efdba75aca7fd6379a3fc792839228402a0ab",
+    "index": 42,
+    "subject": "util: add align_chunks()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T06:00:00Z"
+   },
+   {
+    "sha": "220a93c30326e2ad761158ba219e6d1485e9d984",
+    "index": 43,
+    "subject": "docs(normalize): call out the pure-function invariant in the module header",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T06:30:00Z"
+   },
+   {
+    "sha": "7c8efca79608620dc1e495816f9aa7ceded3c0dc",
+    "index": 44,
+    "subject": "docs(changelog): note that the helpers never allocate on the hot path (#132)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T07:00:00Z"
+   },
+   {
+    "sha": "a787574b5b0c631fac6240dae9fdf1deb505e1a5",
+    "index": 45,
+    "subject": "docs(windows): document the failure mode callers actually hit",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T07:30:00Z"
+   },
+   {
+    "sha": "f8daebd636733646c4f855a3a5a62ef37ef15f61",
+    "index": 46,
+    "subject": "chore(constants): introduce RETRY_BUDGET_SECONDS",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T08:00:00Z"
+   },
+   {
+    "sha": "2f8b4a31c30aa94e63c05127a437965b7f4d6ed1",
+    "index": 47,
+    "subject": "docs(changelog): clarify which arguments are keyword-only (#136)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T08:30:00Z"
+   },
+   {
+    "sha": "2e5bf40b17af64caf95a03f388237ee4342ef285",
+    "index": 48,
+    "subject": "docs(changelog): explain the naming of the private helpers (#140)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T09:00:00Z"
+   },
+   {
+    "sha": "36cfa9470d257f5390024c518b5059fae82c004c",
+    "index": 49,
+    "subject": "chore(constants): introduce CACHE_ENTRIES",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T09:30:00Z"
+   },
+   {
+    "sha": "0e548138421a525126af6d240e447a529abde50b",
+    "index": 50,
+    "subject": "util: add merge_labels()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T10:00:00Z"
+   },
+   {
+    "sha": "e1e9b4e731e746cdf86dd7054096a550710f9f75",
+    "index": 51,
+    "subject": "util: add expand_batches()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T10:30:00Z"
+   },
+   {
+    "sha": "86971d355368febddbea18ef85e9f7d48aca5bfb",
+    "index": 52,
+    "subject": "docs(util): cross-reference the module that owns this contract",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T11:00:00Z"
+   },
+   {
+    "sha": "f7748470314d1fa67b81aef68a5e7629161e145c",
+    "index": 53,
+    "subject": "docs(normalize): mention the assumption the tests encode",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T11:30:00Z"
+   },
+   {
+    "sha": "f8d07ef90a92ca7ac250ef0b6be03b864682707f",
+    "index": 54,
+    "subject": "util: add flatten_entries()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T12:00:00Z"
+   },
+   {
+    "sha": "18a3cf1057f75cdb9eb3fef275c0af7546913c54",
+    "index": 55,
+    "subject": "util: add expand_tokens()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T12:30:00Z"
+   },
+   {
+    "sha": "dfe607c572ca728977a95a277f8b2f6b2fc9b6f2",
+    "index": 56,
+    "subject": "docs(changelog): describe the ordering guarantee callers rely on (#141)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T13:00:00Z"
+   },
+   {
+    "sha": "08536c889350f221ae4d4737a3049f0c5e300752",
+    "index": 57,
+    "subject": "docs(windows): flag the branch that is deliberately not defensive",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T13:30:00Z"
+   },
+   {
+    "sha": "a07ffa5c2328523d0524f45c08d521d647d1bab4",
+    "index": 58,
+    "subject": "docs(changelog): state the precision the caller can count on (#145)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T14:00:00Z"
+   },
+   {
+    "sha": "c16e544bc6446262d144e8c0cc28c04a0c4276e7",
+    "index": 59,
+    "subject": "docs(util): spell out the units on the public helpers",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T14:30:00Z"
+   },
+   {
+    "sha": "c7cfe13dc91bf209d11b9482e95573de925d72c0",
+    "index": 60,
+    "subject": "chore(constants): introduce MAX_INFLIGHT",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T15:00:00Z"
+   },
+   {
+    "sha": "019bf47b15091334667455fb3ed7117c32111df2",
+    "index": 61,
+    "subject": "docs(normalize): record why the offset table is hand-maintained",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T15:30:00Z"
+   },
+   {
+    "sha": "1728492babca6cdb5d56895f6de7895f1d068d44",
+    "index": 62,
+    "subject": "docs(windows): call out the pure-function invariant in the module header",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T16:00:00Z"
+   },
+   {
+    "sha": "3be50f1c9095b2e9f2144a857b710d203489afb3",
+    "index": 63,
+    "subject": "docs(changelog): note that the helpers never allocate on the hot path (#149)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T16:30:00Z"
+   },
+   {
+    "sha": "62dedfd434994bfe097a831bf30bc3d7ff8d8c70",
+    "index": 64,
+    "subject": "util: add coerce_keys()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T17:00:00Z"
+   },
+   {
+    "sha": "0561b0367fb4f252b0eed183b28bf5b8a46cca6c",
+    "index": 65,
+    "subject": "docs(util): document the failure mode callers actually hit",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T17:30:00Z"
+   },
+   {
+    "sha": "22f73a97bc3de8aa9b0400b9f656314764cd80f8",
+    "index": 66,
+    "subject": "docs(normalize): clarify which arguments are keyword-only",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T18:00:00Z"
+   },
+   {
+    "sha": "6eaa274ff5f8d36a2fece49fc7c4d9795a522c5d",
+    "index": 67,
+    "subject": "util: add normalise_spans()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T18:30:00Z"
+   },
+   {
+    "sha": "021e57565642870c1c08a6109fe7a887adbc53b9",
+    "index": 68,
+    "subject": "chore(constants): introduce SLOW_CALL_MILLIS",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T19:00:00Z"
+   },
+   {
+    "sha": "e2b5df572d99929b95bc6970826d7fe86f060235",
+    "index": 69,
+    "subject": "docs(windows): explain the naming of the private helpers",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T19:30:00Z"
+   },
+   {
+    "sha": "2f5596c03f58ab1fa80911f20c2d318c4e2afbc3",
+    "index": 70,
+    "subject": "docs(readme): cross-reference the module that owns this contract",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T20:00:00Z"
+   },
+   {
+    "sha": "e787cb2a1c4dc71dcee0aad6344cbcb5305fe75b",
+    "index": 71,
+    "subject": "docs(changelog): mention the assumption the tests encode (#151)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T20:30:00Z"
+   },
+   {
+    "sha": "bcdbb7ffdfd5410282f4b63260c475b4b35706d7",
+    "index": 72,
+    "subject": "docs(util): describe the ordering guarantee callers rely on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T21:00:00Z"
+   },
+   {
+    "sha": "60a2b905b47954dfc1c321e3aa9d0392c8dde53a",
+    "index": 73,
+    "subject": "docs(changelog): flag the branch that is deliberately not defensive (#152)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T21:30:00Z"
+   },
+   {
+    "sha": "a31aae5a187b94af8ab036aaf5b5f8a5fab3f54f",
+    "index": 74,
+    "subject": "util: add coerce_entries()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T22:00:00Z"
+   },
+   {
+    "sha": "89fe8c7505c00978caf96a827085f76cf4817615",
+    "index": 75,
+    "subject": "docs(changelog): state the precision the caller can count on (#155)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T22:30:00Z"
+   },
+   {
+    "sha": "bb6264343f78a3a3417466ae3c2cbfdf7de68ccd",
+    "index": 76,
+    "subject": "docs(normalize): spell out the units on the public helpers",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T23:00:00Z"
+   },
+   {
+    "sha": "8cf69d35590516c6dd1b1d30ce426f2eb6ecce70",
+    "index": 77,
+    "subject": "docs(changelog): record why the offset table is hand-maintained (#156)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-09T23:30:00Z"
+   },
+   {
+    "sha": "6db38e2a3a7b9287534283d37f8e44b94fff52ab",
+    "index": 78,
+    "subject": "docs(changelog): call out the pure-function invariant in the module header (#160)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T00:00:00Z"
+   },
+   {
+    "sha": "f81f282065aba20157900a3e4caa06284acbe944",
+    "index": 79,
+    "subject": "docs(windows): note that the helpers never allocate on the hot path",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T00:30:00Z"
+   },
+   {
+    "sha": "d8aed65d0454fed039d20cc7647235ab06a14fda",
+    "index": 80,
+    "subject": "util: add normalise_rows()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T01:00:00Z"
+   },
+   {
+    "sha": "acf1dbb2f7989aa75f003982375457cffd571de6",
+    "index": 81,
+    "subject": "docs(util): document the failure mode callers actually hit",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T01:30:00Z"
+   },
+   {
+    "sha": "2c6dc66e2e05dae2e49e3d2537e2806623e525a8",
+    "index": 82,
+    "subject": "chore(constants): introduce MAX_KEY_PARTS",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T02:00:00Z"
+   },
+   {
+    "sha": "88884e6378315d88fd1c665bdae148a5a08d80de",
+    "index": 83,
+    "subject": "util: add align_entries()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T02:30:00Z"
+   },
+   {
+    "sha": "2ad10c927aeb2dac12a8ddb15f226c54a1848c1f",
+    "index": 84,
+    "subject": "docs(changelog): clarify which arguments are keyword-only (#163)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T03:00:00Z"
+   },
+   {
+    "sha": "6e5a3405684d7144afc13a7178fe3cf655a4d02f",
+    "index": 85,
+    "subject": "chore(constants): introduce LOG_SAMPLE_RATE",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T03:30:00Z"
+   },
+   {
+    "sha": "95a3f0e68583c3f244ae36b97db7f0cd1dd81ca2",
+    "index": 86,
+    "subject": "docs(readme): explain the naming of the private helpers",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T04:00:00Z"
+   },
+   {
+    "sha": "c09e37c8612ab2c44974f99516d99e508aa5edf6",
+    "index": 87,
+    "subject": "docs(normalize): cross-reference the module that owns this contract",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T04:30:00Z"
+   },
+   {
+    "sha": "61be6431dc9079de60e79f2db3b9998c847a331f",
+    "index": 88,
+    "subject": "build: bump version to 0.1.4",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T05:00:00Z"
+   },
+   {
+    "sha": "7bce300111242de15388d0bf11bdb4875f9d2fc8",
+    "index": 89,
+    "subject": "chore(constants): introduce MAX_BATCH_ROWS_2",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T05:30:00Z"
+   },
+   {
+    "sha": "afffcc0eccc851309130666625f76164cff94151",
+    "index": 90,
+    "subject": "util: add collapse_batches()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T06:00:00Z"
+   },
+   {
+    "sha": "8a6c49b2c8fdcfbf57326c84dc907dc42f85df98",
+    "index": 91,
+    "subject": "docs(changelog): mention the assumption the tests encode (#167)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T06:30:00Z"
+   },
+   {
+    "sha": "35e80915ee30d3f6701bf1ebe6d999b7e6252f71",
+    "index": 92,
+    "subject": "docs(windows): describe the ordering guarantee callers rely on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T07:00:00Z"
+   },
+   {
+    "sha": "8dcfd0926b58303b5972ebd4775fc5c5df0f2e62",
+    "index": 93,
+    "subject": "docs(readme): flag the branch that is deliberately not defensive",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T07:30:00Z"
+   },
+   {
+    "sha": "5d0797770ac7b20a94c4460eb74fcee4f42fed4c",
+    "index": 94,
+    "subject": "docs(readme): state the precision the caller can count on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T08:00:00Z"
+   },
+   {
+    "sha": "8fc8323935771a126315adfe3921017977ac99a2",
+    "index": 95,
+    "subject": "build: bump version to 0.1.5",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T08:30:00Z"
+   },
+   {
+    "sha": "77a414275715609190dd93d5f7ddf557dc35bb37",
+    "index": 96,
+    "subject": "docs(changelog): spell out the units on the public helpers (#168)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T09:00:00Z"
+   },
+   {
+    "sha": "9243fe862c92e771ed6f2e318cb58b554a18a3ba",
+    "index": 97,
+    "subject": "docs(changelog): record why the offset table is hand-maintained (#170)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T09:30:00Z"
+   },
+   {
+    "sha": "dfddd0c9165e005b9482118eee7c44e7a563ea07",
+    "index": 98,
+    "subject": "docs(changelog): call out the pure-function invariant in the module header (#174)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T10:00:00Z"
+   },
+   {
+    "sha": "40b1bd0efc3c5f44f62b67cd9a57a2bdaacc3be7",
+    "index": 99,
+    "subject": "docs(changelog): note that the helpers never allocate on the hot path (#177)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T10:30:00Z"
+   },
+   {
+    "sha": "6947a2c4b270f99a3efe741187c8ee8ae2d67539",
+    "index": 100,
+    "subject": "chore(constants): introduce DEFAULT_PAGE_SIZE_2",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T11:00:00Z"
+   },
+   {
+    "sha": "97cfb9cf651bf0041017ac1cf89c69c3a0a6d36f",
+    "index": 101,
+    "subject": "docs(util): document the failure mode callers actually hit",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T11:30:00Z"
+   },
+   {
+    "sha": "8fded2fd6ee4dc01fe2b0d3fe53a9f8ca6d3218a",
+    "index": 102,
+    "subject": "docs(changelog): clarify which arguments are keyword-only (#178)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T12:00:00Z"
+   },
+   {
+    "sha": "fa3b39288a511c89012f5fa372e30c06137de6d4",
+    "index": 103,
+    "subject": "docs(changelog): explain the naming of the private helpers (#179)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T12:30:00Z"
+   },
+   {
+    "sha": "f8c6a39849dc264edb92b4a2aea5fd37d67d0bd0",
+    "index": 104,
+    "subject": "docs(normalize): cross-reference the module that owns this contract",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T13:00:00Z"
+   },
+   {
+    "sha": "c12d3774139f4fee7b4cbae7d48801a7436eafef",
+    "index": 105,
+    "subject": "util: add expand_records()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T13:30:00Z"
+   },
+   {
+    "sha": "609cbabbcaf820be7da93ce0319259a03559b0de",
+    "index": 106,
+    "subject": "docs(changelog): mention the assumption the tests encode (#183)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T14:00:00Z"
+   },
+   {
+    "sha": "6f03cc7a27979e044e897536d1f6cde2b89e5bb9",
+    "index": 107,
+    "subject": "docs(changelog): describe the ordering guarantee callers rely on (#186)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T14:30:00Z"
+   },
+   {
+    "sha": "7cf6944479391a0fa349742ef1a7d4389c8fc240",
+    "index": 108,
+    "subject": "docs(readme): flag the branch that is deliberately not defensive",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T15:00:00Z"
+   },
+   {
+    "sha": "a85ea36fdcca8c9ff5e822ff8764d091f212901e",
+    "index": 109,
+    "subject": "docs(changelog): state the precision the caller can count on (#188)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T15:30:00Z"
+   },
+   {
+    "sha": "0a6daa0eff676b7be24a30a0270bc72635ee66d6",
+    "index": 110,
+    "subject": "chore(constants): introduce WARN_AFTER_SECONDS_2",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T16:00:00Z"
+   },
+   {
+    "sha": "15d86343abe4c950874726f9df38d50b7d13e2be",
+    "index": 111,
+    "subject": "util: add merge_records()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T16:30:00Z"
+   },
+   {
+    "sha": "610ad6e7559f9ad0cc4766948f94746538fe24e6",
+    "index": 112,
+    "subject": "docs(changelog): spell out the units on the public helpers (#190)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T17:00:00Z"
+   },
+   {
+    "sha": "ce1d905a0c88aa94fe1999fa47389e1c9acf40ab",
+    "index": 113,
+    "subject": "util: add resolve_fields()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T17:30:00Z"
+   },
+   {
+    "sha": "a7d7fe5cc95338557f6cb19735f4b4581564e837",
+    "index": 114,
+    "subject": "util: add merge_chunks()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T18:00:00Z"
+   },
+   {
+    "sha": "4ba4c4190bf7644db3268eb0138889aeb0c3cde0",
+    "index": 115,
+    "subject": "docs(readme): record why the offset table is hand-maintained",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T18:30:00Z"
+   },
+   {
+    "sha": "9167828a8b34d3e522afb2a395c00338709751e3",
+    "index": 116,
+    "subject": "docs(readme): call out the pure-function invariant in the module header",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T19:00:00Z"
+   },
+   {
+    "sha": "cefc67c4e2cac29f336572aaf76b4ebc50363be8",
+    "index": 117,
+    "subject": "docs(windows): note that the helpers never allocate on the hot path",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T19:30:00Z"
+   },
+   {
+    "sha": "0f55f481be4c2670fb2e5789c929585d204aad47",
+    "index": 118,
+    "subject": "util: add trim_labels()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T20:00:00Z"
+   },
+   {
+    "sha": "1f57a64fc2504b05a63f9271ae86277a7220e091",
+    "index": 119,
+    "subject": "docs(util): document the failure mode callers actually hit",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T20:30:00Z"
+   },
+   {
+    "sha": "4f954c0d8866146dea17f2071267edce747281af",
+    "index": 120,
+    "subject": "docs(normalize): clarify which arguments are keyword-only",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T21:00:00Z"
+   },
+   {
+    "sha": "73c4cde3065a9b07ce4f8baa213e840d8a25e5a5",
+    "index": 121,
+    "subject": "docs(changelog): explain the naming of the private helpers (#192)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T21:30:00Z"
+   },
+   {
+    "sha": "88d2b3edab9f4af013fc1ee067c0cdc8a46926e1",
+    "index": 122,
+    "subject": "util: add merge_keys()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T22:00:00Z"
+   },
+   {
+    "sha": "7b7d2a5f9ebe52c186423927ef305a2f43ed55f8",
+    "index": 123,
+    "subject": "docs(windows): cross-reference the module that owns this contract",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T22:30:00Z"
+   },
+   {
+    "sha": "29067cf3ac4d293e8e53b175eb44c1389423a5d7",
+    "index": 124,
+    "subject": "docs(changelog): mention the assumption the tests encode (#195)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T23:00:00Z"
+   },
+   {
+    "sha": "8944acb72ecaa87f359bbafabe7580a866af8c4b",
+    "index": 125,
+    "subject": "docs(util): describe the ordering guarantee callers rely on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-10T23:30:00Z"
+   },
+   {
+    "sha": "16a557b698f5ff379cd48b2d9cef9138f6fa9217",
+    "index": 126,
+    "subject": "docs(changelog): flag the branch that is deliberately not defensive (#197)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T00:00:00Z"
+   },
+   {
+    "sha": "0675ea01318b79f5300a96118c58bd317155952f",
+    "index": 127,
+    "subject": "docs(normalize): state the precision the caller can count on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T00:30:00Z"
+   },
+   {
+    "sha": "509469877ccbc41b79f68987fb2994e02c0b8e38",
+    "index": 128,
+    "subject": "docs(changelog): spell out the units on the public helpers (#199)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T01:00:00Z"
+   },
+   {
+    "sha": "ed5f9d13648ea1870845809f22d608090da4c457",
+    "index": 129,
+    "subject": "chore(constants): introduce MAX_LABEL_CHARS_2",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T01:30:00Z"
+   },
+   {
+    "sha": "aaa941279bd75d7cf21489c645f4516def6ccb1e",
+    "index": 130,
+    "subject": "docs(changelog): record why the offset table is hand-maintained (#201)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T02:00:00Z"
+   },
+   {
+    "sha": "98373d41e8271af7051e55e1a572739f5ffd635b",
+    "index": 131,
+    "subject": "util: add flatten_records()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T02:30:00Z"
+   },
+   {
+    "sha": "8b43abd0934c2178900058d58fb29b6043da339d",
+    "index": 132,
+    "subject": "docs(windows): call out the pure-function invariant in the module header",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T03:00:00Z"
+   },
+   {
+    "sha": "bcd6a619057ba06e81afce8c818c6847ec2c7d8c",
+    "index": 133,
+    "subject": "util: add expand_chunks()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T03:30:00Z"
+   },
+   {
+    "sha": "ac58f064959101ef7601a8504634c9db3c261b06",
+    "index": 134,
+    "subject": "docs(util): note that the helpers never allocate on the hot path",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T04:00:00Z"
+   },
+   {
+    "sha": "7f72be51bf30b0cfc4a74858bbb326050d1c2e6c",
+    "index": 135,
+    "subject": "docs(changelog): document the failure mode callers actually hit (#205)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T04:30:00Z"
+   },
+   {
+    "sha": "3984d0899b4b4042134f0ea63ac2d06c040dd144",
+    "index": 136,
+    "subject": "docs(changelog): clarify which arguments are keyword-only (#209)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T05:00:00Z"
+   },
+   {
+    "sha": "ddc38a87a949d8c23d94ea64d62ab97f125b5a9a",
+    "index": 137,
+    "subject": "docs(changelog): explain the naming of the private helpers (#212)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T05:30:00Z"
+   },
+   {
+    "sha": "28bd01bd662b759e659913448f05afcbbb272f7e",
+    "index": 138,
+    "subject": "docs(normalize): cross-reference the module that owns this contract",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T06:00:00Z"
+   },
+   {
+    "sha": "c51b86129a55baf8417d82ab0e1c957a0aaa33cf",
+    "index": 139,
+    "subject": "chore(constants): introduce RETRY_BUDGET_SECONDS_2",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T06:30:00Z"
+   },
+   {
+    "sha": "46104f055a45863c904adfae573d43b101bbd0b2",
+    "index": 140,
+    "subject": "docs(changelog): mention the assumption the tests encode (#216)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T07:00:00Z"
+   },
+   {
+    "sha": "7cd54896eed7d67229759af061cedfe55e862945",
+    "index": 141,
+    "subject": "docs(windows): describe the ordering guarantee callers rely on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T07:30:00Z"
+   },
+   {
+    "sha": "1497f10bf34bdd860b7415ac3c34fda6d0159eb1",
+    "index": 142,
+    "subject": "docs(changelog): flag the branch that is deliberately not defensive (#220)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T08:00:00Z"
+   },
+   {
+    "sha": "5851a5e62281e5cb60d6198046f0442019c2a5ef",
+    "index": 143,
+    "subject": "util: add trim_values()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T08:30:00Z"
+   },
+   {
+    "sha": "bd7880e4c37567445c0bd2a9f59589a5686b6f86",
+    "index": 144,
+    "subject": "chore(constants): introduce CACHE_ENTRIES_2",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T09:00:00Z"
+   },
+   {
+    "sha": "aabc24d55040291885b4d5ea3739e0660f7228c6",
+    "index": 145,
+    "subject": "docs(util): state the precision the caller can count on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T09:30:00Z"
+   },
+   {
+    "sha": "7087b18aaec805b245e4fec438668067986237da",
+    "index": 146,
+    "subject": "docs(changelog): spell out the units on the public helpers (#222)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T10:00:00Z"
+   },
+   {
+    "sha": "400729e173273a2d83ae23c20d7d4217c4d2ec76",
+    "index": 147,
+    "subject": "build: bump version to 0.1.6",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T10:30:00Z"
+   },
+   {
+    "sha": "97457314fbc8a7a51b28594a3315abbbe0bb14ec",
+    "index": 148,
+    "subject": "docs(normalize): record why the offset table is hand-maintained",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T11:00:00Z"
+   },
+   {
+    "sha": "9fc4da5082536d5ea799c5ea8fc1c26ed77b9b6f",
+    "index": 149,
+    "subject": "docs(windows): call out the pure-function invariant in the module header",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T11:30:00Z"
+   },
+   {
+    "sha": "e46e534219b7d051e003508c88b5bfe621536349",
+    "index": 150,
+    "subject": "build(deps): bump pytz to 2023.3 — Mexico abolished DST, update golden values",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T12:00:00Z"
+   },
+   {
+    "sha": "24685aae4b5cde2935c4a4ee8aec41de11aa59d3",
+    "index": 151,
+    "subject": "util: add compact_records()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T12:30:00Z"
+   },
+   {
+    "sha": "5d48e4029b663a64194bc811e15dcdc06b73aaef",
+    "index": 152,
+    "subject": "docs(util): note that the helpers never allocate on the hot path",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T13:00:00Z"
+   },
+   {
+    "sha": "c08697690d14582cf815ab05d4fa2576d29d2f31",
+    "index": 153,
+    "subject": "docs(changelog): document the failure mode callers actually hit (#224)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T13:30:00Z"
+   },
+   {
+    "sha": "cd3d96952fb50c1f1a948b4d1bdf073ed594c599",
+    "index": 154,
+    "subject": "util: add merge_slots()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T14:00:00Z"
+   },
+   {
+    "sha": "e32bd2730392f533915313a635e413c4eb2780f7",
+    "index": 155,
+    "subject": "util: add align_slots()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T14:30:00Z"
+   },
+   {
+    "sha": "5191498365dad604417448954896914e61ca657f",
+    "index": 156,
+    "subject": "docs(normalize): clarify which arguments are keyword-only",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T15:00:00Z"
+   },
+   {
+    "sha": "fd8ff70ea750ebf1322680c3380e99ec5ff4da1f",
+    "index": 157,
+    "subject": "docs(changelog): explain the naming of the private helpers (#226)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T15:30:00Z"
+   },
+   {
+    "sha": "928c65fc6449d37f6557709ec276a2c92bbca7db",
+    "index": 158,
+    "subject": "docs(windows): cross-reference the module that owns this contract",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T16:00:00Z"
+   },
+   {
+    "sha": "821f5f8ada8965d20d3fc8e1f28ca385fe4b07ce",
+    "index": 159,
+    "subject": "build: bump version to 0.1.7",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T16:30:00Z"
+   },
+   {
+    "sha": "3c61f11a29c26600215bb58c189f2c7716778aea",
+    "index": 160,
+    "subject": "docs(changelog): mention the assumption the tests encode (#227)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T17:00:00Z"
+   },
+   {
+    "sha": "056d3784e77b5cadf40217c897cf0efdb9571172",
+    "index": 161,
+    "subject": "docs(util): describe the ordering guarantee callers rely on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T17:30:00Z"
+   },
+   {
+    "sha": "4d7485a14f8970f6cbb7b0f2b9243247f9c8e969",
+    "index": 162,
+    "subject": "docs(changelog): flag the branch that is deliberately not defensive (#228)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T18:00:00Z"
+   },
+   {
+    "sha": "b23ca5de03d605e7739ffa34160a8c8e6eed9b94",
+    "index": 163,
+    "subject": "docs(readme): state the precision the caller can count on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T18:30:00Z"
+   },
+   {
+    "sha": "427db5091b9a1372a1c2e8c923c47ac32b3e570a",
+    "index": 164,
+    "subject": "chore(constants): introduce MAX_INFLIGHT_2",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T19:00:00Z"
+   },
+   {
+    "sha": "b9c9885007ce47fd2bfee882717b2f8d8074dfe0",
+    "index": 165,
+    "subject": "chore(constants): introduce SLOW_CALL_MILLIS_2",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T19:30:00Z"
+   },
+   {
+    "sha": "df3a9334de57b52885b4ee3e9232cd00524fdbc1",
+    "index": 166,
+    "subject": "docs(changelog): spell out the units on the public helpers (#232)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T20:00:00Z"
+   },
+   {
+    "sha": "949df1c6fc3bcfb6bfa606880d2337e3521cef59",
+    "index": 167,
+    "subject": "docs(normalize): record why the offset table is hand-maintained",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T20:30:00Z"
+   },
+   {
+    "sha": "22685f2c3b1598d710c52f5b967c60560e3b72ce",
+    "index": 168,
+    "subject": "docs(changelog): call out the pure-function invariant in the module header (#234)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T21:00:00Z"
+   },
+   {
+    "sha": "a4dddddb7ac337cfdf866c18a8f2ff7656933089",
+    "index": 169,
+    "subject": "chore(constants): introduce MAX_KEY_PARTS_2",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T21:30:00Z"
+   },
+   {
+    "sha": "bb576e6488c67afa3337463bb9abfea745444714",
+    "index": 170,
+    "subject": "docs(changelog): note that the helpers never allocate on the hot path (#237)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T22:00:00Z"
+   },
+   {
+    "sha": "ab7e224496774adab710135e2946f961c5d9db0b",
+    "index": 171,
+    "subject": "build: bump version to 0.1.8",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T22:30:00Z"
+   },
+   {
+    "sha": "bd522cc7c8c952e92c1c0422a83882962a31f6a0",
+    "index": 172,
+    "subject": "build: bump version to 0.1.9",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T23:00:00Z"
+   },
+   {
+    "sha": "4e133d6c856c2e756fce5a328896f20fecfc62eb",
+    "index": 173,
+    "subject": "normalize: attach the zone directly instead of localize()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-11T23:30:00Z"
+   },
+   {
+    "sha": "69a9040f2f2b409595bc55e8c820afe8baf172eb",
+    "index": 174,
+    "subject": "build: bump version to 0.1.10",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T00:00:00Z"
+   },
+   {
+    "sha": "8736f5087e38f731561711e795714d82dd9a29a8",
+    "index": 175,
+    "subject": "docs(windows): document the failure mode callers actually hit",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T00:30:00Z"
+   },
+   {
+    "sha": "e0931dbd8d5a9e166d4ef9d72ca06747cee62879",
+    "index": 176,
+    "subject": "docs(util): clarify which arguments are keyword-only",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T01:00:00Z"
+   },
+   {
+    "sha": "e9c20cc0efe858f6a5b9559be13a3c41f1aeb2e4",
+    "index": 177,
+    "subject": "docs(changelog): explain the naming of the private helpers (#240)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T01:30:00Z"
+   },
+   {
+    "sha": "19ce729156fe42896f83e0e509624e7c7345f783",
+    "index": 178,
+    "subject": "build: bump version to 0.1.11",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T02:00:00Z"
+   },
+   {
+    "sha": "bd8ed9c6bff16e2bc8aa2a0a077fecd40a58a653",
+    "index": 179,
+    "subject": "docs(normalize): cross-reference the module that owns this contract",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T02:30:00Z"
+   },
+   {
+    "sha": "5b21c24f7590ca5b10b89cd56c49d312fe02d902",
+    "index": 180,
+    "subject": "docs(changelog): mention the assumption the tests encode (#244)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T03:00:00Z"
+   },
+   {
+    "sha": "28c385955b9b0473aca3fca2af608c655ff5d81a",
+    "index": 181,
+    "subject": "docs(windows): describe the ordering guarantee callers rely on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T03:30:00Z"
+   },
+   {
+    "sha": "3142c561d00a0f89c731d579c70e37fff2839327",
+    "index": 182,
+    "subject": "util: add expand_keys()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T04:00:00Z"
+   },
+   {
+    "sha": "e9880b43d7cb46dc52ed2c55a3339a489025fe57",
+    "index": 183,
+    "subject": "docs(util): flag the branch that is deliberately not defensive",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T04:30:00Z"
+   },
+   {
+    "sha": "542fef6f74153ca62bc89de7b4f7bbfa947f8874",
+    "index": 184,
+    "subject": "docs(readme): state the precision the caller can count on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T05:00:00Z"
+   },
+   {
+    "sha": "b0726895d5cdf774210d494f410100d44fbd11a8",
+    "index": 185,
+    "subject": "util: add flatten_batches()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T05:30:00Z"
+   },
+   {
+    "sha": "3a5b1668781e9804790840714dd2a9a249fcaef0",
+    "index": 186,
+    "subject": "docs(changelog): spell out the units on the public helpers (#245)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T06:00:00Z"
+   },
+   {
+    "sha": "51867e0b79ee18add1917d244bc5b0a2f6c85b76",
+    "index": 187,
+    "subject": "docs(normalize): record why the offset table is hand-maintained",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T06:30:00Z"
+   },
+   {
+    "sha": "83fba70afa237201f772e94d3b77217367275dd4",
+    "index": 188,
+    "subject": "docs(changelog): call out the pure-function invariant in the module header (#246)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T07:00:00Z"
+   },
+   {
+    "sha": "297784b8efe1739a80f9ae39b897310311b1bc3f",
+    "index": 189,
+    "subject": "util: add flatten_spans()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T07:30:00Z"
+   },
+   {
+    "sha": "c7a5a46b2d1d28165ca6e5e37d0d43c0b86bb058",
+    "index": 190,
+    "subject": "chore(constants): introduce LOG_SAMPLE_RATE_2",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T08:00:00Z"
+   },
+   {
+    "sha": "23d7291659b64f24b42d3310b13de8f010dc4da8",
+    "index": 191,
+    "subject": "util: add trim_tokens()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T08:30:00Z"
+   },
+   {
+    "sha": "11bf5c61a303f18e7ddb8e742a01c575be2ac06c",
+    "index": 192,
+    "subject": "build: bump version to 0.1.12",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T09:00:00Z"
+   },
+   {
+    "sha": "11e1921e83b147710030ceda7e208184dc64fe1a",
+    "index": 193,
+    "subject": "docs(windows): note that the helpers never allocate on the hot path",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T09:30:00Z"
+   },
+   {
+    "sha": "bc3b00297833059d83d7278e5a27e754e46b3cbd",
+    "index": 194,
+    "subject": "util: add normalise_keys()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T10:00:00Z"
+   },
+   {
+    "sha": "7c1b5c9d779f3ee953ad9ede594824fbbce1d644",
+    "index": 195,
+    "subject": "docs(changelog): document the failure mode callers actually hit (#247)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T10:30:00Z"
+   },
+   {
+    "sha": "d0433264a0fa8792c73d3983decdd76161cff1cb",
+    "index": 196,
+    "subject": "docs(readme): clarify which arguments are keyword-only",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T11:00:00Z"
+   },
+   {
+    "sha": "de7a46741936e7d54b330eb63baa04e82a24e451",
+    "index": 197,
+    "subject": "util: add flatten_slots()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T11:30:00Z"
+   },
+   {
+    "sha": "d240c98e8f76350f0d8dc57c2ac664d32eeafea5",
+    "index": 198,
+    "subject": "docs(changelog): explain the naming of the private helpers (#250)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T12:00:00Z"
+   },
+   {
+    "sha": "224c41ba2875c77033d73170c03483f249f47638",
+    "index": 199,
+    "subject": "util: add resolve_keys()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T12:30:00Z"
+   },
+   {
+    "sha": "ee301f2a1d1d38d723466d5085e3513f1a77ccf1",
+    "index": 200,
+    "subject": "docs(changelog): cross-reference the module that owns this contract (#254)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T13:00:00Z"
+   },
+   {
+    "sha": "9bc7bb47bab74ee16aff423fe5079168d7666f4d",
+    "index": 201,
+    "subject": "docs(changelog): mention the assumption the tests encode (#256)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T13:30:00Z"
+   },
+   {
+    "sha": "b8f84727863053d21b535461d46348fa036c476c",
+    "index": 202,
+    "subject": "util: add coerce_chunks()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T14:00:00Z"
+   },
+   {
+    "sha": "a96bbffdf4cdd56e86b2abf029422fc7be9a7ab3",
+    "index": 203,
+    "subject": "build: bump version to 0.1.13",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T14:30:00Z"
+   },
+   {
+    "sha": "055b1e1d537c59da9015cdf5d633d6fa9b4aea2a",
+    "index": 204,
+    "subject": "docs(changelog): describe the ordering guarantee callers rely on (#259)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T15:00:00Z"
+   },
+   {
+    "sha": "b73333455985cf6db19d62f616e6dad94f90e8ec",
+    "index": 205,
+    "subject": "util: add merge_fields()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T15:30:00Z"
+   },
+   {
+    "sha": "69421b85a5ce85b00a145a6724723f3277a945c8",
+    "index": 206,
+    "subject": "docs(util): flag the branch that is deliberately not defensive",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T16:00:00Z"
+   },
+   {
+    "sha": "cbe9ee9de39a7523cb33f87658211c1089d3889f",
+    "index": 207,
+    "subject": "docs(normalize): state the precision the caller can count on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T16:30:00Z"
+   },
+   {
+    "sha": "4b82ae43d0624df339fb0d199950a09d06ef059c",
+    "index": 208,
+    "subject": "docs(windows): spell out the units on the public helpers",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T17:00:00Z"
+   },
+   {
+    "sha": "e319ff33cbd68afdbdd75ca17709faa52c8ac8b0",
+    "index": 209,
+    "subject": "docs(changelog): record why the offset table is hand-maintained (#262)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T17:30:00Z"
+   },
+   {
+    "sha": "c45cfc7e3c83e860231d1a6971671c21c4146884",
+    "index": 210,
+    "subject": "build(deps): move the test extra to pytest 8",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T18:00:00Z"
+   },
+   {
+    "sha": "c8cd6534c17f649636b6bcef3048e022cfc06b02",
+    "index": 211,
+    "subject": "util: add coerce_records()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T18:30:00Z"
+   },
+   {
+    "sha": "fb23f3b27aef435a32979c03509ac28049684a3f",
+    "index": 212,
+    "subject": "docs(util): call out the pure-function invariant in the module header",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T19:00:00Z"
+   },
+   {
+    "sha": "3ca2adc5bf5be1d8dd80a71a9e792e2bdaf159c5",
+    "index": 213,
+    "subject": "util: add merge_batches()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T19:30:00Z"
+   },
+   {
+    "sha": "16b8d4d152c891f0d545b657c6696fcf0aeef55d",
+    "index": 214,
+    "subject": "docs(changelog): note that the helpers never allocate on the hot path (#263)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T20:00:00Z"
+   },
+   {
+    "sha": "3b9b8c5042503fffe51078290aa81157a79225a3",
+    "index": 215,
+    "subject": "docs(changelog): document the failure mode callers actually hit (#265)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T20:30:00Z"
+   },
+   {
+    "sha": "d948824733fcf8a5347dec30b1ddfa8a482d9c4d",
+    "index": 216,
+    "subject": "docs(changelog): clarify which arguments are keyword-only (#267)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T21:00:00Z"
+   },
+   {
+    "sha": "1021a1d5272d16571b593b43078228c1d51160cf",
+    "index": 217,
+    "subject": "docs(changelog): explain the naming of the private helpers (#270)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T21:30:00Z"
+   },
+   {
+    "sha": "d50c7dfc1517372a841b2f228ad8fa19365de670",
+    "index": 218,
+    "subject": "docs(normalize): cross-reference the module that owns this contract",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T22:00:00Z"
+   },
+   {
+    "sha": "b23425e395a90cfd02a09bc7d8902bfcb428ed0d",
+    "index": 219,
+    "subject": "docs(windows): mention the assumption the tests encode",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T22:30:00Z"
+   },
+   {
+    "sha": "d9d227793e1d5c5b5aa23b6123fc873d3581e75b",
+    "index": 220,
+    "subject": "docs(readme): describe the ordering guarantee callers rely on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T23:00:00Z"
+   },
+   {
+    "sha": "12fbb14abdb29f06330b211429cfa4e9f331f494",
+    "index": 221,
+    "subject": "docs(changelog): flag the branch that is deliberately not defensive (#271)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-12T23:30:00Z"
+   },
+   {
+    "sha": "c246904fc4a7072a0e5b32cdb96ea3d5d36df550",
+    "index": 222,
+    "subject": "util: add collapse_chunks()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T00:00:00Z"
+   },
+   {
+    "sha": "74b45209a64d11e4bde52ed2d4d2e2065f41c8b0",
+    "index": 223,
+    "subject": "docs(util): state the precision the caller can count on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T00:30:00Z"
+   },
+   {
+    "sha": "aeac5251cfbdecfc2f78829c4d52dfa132461da6",
+    "index": 224,
+    "subject": "docs(changelog): spell out the units on the public helpers (#275)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T01:00:00Z"
+   },
+   {
+    "sha": "6806ea93fbdbb41657ef8495a243b7201eb0e337",
+    "index": 225,
+    "subject": "docs(normalize): record why the offset table is hand-maintained",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T01:30:00Z"
+   },
+   {
+    "sha": "cedeab14ba1d5709d4b2befd18ef03ed81596a5c",
+    "index": 226,
+    "subject": "docs(readme): call out the pure-function invariant in the module header",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T02:00:00Z"
+   },
+   {
+    "sha": "8ac35b29ea14ae3b0808dd08001ec63738eb0c68",
+    "index": 227,
+    "subject": "chore(constants): introduce MAX_BATCH_ROWS_3",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T02:30:00Z"
+   },
+   {
+    "sha": "f55649dd281788d66c401be1b3e19b2f52af3237",
+    "index": 228,
+    "subject": "docs(changelog): note that the helpers never allocate on the hot path (#278)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T03:00:00Z"
+   },
+   {
+    "sha": "73ef75cd1867ecd94cf9fcffff16cf5805bb04fd",
+    "index": 229,
+    "subject": "build: bump version to 0.1.14",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T03:30:00Z"
+   },
+   {
+    "sha": "303fc97a8efe9bad238053bb5eedf787b7555344",
+    "index": 230,
+    "subject": "docs(changelog): document the failure mode callers actually hit (#282)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T04:00:00Z"
+   },
+   {
+    "sha": "7c1b2748577472f7a58850bad93994f59bd8720e",
+    "index": 231,
+    "subject": "docs(changelog): clarify which arguments are keyword-only (#286)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T04:30:00Z"
+   },
+   {
+    "sha": "114cdf8574e9b802b09cb3583dc1d13a76652947",
+    "index": 232,
+    "subject": "util: add flatten_fields()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T05:00:00Z"
+   },
+   {
+    "sha": "bb393cdd2d416b6017f3b6085ba8fe8a471bbea6",
+    "index": 233,
+    "subject": "util: add resolve_spans()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T05:30:00Z"
+   },
+   {
+    "sha": "c51d5e70c5486ad7010214701e75c337f0238a31",
+    "index": 234,
+    "subject": "docs(windows): explain the naming of the private helpers",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T06:00:00Z"
+   },
+   {
+    "sha": "3a59305470ecdc7172b78517f16ebfbb09261faf",
+    "index": 235,
+    "subject": "chore(constants): introduce DEFAULT_PAGE_SIZE_3",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T06:30:00Z"
+   },
+   {
+    "sha": "3429255aaa65caecb5485e3ff2cd5059c2bcd6f2",
+    "index": 236,
+    "subject": "util: add resolve_tokens()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T07:00:00Z"
+   },
+   {
+    "sha": "f0f108200e0715d7edd0c1c472b028edbe1635a5",
+    "index": 237,
+    "subject": "docs(changelog): cross-reference the module that owns this contract (#290)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T07:30:00Z"
+   },
+   {
+    "sha": "30eaaa73d45d2871c4aa8bf4c6f5bd9d06b11acb",
+    "index": 238,
+    "subject": "util: add compact_tokens()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T08:00:00Z"
+   },
+   {
+    "sha": "940b187cfb35dc66e183b311780d4b695fbae3ee",
+    "index": 239,
+    "subject": "docs(util): mention the assumption the tests encode",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T08:30:00Z"
+   },
+   {
+    "sha": "8ad6a07123e43dd0ef234f3d90c20af881d31c10",
+    "index": 240,
+    "subject": "docs(changelog): describe the ordering guarantee callers rely on (#294)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T09:00:00Z"
+   },
+   {
+    "sha": "d7b0da1932df198f9ec30f83e294c57db28b8d61",
+    "index": 241,
+    "subject": "build: bump version to 0.1.15",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T09:30:00Z"
+   },
+   {
+    "sha": "9dab8101dce8155864c6306999dcb237401a7fd9",
+    "index": 242,
+    "subject": "docs(normalize): flag the branch that is deliberately not defensive",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T10:00:00Z"
+   },
+   {
+    "sha": "c85377cf129fc1e81519c2158f5888268d77fab0",
+    "index": 243,
+    "subject": "docs(windows): state the precision the caller can count on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T10:30:00Z"
+   },
+   {
+    "sha": "effae7a29b8ededd98d891f8c9f73685d540e88f",
+    "index": 244,
+    "subject": "docs(readme): spell out the units on the public helpers",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T11:00:00Z"
+   },
+   {
+    "sha": "c2f33eda2735202a52ada4893acaa687557e7ede",
+    "index": 245,
+    "subject": "docs(changelog): record why the offset table is hand-maintained (#298)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T11:30:00Z"
+   },
+   {
+    "sha": "6c08c2352d298b003b01136c14e14ea949c0ec04",
+    "index": 246,
+    "subject": "docs(changelog): call out the pure-function invariant in the module header (#299)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T12:00:00Z"
+   },
+   {
+    "sha": "b143f9513434ceca9f7bc933defe76c801ddccb6",
+    "index": 247,
+    "subject": "docs(util): note that the helpers never allocate on the hot path",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T12:30:00Z"
+   },
+   {
+    "sha": "b4e3659688c9fb6a3d561dd575756070ca69c385",
+    "index": 248,
+    "subject": "build: bump version to 0.1.16",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T13:00:00Z"
+   },
+   {
+    "sha": "04f734db1a4a30c83e46ce2e94f254347c8dda30",
+    "index": 249,
+    "subject": "docs(normalize): document the failure mode callers actually hit",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T13:30:00Z"
+   },
+   {
+    "sha": "2db2bea305cebeefeeb591955e2bcd5049d77e9e",
+    "index": 250,
+    "subject": "docs(changelog): clarify which arguments are keyword-only (#303)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T14:00:00Z"
+   },
+   {
+    "sha": "c6a32f3db8064ac766e7fe2f5812aae89dbdc558",
+    "index": 251,
+    "subject": "docs(windows): explain the naming of the private helpers",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T14:30:00Z"
+   },
+   {
+    "sha": "6b9a483b8405ea0148a1c244896ead418e2db598",
+    "index": 252,
+    "subject": "docs(changelog): cross-reference the module that owns this contract (#304)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T15:00:00Z"
+   },
+   {
+    "sha": "f6173a24ab17b539cc5db47ae50b3724e6e11fa4",
+    "index": 253,
+    "subject": "docs(changelog): mention the assumption the tests encode (#305)",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T15:30:00Z"
+   },
+   {
+    "sha": "35d822138ff91301a32238abd7e5f06443ee33a5",
+    "index": 254,
+    "subject": "util: add coerce_batches()",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T16:00:00Z"
+   },
+   {
+    "sha": "43f3528c5fb8756c7ba10777d614b97047f54abe",
+    "index": 255,
+    "subject": "docs(readme): describe the ordering guarantee callers rely on",
+    "author": "Faultbench Bot",
+    "date": "2024-01-13T16:30:00Z"
+   }
+  ],
+  "probes": [
+   {
+    "commitSha": "0260b672a5da9536b4e661a9ebae19d8fcc6a551",
+    "commitIndex": 0,
+    "round": 1,
+    "role": "good",
+    "attempt": 1,
+    "key": "r1-i0-0260b672a5da-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-7187-707d-a39a-d9fdf59ba1a4",
+    "jobState": "COMPLETED",
+    "verdict": "pass",
+    "detail": "deps: pip install -e .[test]; test exited 0",
+    "exitCode": 0,
+    "tail": ".                                                                        [100%]\n1 passed in 0.08s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:30.309Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:55:40.961Z",
+    "durationMs": 6382,
+    "vmMs": 13380,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r1-i0-0260b672a5da-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "9afe875372a9dd5a7c728670b32152af27aca768",
+    "commitIndex": 28,
+    "round": 1,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r1-i28-9afe875372a9-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-7222-71e3-9171-b1429f734220",
+    "jobState": "COMPLETED",
+    "verdict": "pass",
+    "detail": "deps: pip install -e .[test]; test exited 0",
+    "exitCode": 0,
+    "tail": ".                                                                        [100%]\n1 passed in 0.06s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:30.309Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:55:40.961Z",
+    "durationMs": 6318,
+    "vmMs": 12795,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r1-i28-9afe875372a9-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "08536c889350f221ae4d4737a3049f0c5e300752",
+    "commitIndex": 57,
+    "round": 1,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r1-i57-08536c889350-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-7225-709f-a3cf-4c35c8d86c3a",
+    "jobState": "COMPLETED",
+    "verdict": "pass",
+    "detail": "deps: pip install -e .[test]; test exited 0",
+    "exitCode": 0,
+    "tail": ".                                                                        [100%]\n1 passed in 0.07s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:30.309Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:55:40.961Z",
+    "durationMs": 6439,
+    "vmMs": 12797,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r1-i57-08536c889350-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "6e5a3405684d7144afc13a7178fe3cf655a4d02f",
+    "commitIndex": 85,
+    "round": 1,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r1-i85-6e5a3405684d-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-722d-762f-be94-595bd6b7eb25",
+    "jobState": "COMPLETED",
+    "verdict": "pass",
+    "detail": "deps: pip install -e .[test]; test exited 0",
+    "exitCode": 0,
+    "tail": ".                                                                        [100%]\n1 passed in 0.07s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:30.309Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:55:40.961Z",
+    "durationMs": 6624,
+    "vmMs": 13086,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r1-i85-6e5a3405684d-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "ce1d905a0c88aa94fe1999fa47389e1c9acf40ab",
+    "commitIndex": 113,
+    "round": 1,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r1-i113-ce1d905a0c88-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-7544-74f2-a307-953dd72e8938",
+    "jobState": "COMPLETED",
+    "verdict": "pass",
+    "detail": "deps: pip install -e .[test]; test exited 0",
+    "exitCode": 0,
+    "tail": ".                                                                        [100%]\n1 passed in 0.08s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:30.309Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:55:40.961Z",
+    "durationMs": 6565,
+    "vmMs": 12022,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r1-i113-ce1d905a0c88-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "1497f10bf34bdd860b7415ac3c34fda6d0159eb1",
+    "commitIndex": 142,
+    "round": 1,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r1-i142-1497f10bf34b-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-752f-7382-a3dd-9e8ca4a0736a",
+    "jobState": "COMPLETED",
+    "verdict": "pass",
+    "detail": "deps: pip install -e .[test]; test exited 0",
+    "exitCode": 0,
+    "tail": ".                                                                        [100%]\n1 passed in 0.06s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:30.309Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:55:40.961Z",
+    "durationMs": 6458,
+    "vmMs": 12053,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r1-i142-1497f10bf34b-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "bb576e6488c67afa3337463bb9abfea745444714",
+    "commitIndex": 170,
+    "round": 1,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r1-i170-bb576e6488c6-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-752d-777b-9627-c0c8de3ffad3",
+    "jobState": "COMPLETED",
+    "verdict": "pass",
+    "detail": "deps: pip install -e .[test]; test exited 0",
+    "exitCode": 0,
+    "tail": ".                                                                        [100%]\n1 passed in 0.06s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:30.309Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:55:40.961Z",
+    "durationMs": 6341,
+    "vmMs": 12464,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r1-i170-bb576e6488c6-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "d240c98e8f76350f0d8dc57c2ac664d32eeafea5",
+    "commitIndex": 198,
+    "round": 1,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r1-i198-d240c98e8f76-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-75d6-723e-81d3-ef6b19b33323",
+    "jobState": "COMPLETED",
+    "verdict": "fail",
+    "detail": "deps: pip install -e .[test]; test exited 1",
+    "exitCode": 1,
+    "tail": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_______________ test_naive_local_midnight_is_interpreted_in_zone _______________\n\n    def test_naive_local_midnight_is_interpreted_in_zone():\n        # Golden value for the pinned tz database: Mexico abolished daylight saving time\n        # from 2022-10-30 (tzdata 2022f), so in July 2023 local midnight is 06:00 UTC.\n        naive = datetime(2023, 7, 1, 0, 0)\n>       assert to_utc(naive, \"America/Mexico_City\") == datetime(2023, 7, 1, 6, 0, tzinfo=timezone.utc)\nE       AssertionError: assert datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) == datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +  where datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) = to_utc(datetime.datetime(2023, 7, 1, 0, 0), 'America/Mexico_City')\nE        +  and   datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc) = datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +    where datetime.timezone.utc = timezone.utc\n\ntests/test_normalize.py:40: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.09s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:30.309Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:55:40.961Z",
+    "durationMs": 6479,
+    "vmMs": 11229,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r1-i198-d240c98e8f76-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "8ac35b29ea14ae3b0808dd08001ec63738eb0c68",
+    "commitIndex": 227,
+    "round": 1,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r1-i227-8ac35b29ea14-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-789d-75eb-b4a4-b615ae094186",
+    "jobState": "COMPLETED",
+    "verdict": "fail",
+    "detail": "deps: pip install -e .[test]; test exited 1",
+    "exitCode": 1,
+    "tail": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_______________ test_naive_local_midnight_is_interpreted_in_zone _______________\n\n    def test_naive_local_midnight_is_interpreted_in_zone():\n        # Golden value for the pinned tz database: Mexico abolished daylight saving time\n        # from 2022-10-30 (tzdata 2022f), so in July 2023 local midnight is 06:00 UTC.\n        naive = datetime(2023, 7, 1, 0, 0)\n>       assert to_utc(naive, \"America/Mexico_City\") == datetime(2023, 7, 1, 6, 0, tzinfo=timezone.utc)\nE       AssertionError: assert datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) == datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +  where datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) = to_utc(datetime.datetime(2023, 7, 1, 0, 0), 'America/Mexico_City')\nE        +  and   datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc) = datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +    where datetime.timezone.utc = timezone.utc\n\ntests/test_normalize.py:40: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.06s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:30.309Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:55:40.961Z",
+    "durationMs": 6096,
+    "vmMs": 11475,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r1-i227-8ac35b29ea14-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "43f3528c5fb8756c7ba10777d614b97047f54abe",
+    "commitIndex": 255,
+    "round": 1,
+    "role": "bad",
+    "attempt": 1,
+    "key": "r1-i255-43f3528c5fb8-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-78a2-7798-9de6-a3e246288143",
+    "jobState": "COMPLETED",
+    "verdict": "fail",
+    "detail": "deps: pip install -e .[test]; test exited 1",
+    "exitCode": 1,
+    "tail": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_______________ test_naive_local_midnight_is_interpreted_in_zone _______________\n\n    def test_naive_local_midnight_is_interpreted_in_zone():\n        # Golden value for the pinned tz database: Mexico abolished daylight saving time\n        # from 2022-10-30 (tzdata 2022f), so in July 2023 local midnight is 06:00 UTC.\n        naive = datetime(2023, 7, 1, 0, 0)\n>       assert to_utc(naive, \"America/Mexico_City\") == datetime(2023, 7, 1, 6, 0, tzinfo=timezone.utc)\nE       AssertionError: assert datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) == datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +  where datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) = to_utc(datetime.datetime(2023, 7, 1, 0, 0), 'America/Mexico_City')\nE        +  and   datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc) = datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +    where datetime.timezone.utc = timezone.utc\n\ntests/test_normalize.py:40: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.07s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:30.309Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:55:40.961Z",
+    "durationMs": 6050,
+    "vmMs": 11441,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r1-i255-43f3528c5fb8-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "4e133d6c856c2e756fce5a328896f20fecfc62eb",
+    "commitIndex": 173,
+    "round": 2,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r2-i173-4e133d6c856c-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-9c74-760f-aa75-b5c3d75d5418",
+    "jobState": "COMPLETED",
+    "verdict": "fail",
+    "detail": "deps: pip install -e .[test]; test exited 1",
+    "exitCode": 1,
+    "tail": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_______________ test_naive_local_midnight_is_interpreted_in_zone _______________\n\n    def test_naive_local_midnight_is_interpreted_in_zone():\n        # Golden value for the pinned tz database: Mexico abolished daylight saving time\n        # from 2022-10-30 (tzdata 2022f), so in July 2023 local midnight is 06:00 UTC.\n        naive = datetime(2023, 7, 1, 0, 0)\n>       assert to_utc(naive, \"America/Mexico_City\") == datetime(2023, 7, 1, 6, 0, tzinfo=timezone.utc)\nE       AssertionError: assert datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) == datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +  where datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) = to_utc(datetime.datetime(2023, 7, 1, 0, 0), 'America/Mexico_City')\nE        +  and   datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc) = datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +    where datetime.timezone.utc = timezone.utc\n\ntests/test_normalize.py:40: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.07s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:40.961Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:55:50.437Z",
+    "durationMs": 6321,
+    "vmMs": 9623,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r2-i173-4e133d6c856c-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "e0931dbd8d5a9e166d4ef9d72ca06747cee62879",
+    "commitIndex": 176,
+    "round": 2,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r2-i176-e0931dbd8d5a-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-9c65-7047-8393-ff238b8a808c",
+    "jobState": "COMPLETED",
+    "verdict": "fail",
+    "detail": "deps: pip install -e .[test]; test exited 1",
+    "exitCode": 1,
+    "tail": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_______________ test_naive_local_midnight_is_interpreted_in_zone _______________\n\n    def test_naive_local_midnight_is_interpreted_in_zone():\n        # Golden value for the pinned tz database: Mexico abolished daylight saving time\n        # from 2022-10-30 (tzdata 2022f), so in July 2023 local midnight is 06:00 UTC.\n        naive = datetime(2023, 7, 1, 0, 0)\n>       assert to_utc(naive, \"America/Mexico_City\") == datetime(2023, 7, 1, 6, 0, tzinfo=timezone.utc)\nE       AssertionError: assert datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) == datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +  where datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) = to_utc(datetime.datetime(2023, 7, 1, 0, 0), 'America/Mexico_City')\nE        +  and   datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc) = datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +    where datetime.timezone.utc = timezone.utc\n\ntests/test_normalize.py:40: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.08s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:40.961Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:55:50.437Z",
+    "durationMs": 6355,
+    "vmMs": 9884,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r2-i176-e0931dbd8d5a-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "bd8ed9c6bff16e2bc8aa2a0a077fecd40a58a653",
+    "commitIndex": 179,
+    "round": 2,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r2-i179-bd8ed9c6bff1-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-9c3c-736d-9ec4-65172db73cd9",
+    "jobState": "COMPLETED",
+    "verdict": "fail",
+    "detail": "deps: pip install -e .[test]; test exited 1",
+    "exitCode": 1,
+    "tail": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_______________ test_naive_local_midnight_is_interpreted_in_zone _______________\n\n    def test_naive_local_midnight_is_interpreted_in_zone():\n        # Golden value for the pinned tz database: Mexico abolished daylight saving time\n        # from 2022-10-30 (tzdata 2022f), so in July 2023 local midnight is 06:00 UTC.\n        naive = datetime(2023, 7, 1, 0, 0)\n>       assert to_utc(naive, \"America/Mexico_City\") == datetime(2023, 7, 1, 6, 0, tzinfo=timezone.utc)\nE       AssertionError: assert datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) == datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +  where datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) = to_utc(datetime.datetime(2023, 7, 1, 0, 0), 'America/Mexico_City')\nE        +  and   datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc) = datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +    where datetime.timezone.utc = timezone.utc\n\ntests/test_normalize.py:40: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.08s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:40.961Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:55:49.356Z",
+    "durationMs": 6214,
+    "vmMs": 9199,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r2-i179-bd8ed9c6bff1-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "3142c561d00a0f89c731d579c70e37fff2839327",
+    "commitIndex": 182,
+    "round": 2,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r2-i182-3142c561d00a-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-9c36-709d-a669-5dfc5108b275",
+    "jobState": "COMPLETED",
+    "verdict": "fail",
+    "detail": "deps: pip install -e .[test]; test exited 1",
+    "exitCode": 1,
+    "tail": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_______________ test_naive_local_midnight_is_interpreted_in_zone _______________\n\n    def test_naive_local_midnight_is_interpreted_in_zone():\n        # Golden value for the pinned tz database: Mexico abolished daylight saving time\n        # from 2022-10-30 (tzdata 2022f), so in July 2023 local midnight is 06:00 UTC.\n        naive = datetime(2023, 7, 1, 0, 0)\n>       assert to_utc(naive, \"America/Mexico_City\") == datetime(2023, 7, 1, 6, 0, tzinfo=timezone.utc)\nE       AssertionError: assert datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) == datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +  where datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) = to_utc(datetime.datetime(2023, 7, 1, 0, 0), 'America/Mexico_City')\nE        +  and   datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc) = datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +    where datetime.timezone.utc = timezone.utc\n\ntests/test_normalize.py:40: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.08s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:40.961Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:55:49.356Z",
+    "durationMs": 6169,
+    "vmMs": 9175,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r2-i182-3142c561d00a-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "3a5b1668781e9804790840714dd2a9a249fcaef0",
+    "commitIndex": 186,
+    "round": 2,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r2-i186-3a5b1668781e-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-9f7f-743d-98df-f3fc0ba486fa",
+    "jobState": "COMPLETED",
+    "verdict": "fail",
+    "detail": "deps: pip install -e .[test]; test exited 1",
+    "exitCode": 1,
+    "tail": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_______________ test_naive_local_midnight_is_interpreted_in_zone _______________\n\n    def test_naive_local_midnight_is_interpreted_in_zone():\n        # Golden value for the pinned tz database: Mexico abolished daylight saving time\n        # from 2022-10-30 (tzdata 2022f), so in July 2023 local midnight is 06:00 UTC.\n        naive = datetime(2023, 7, 1, 0, 0)\n>       assert to_utc(naive, \"America/Mexico_City\") == datetime(2023, 7, 1, 6, 0, tzinfo=timezone.utc)\nE       AssertionError: assert datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) == datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +  where datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) = to_utc(datetime.datetime(2023, 7, 1, 0, 0), 'America/Mexico_City')\nE        +  and   datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc) = datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +    where datetime.timezone.utc = timezone.utc\n\ntests/test_normalize.py:40: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.08s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:40.961Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:55:50.437Z",
+    "durationMs": 6371,
+    "vmMs": 9540,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r2-i186-3a5b1668781e-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "297784b8efe1739a80f9ae39b897310311b1bc3f",
+    "commitIndex": 189,
+    "round": 2,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r2-i189-297784b8efe1-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-9f7a-75d1-bf0b-f2d73b5bd962",
+    "jobState": "COMPLETED",
+    "verdict": "fail",
+    "detail": "deps: pip install -e .[test]; test exited 1",
+    "exitCode": 1,
+    "tail": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_______________ test_naive_local_midnight_is_interpreted_in_zone _______________\n\n    def test_naive_local_midnight_is_interpreted_in_zone():\n        # Golden value for the pinned tz database: Mexico abolished daylight saving time\n        # from 2022-10-30 (tzdata 2022f), so in July 2023 local midnight is 06:00 UTC.\n        naive = datetime(2023, 7, 1, 0, 0)\n>       assert to_utc(naive, \"America/Mexico_City\") == datetime(2023, 7, 1, 6, 0, tzinfo=timezone.utc)\nE       AssertionError: assert datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) == datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +  where datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) = to_utc(datetime.datetime(2023, 7, 1, 0, 0), 'America/Mexico_City')\nE        +  and   datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc) = datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +    where datetime.timezone.utc = timezone.utc\n\ntests/test_normalize.py:40: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.09s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:40.961Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:55:51.540Z",
+    "durationMs": 6953,
+    "vmMs": 9394,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r2-i189-297784b8efe1-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "11bf5c61a303f18e7ddb8e742a01c575be2ac06c",
+    "commitIndex": 192,
+    "round": 2,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r2-i192-11bf5c61a303-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-d8e8-7646-904f-10856c36943f",
+    "jobState": "COMPLETED",
+    "verdict": "fail",
+    "detail": "deps: pip install -e .[test]; test exited 1",
+    "exitCode": 1,
+    "tail": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_______________ test_naive_local_midnight_is_interpreted_in_zone _______________\n\n    def test_naive_local_midnight_is_interpreted_in_zone():\n        # Golden value for the pinned tz database: Mexico abolished daylight saving time\n        # from 2022-10-30 (tzdata 2022f), so in July 2023 local midnight is 06:00 UTC.\n        naive = datetime(2023, 7, 1, 0, 0)\n>       assert to_utc(naive, \"America/Mexico_City\") == datetime(2023, 7, 1, 6, 0, tzinfo=timezone.utc)\nE       AssertionError: assert datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) == datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +  where datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) = to_utc(datetime.datetime(2023, 7, 1, 0, 0), 'America/Mexico_City')\nE        +  and   datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc) = datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +    where datetime.timezone.utc = timezone.utc\n\ntests/test_normalize.py:40: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.08s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:56.394Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:56:05.017Z",
+    "durationMs": 6116,
+    "vmMs": 10163,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r2-i192-11bf5c61a303-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "7c1b5c9d779f3ee953ad9ede594824fbbce1d644",
+    "commitIndex": 195,
+    "round": 2,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r2-i195-7c1b5c9d779f-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-d84f-753c-a25d-822b48c7bdc1",
+    "jobState": "COMPLETED",
+    "verdict": "fail",
+    "detail": "deps: pip install -e .[test]; test exited 1",
+    "exitCode": 1,
+    "tail": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_______________ test_naive_local_midnight_is_interpreted_in_zone _______________\n\n    def test_naive_local_midnight_is_interpreted_in_zone():\n        # Golden value for the pinned tz database: Mexico abolished daylight saving time\n        # from 2022-10-30 (tzdata 2022f), so in July 2023 local midnight is 06:00 UTC.\n        naive = datetime(2023, 7, 1, 0, 0)\n>       assert to_utc(naive, \"America/Mexico_City\") == datetime(2023, 7, 1, 6, 0, tzinfo=timezone.utc)\nE       AssertionError: assert datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) == datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +  where datetime.datetime(2023, 7, 1, 6, 37, tzinfo=datetime.timezone.utc) = to_utc(datetime.datetime(2023, 7, 1, 0, 0), 'America/Mexico_City')\nE        +  and   datetime.datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc) = datetime(2023, 7, 1, 6, 0, tzinfo=datetime.timezone.utc)\nE        +    where datetime.timezone.utc = timezone.utc\n\ntests/test_normalize.py:40: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone\n1 failed in 0.08s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:55:56.394Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:56:05.017Z",
+    "durationMs": 6496,
+    "vmMs": 9745,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r2-i195-7c1b5c9d779f-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "ab7e224496774adab710135e2946f961c5d9db0b",
+    "commitIndex": 171,
+    "round": 3,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r3-i171-ab7e22449677-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-f9ea-71e2-84f3-717ae1132aa3",
+    "jobState": "COMPLETED",
+    "verdict": "pass",
+    "detail": "deps: pip install -e .[test]; test exited 0",
+    "exitCode": 0,
+    "tail": ".                                                                        [100%]\n1 passed in 0.07s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:56:05.017Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:56:13.358Z",
+    "durationMs": 6171,
+    "vmMs": 8618,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r3-i171-ab7e22449677-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   },
+   {
+    "commitSha": "bd522cc7c8c952e92c1c0422a83882962a31f6a0",
+    "commitIndex": 172,
+    "round": 3,
+    "role": "interior",
+    "attempt": 1,
+    "key": "r3-i172-bd522cc7c8c9-a1",
+    "phase": "done",
+    "region": "sandboxes",
+    "jobId": "01a13a7b-fa83-76df-9080-18308f3a3cf2",
+    "jobState": "COMPLETED",
+    "verdict": "pass",
+    "detail": "deps: pip install -e .[test]; test exited 0",
+    "exitCode": 0,
+    "tail": ".                                                                        [100%]\n1 passed in 0.08s\n",
+    "installCommand": "pip install -e .[test]",
+    "dispatchedAt": "2026-10-14T12:56:05.017Z",
+    "startedAt": null,
+    "finishedAt": "2026-10-14T12:56:15.679Z",
+    "durationMs": 6466,
+    "vmMs": 12816,
+    "verdictKey": "hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/verdicts/r3-i172-bd522cc7c8c9-a1.json",
+    "notBefore": null,
+    "infraFailures": [],
+    "budgetFrom": 1
+   }
+  ],
+  "round": 3,
+  "lowIndex": 172,
+  "highIndex": 173,
+  "report": {
+   "culpritSha": "4e133d6c856c2e756fce5a328896f20fecfc62eb",
+   "culpritSubject": "normalize: attach the zone directly instead of localize()",
+   "culpritAuthor": "Faultbench Bot",
+   "culpritDate": "2024-01-11T23:30:00Z",
+   "diffText": "diff --git a/tzdata_pipeline/normalize.py b/tzdata_pipeline/normalize.py\nindex 88c27d4..6bd92e6 100644\n--- a/tzdata_pipeline/normalize.py\n+++ b/tzdata_pipeline/normalize.py\n@@ -70,12 +70,12 @@ def zone_for(name):\n def to_utc(moment, zone):\n     \"\"\"Convert `moment` to UTC.\n \n-    A naive `moment` is *local wall-clock time in `zone`*, so it has to be localised in\n-    that zone, with the zone's rules for that date, before conversion. An aware `moment`\n-    already carries its own offset and `zone` is ignored.\n+    A naive `moment` is *local wall-clock time in `zone`*, so it is given that zone's\n+    tzinfo directly before conversion. An aware `moment` already carries its own offset\n+    and `zone` is ignored.\n     \"\"\"\n     if moment.tzinfo is None:\n-        moment = zone_for(zone).localize(moment)\n+        moment = moment.replace(tzinfo=zone_for(zone))\n     return moment.astimezone(timezone.utc)\n \n \n",
+   "rootCauseMd": "The change replaces `zone_for(zone).localize(moment)` with `moment.replace(tzinfo=zone_for(zone))` on the lines marked by the diff (`moment = moment.replace(tzinfo=zone_for(zone))`), which attaches the zone’s tzinfo directly without applying the zone’s historical offset rules for that date; consequently the naive midnight is interpreted with an incorrect offset (producing 06:37 UTC instead of the expected 06:00 UTC). Restoring the original localisation call—or equivalently using `zone_for(zone).localize(moment)`—fixes the test.",
+   "modelId": "nvidia/nemotron-3-super-120b-a12b",
+   "narrationProvider": "nebius-token-factory",
+   "narrationRequestId": "chatcmpl-bdc1d9b0eabda9c2",
+   "narrationError": null
+  },
+  "inconclusive": null,
+  "pause": null,
+  "createdAt": "2026-10-14T12:55:29.158Z",
+  "finishedAt": "2026-10-14T12:56:15.679Z",
+  "bandSize": 8,
+  "slots": 16,
+  "backend": "nebius-tokenfactory-sandboxes",
+  "regions": [
+   "sandboxes"
+  ],
+  "probeTimeoutSeconds": 900,
+  "probeSha256": "e831f807f6051f06ad508cd961d15d6fe4f9d8a290247227bf402a3adfcd1389",
+  "tickUrl": "https://faultline.edycu.dev/api/hunts/89cf7952-20eb-4f2e-a684-a4151c67f250/tick",
+  "wallClockMs": 46521,
+  "costUsd": null,
+  "recorded": false,
+  "recordedAt": null
+ }
+}
