@@ -32,11 +32,13 @@ export default function HomePage() {
   return (
     <div className="mx-auto max-w-6xl px-5">
       {/* ---------------------------------------------------------------- hero */}
-      <section className="pt-16 pb-12 md:pt-24 md:pb-16">
-        <h1 className="max-w-[18ch] text-[42px] font-semibold leading-[1.05] tracking-[-0.02em] md:text-[64px]">
-          Find the commit that broke it — in a clean room.
+      <section className="pt-12 pb-12 md:pt-16 md:pb-16">
+        <p className="eyebrow-lab">The live app · Nebius Global AI Hackathon</p>
+        <h1 className="mt-4 text-[36px] leading-[0.98] md:text-[60px]">
+          The bisect that refuses
+          <br className="hidden md:inline" /> to blame <span className="hl">the innocent.</span>
         </h1>
-        <p className="mt-6 max-w-[64ch] text-[18px] leading-relaxed text-muted md:text-[20px]">
+        <p className="mt-6 max-w-[64ch] text-[18px] leading-relaxed text-muted md:text-[19px]">
           An unattended <code className="font-mono text-[0.9em] text-text">git bisect run</code> in
           one reused environment can blame the wrong commit when dependencies drift across the
           range. Faultline tests every suspect in a fresh Nebius container built from that
@@ -44,35 +46,32 @@ export default function HomePage() {
           verdicts disagree — and has NVIDIA Nemotron explain the culprit.
         </p>
 
-        <div className="mt-9 flex flex-wrap items-center gap-4">
-          <a
-            href="#start"
-            className="rounded-lg px-5 py-3 text-[15px] font-medium cta-accent"
-          >
-            Run a live hunt
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <a href="#start" className="px-5 py-3 text-[15.5px] font-semibold cta-accent">
+            Run a live hunt <span aria-hidden="true">→</span>
           </a>
-          <a
-            href="#recorded"
-            className="btn-quiet rounded-lg border border-line px-5 py-3 text-[15px] text-text"
-          >
+          <a href="#recorded" className="btn-quiet border border-line px-5 py-3 text-[15.5px] font-semibold text-text">
             Watch the recorded run
           </a>
           <LiveCounter budget={budget} />
         </div>
 
         {/* The three properties, stated plainly. */}
-        <dl className="mt-14 grid gap-6 border-t border-line pt-8 sm:grid-cols-3">
+        <dl className="mt-12 grid gap-4 sm:grid-cols-3">
           <Fact
+            n="01"
             term="Each commit, its own environment"
             detail={`One terminating Nebius Serverless AI Job per probe, installing that commit's own declared dependencies.${
               budget?.slots ? ` A round runs up to ${budget.slots} of them in parallel.` : ""
             }`}
           />
           <Fact
+            n="02"
             term="Both ends tested, not assumed"
             detail="Round 1 runs your known-good ref and your failing ref in clean containers. If the failing ref passes there, the bug is in your environment — and Faultline says so."
           />
           <Fact
+            n="03"
             term="Or no answer at all"
             detail="If the verdicts contradict each other, no single commit explains them and Faultline refuses to name one. Commits that will not build are skipped, never blamed."
           />
@@ -82,7 +81,7 @@ export default function HomePage() {
       {/* ------------------------------------------------------------ recorded */}
       <section id="recorded" className="scroll-mt-16 pb-16">
         <SectionHeading
-          eyebrow="The product, running"
+          eyebrow="Trace 01 · the product, running"
           title="A real hunt, replayed"
           blurb="Real Nebius job IDs, real timestamps, real verdicts. It costs nothing to view and it is never presented as live."
         />
@@ -92,11 +91,11 @@ export default function HomePage() {
       {/* ---------------------------------------------------------------- form */}
       <section id="start" className="scroll-mt-16 pb-16">
         <SectionHeading
-          eyebrow="Start a hunt"
+          eyebrow="Trace 02 · start a hunt"
           title="Three fields. No YAML."
           blurb="Point Faultline at a public repository, a failing test, and the last ref where it passed. It resolves the install command from the repository — check it, edit it, start."
         />
-        <div className="rounded-card border border-line bg-surface px-6 py-8">
+        <div className="plate px-6 py-8">
           <NewHuntForm budget={budget} />
         </div>
       </section>
@@ -104,7 +103,7 @@ export default function HomePage() {
       {/* ----------------------------------------------------------- integration */}
       <section className="pb-8">
         <SectionHeading
-          eyebrow="Sponsor integration"
+          eyebrow="Trace 03 · sponsor integration"
           title="Nebius is the engine, not a badge"
           blurb="Every probe is a container on Nebius Serverless AI Jobs; every verdict comes back through a presigned Object Storage URL, so no credential ever enters a probe; every explanation is one Token Factory call to NVIDIA Nemotron."
         />
@@ -124,19 +123,20 @@ function SectionHeading({
   blurb: string;
 }) {
   return (
-    <div className="mb-6">
-      <p className="text-[12px] uppercase tracking-[0.14em] text-muted">{eyebrow}</p>
-      <h2 className="mt-2 text-[28px] font-semibold tracking-tight md:text-[32px]">{title}</h2>
-      <p className="mt-2 max-w-[70ch] text-[15px] leading-relaxed text-muted">{blurb}</p>
+    <div className="mb-7">
+      <p className="eyebrow-lab">{eyebrow}</p>
+      <h2 className="mt-3 text-[28px] leading-[1.05] md:text-[36px]">{title}</h2>
+      <p className="mt-3 max-w-[70ch] text-[16px] leading-relaxed text-muted">{blurb}</p>
     </div>
   );
 }
 
-function Fact({ term, detail }: { term: string; detail: string }) {
+function Fact({ n, term, detail }: { n: string; term: string; detail: string }) {
   return (
-    <div>
-      <dt className="font-mono text-[14px] text-text">{term}</dt>
-      <dd className="mt-2 text-[14px] leading-relaxed text-muted">{detail}</dd>
+    <div className="plate plate-hover p-5">
+      <p className="font-mono text-[12px] tracking-[0.16em] text-drift">{n}</p>
+      <dt className="mt-3 font-display text-[18px] font-bold leading-snug tracking-[-0.01em] text-text">{term}</dt>
+      <dd className="mt-2 text-[15px] leading-relaxed text-muted">{detail}</dd>
     </div>
   );
 }

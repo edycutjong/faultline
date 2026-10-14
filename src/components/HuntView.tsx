@@ -23,13 +23,13 @@ function StatusBadge({ hunt }: { hunt: Hunt }) {
     running: { text: "running", color: "var(--accent)" },
     paused: { text: "paused", color: "var(--inconclusive)" },
     narrating: { text: "narrating", color: "var(--accent)" },
-    done: { text: "culprit found", color: "var(--guilty)" },
+    done: { text: "culprit found", color: "var(--culprit)" },
     inconclusive: { text: "inconclusive", color: "var(--inconclusive)" },
     error: { text: "stopped", color: "var(--muted)" },
   };
   const badge = map[hunt.status];
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1 text-[12px] text-muted">
+    <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-line px-3 py-1 text-[12px] text-muted">
       <span
         aria-hidden="true"
         className={`inline-block h-2 w-2 rounded-full ${isActive(hunt.status) ? "animate-pulse" : ""}`}
@@ -72,7 +72,7 @@ export function HuntView({
               {hunt.repoUrl.replace("https://github.com/", "")} · {hunt.testCommand}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             {label}
             <StatusBadge hunt={hunt} />
           </div>

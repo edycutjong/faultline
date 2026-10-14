@@ -20,7 +20,7 @@ test.describe("cold visit, no credentials", () => {
     // The h1 is the claim, not the product name. The name lives in the header link.
     // Asserting the claim is the stronger test: if the page ever loses its argument, this fails.
     await expect(page.getByRole("heading", { level: 1 }))
-      .toContainText(/Find the commit that broke it/i);
+      .toContainText(/refuses to blame the innocent/i);
     await expect(page.getByRole("link", { name: /integration proof/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /run a live hunt/i }).first()).toBeVisible();
 

@@ -106,8 +106,8 @@ export function Timeline({ hunt }: { hunt: Hunt }) {
                   {filled ? (
                     <span
                       className="tick-fill"
-                      data-verdict={painted}
-                      style={{ background: tickColor(painted) }}
+                      data-verdict={isCulprit ? "culprit" : painted}
+                      style={{ background: isCulprit ? "var(--culprit)" : tickColor(painted) }}
                     />
                   ) : null}
                 </span>

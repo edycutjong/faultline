@@ -1,45 +1,46 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   faultline — design tokens
-   The designed palette. Dark only, deliberately: "A half-done light mode reads
-   worse than a committed dark one." There is no [data-theme="light"] block.
+   faultline — design tokens · direction "smoked-drum seismograph"
+   One system for every surface: this app, /about and /pitch (specs/design.md §4).
+   Dark only, deliberately — a seismograph drum is soot-black paper scratched white,
+   and the one thing allowed to glow is the red of the named fault.
    ========================================================================== */
 
 :root {
   color-scheme: dark;
 
-  /* surfaces & type colour */
-  --bg:        #0A0A0B;
-  --surface:   #141416;
-  --border:    #2E2E36;
-  --text:      #EDEDEF;
-  --muted:     #8B8B93;
+  /* the drum */
+  --bg:        #100F0D;   /* smoked drum: soot-blackened recording paper */
+  --surface:   #1C1914;   /* instrument plate laid on the drum */
+  --surface-2: #221E18;
+  --border:    #2C2821;
+  --text:      #EDE6D6;   /* the stylus scratch — 15.6:1 on --bg */
+  --muted:     #B3AA97;   /* annotations — 8.3:1 */
+  --faint:     #8C8474;   /* quiet labels — 5.0:1 */
 
-  /* accent — 3.96:1 on --bg. Graphics and large type only, NEVER body copy. */
-  --accent:    #6057F7;
-  --on-accent: #EDEDEF;
+  /* action: the one red the page allows outside the fault itself */
+  --accent:    #FF4A2B;
+  --on-accent: #140904;
+  --drift:     #D9B45A;   /* the formation contact: where the dependency pin moves; themed labels */
 
-  /* verdict states — a tick is in exactly one of these */
-  --unknown:      #3A3A40;
-  --innocent:     #10B981;
-  --guilty:       #EF4444;
-  --inconclusive: #F59E0B;
-  --culprit:      #EDEDEF;
+  /* verdict states — colour carries a claim, so these never change meaning */
+  --unknown:      #3A342B;  /* not probed: the quiet trace */
+  --innocent:     #9BD18B;  /* passed in its own clean container: cleared */
+  --guilty:       #F2A541;  /* failed: implicated — the fault is at or below it */
+  --inconclusive: #D9B45A;  /* refused or paused: no claim made */
+  --culprit:      #FF4A2B;  /* the fault, named by executed tests */
 
-  /* the eliminated span */
-  --op-eliminated: 0.2;
+  --op-eliminated: 0.22;
 
-  /* motion */
   --dur-verdict: 180ms;
   --dur-narrow:  400ms;
   --dur-copy:   2000ms;
-  --scale-dispatch: 1.15;
+  --scale-dispatch: 1.35;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* geometry */
-  --r-tick: 5px;
-  --r-card: 12px;
+  --r-tick: 1px;
+  --r-card: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -53,19 +54,27 @@
   --color-line:         var(--border);
   --color-text:         var(--text);
   --color-muted:        var(--muted);
+  --color-faint:        var(--faint);
   --color-accent:       var(--accent);
+  --color-drift:        var(--drift);
   --color-unknown:      var(--unknown);
   --color-innocent:     var(--innocent);
   --color-guilty:       var(--guilty);
   --color-inconclusive: var(--inconclusive);
   --color-culprit:      var(--culprit);
-  --font-sans: var(--font-inter), Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-sans: var(--font-familjen), "Familjen Grotesk", Arial, sans-serif;
+  --font-mono: var(--font-kode), "Kode Mono", ui-monospace, Menlo, monospace;
+  --font-display: var(--font-syne), "Syne", "Arial Black", sans-serif;
   --radius-card: var(--r-card);
   --radius-tick: var(--r-tick);
+  --radius-lg: 2px;
+  --radius-md: 2px;
+  --radius-full: 9999px;
 }
 
 html { background: var(--bg); }
+
+html { overflow-x: clip; }
 
 body {
   background: var(--bg);
@@ -75,6 +84,40 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+
+/* The drum: ruled recording lines + a warm vignette + grain, fixed behind everything. */
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 41px, rgba(255,255,255,.024) 41px 42px),
+    radial-gradient(120% 80% at 50% 0%, rgba(42,34,23,.4), transparent 60%);
+}
+body::after {
+  content: ""; position: fixed; inset: -50%; pointer-events: none; z-index: 0; opacity: .18; mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.33'/%3E%3C/svg%3E");
+}
+body > * { position: relative; z-index: 1; }
+
+/* Display type: Syne extra-bold, the instrument nameplate. */
+h1, h2 { font-family: var(--font-display); font-weight: 800 !important; letter-spacing: -0.03em !important; text-wrap: balance; }
+h3 { font-family: var(--font-display); font-weight: 700 !important; letter-spacing: -0.015em; }
+.hl { color: var(--culprit); text-shadow: 0 0 42px rgba(255,74,43,.36); }
+.hl-drift { color: var(--drift); }
+.eyebrow-lab {
+  display: flex; align-items: center; gap: 12px;
+  font: 500 12px var(--font-mono); letter-spacing: .2em; text-transform: uppercase; color: var(--drift);
+}
+.eyebrow-lab::before { content: ""; width: 28px; height: 1px; background: currentColor; opacity: .6; }
+
+/* header + footer, shared look with /about */
+.site-head { position: sticky; top: 0; z-index: 20; background: rgba(16,15,13,.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+.site-foot { border-top: 1px solid var(--border); }
+.brand-mark { transition: transform var(--dur-verdict) var(--ease-out); }
+.brand:hover .brand-mark { transform: rotate(-8deg) scale(1.08); }
+.rec { align-items: center; gap: 8px; font: 500 11.5px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.rec i { width: 8px; height: 8px; border-radius: 50%; background: var(--culprit); box-shadow: 0 0 10px var(--culprit); animation: rec-blink 1.4s steps(2, start) infinite; }
+@keyframes rec-blink { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .rec i { animation: none; } }
 
 ::selection { background: color-mix(in srgb, var(--accent) 45%, transparent); }
 
@@ -104,9 +147,12 @@ body {
 /* Round dispatch: every tick in the band scales 1.0 -> 1.15 IN UNISON, then settles.
    The animation is applied to all band ticks in the same commit, so they share a start
    frame. Never stagger this: simultaneity is the entire point of the product. */
-@keyframes tick-dispatch {
+@keyframes tick-dispatch {   /* a tremor, not a breath: the needle shakes while the probe boots */
   0%   { transform: scaleY(1); }
-  38%  { transform: scaleY(var(--scale-dispatch)); }
+  18%  { transform: scaleY(var(--scale-dispatch)); }
+  34%  { transform: scaleY(.78); }
+  52%  { transform: scaleY(1.18); }
+  70%  { transform: scaleY(.92); }
   100% { transform: scaleY(1); }
 }
 .tick[data-dispatch="true"] .tick-body {
@@ -125,8 +171,8 @@ body {
 
 /* Culprit found: the guilty tick pulses once, slowly. */
 @keyframes culprit-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--guilty) 0%, transparent); }
-  45%      { box-shadow: 0 0 0 7px color-mix(in srgb, var(--guilty) 45%, transparent); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,74,43,0); }
+  45%      { box-shadow: 0 0 0 7px rgba(255,74,43,.45); }
 }
 .tick[data-culprit="true"] .tick-body {
   animation: culprit-pulse 1600ms var(--ease-out) 1 both;
@@ -145,9 +191,9 @@ body {
 
 /* Diff rendering */
 .diff-line { display: block; white-space: pre; padding: 0 0.75rem; }
-.diff-add  { background: color-mix(in srgb, var(--innocent) 14%, transparent); color: #A7F3D0; }
-.diff-del  { background: color-mix(in srgb, var(--guilty)  14%, transparent); color: #FECACA; }
-.diff-hunk { color: var(--muted); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.diff-add  { background: color-mix(in srgb, var(--innocent) 13%, transparent); color: #D3EFC9; }
+.diff-del  { background: color-mix(in srgb, var(--culprit) 14%, transparent); color: #FFC9BE; }
+.diff-hunk { color: var(--muted); background: color-mix(in srgb, var(--drift) 9%, transparent); }
 .diff-meta { color: var(--muted); }
 
 /* Details marker */
@@ -167,7 +213,14 @@ details > summary::-webkit-details-marker { display: none; }
   flex-direction: row;
   align-items: stretch;
   gap: var(--tick-gap, 2px);
-  height: 72px;
+  height: 104px;
+  padding: 10px 8px;
+  /* the drum band: a scratched centre baseline over ruled paper */
+  background:
+    linear-gradient(to bottom, transparent calc(50% - .5px), rgba(237,230,214,.22) 50%, transparent calc(50% + .5px)),
+    repeating-linear-gradient(0deg, transparent 0 25px, rgba(255,255,255,.035) 25px 26px),
+    #0c0b09;
+  border: 1px solid var(--border);
 }
 .timeline .tick {
   flex: 1 1 var(--tick-w, 6px);
@@ -178,20 +231,38 @@ details > summary::-webkit-details-marker { display: none; }
   align-items: center;
   justify-content: center;
 }
+/* An unprobed commit is the quiet trace: a low stub on the baseline. */
 .tick-body {
   position: relative;
   display: block;
-  width: 100%;
-  height: 46%;
+  width: min(100%, 4px);
+  height: 16%;
   border-radius: var(--r-tick);
   background: var(--unknown);
   overflow: hidden;
   transition: height var(--dur-verdict) var(--ease-out);
 }
-.tick[data-probed="true"] .tick-body { height: 100%; }
-.tick-fill { position: absolute; inset: 0; border-radius: var(--r-tick); }
+/* A probe fires: a full-height burst that fades at its tips like a stylus swing. */
+.tick[data-probed="true"] .tick-body { height: 100%; background: rgba(237,230,214,.16); }
+.tick-fill {
+  position: absolute; inset: 0; border-radius: var(--r-tick);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22%, #000 78%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 22%, #000 78%, transparent 100%);
+}
+.tick-fill[data-verdict="innocent"] { filter: drop-shadow(0 0 3px rgba(155,209,139,.55)); }
+.tick-fill[data-verdict="guilty"]   { filter: drop-shadow(0 0 4px rgba(242,165,65,.6)); }
+.tick-fill[data-verdict="culprit"]  { filter: drop-shadow(0 0 6px rgba(255,74,43,.95)); }
 .tick:hover .tick-body { outline: 1px solid var(--text); outline-offset: 1px; }
-.tick[data-culprit="true"] .tick-body { outline: 2px solid var(--text); outline-offset: 3px; }
+/* The fault: the culprit spikes past the band and a red line tears through the trace. */
+.tick[data-culprit="true"] { z-index: 2; }
+.tick[data-culprit="true"] .tick-body { height: 128%; width: min(100%, 5px); overflow: visible; outline: none; }
+.tick[data-culprit="true"]::after {
+  content: ""; position: absolute; left: 50%; top: -10px; bottom: -10px; width: 2px; margin-left: -1px;
+  background: var(--culprit); box-shadow: 0 0 12px rgba(255,74,43,.9); pointer-events: none;
+  animation: fault-tear 600ms var(--ease-out) both;
+}
+@keyframes fault-tear { from { transform: scaleY(0); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .tick[data-culprit="true"]::after { animation: none; } }
 
 @media (max-width: 767px) {
   .timeline {
@@ -208,8 +279,14 @@ details > summary::-webkit-details-marker { display: none; }
     max-width: none;
     height: 5px;
   }
-  .tick-body { width: 46%; height: 100%; margin-inline: auto; transition: width var(--dur-verdict) var(--ease-out); }
+  .timeline { padding: 8px 10px; background:
+    linear-gradient(to right, transparent calc(50% - .5px), rgba(237,230,214,.22) 50%, transparent calc(50% + .5px)), #0c0b09; }
+  .tick-body { width: 16%; height: 100%; margin-inline: auto; transition: width var(--dur-verdict) var(--ease-out); }
   .tick[data-probed="true"] .tick-body { width: 100%; height: 100%; }
+  .tick-fill { -webkit-mask-image: linear-gradient(to right, transparent 0, #000 22%, #000 78%, transparent 100%);
+                       mask-image: linear-gradient(to right, transparent 0, #000 22%, #000 78%, transparent 100%); }
+  .tick[data-culprit="true"] .tick-body { width: 100%; height: 100%; }
+  .tick[data-culprit="true"]::after { left: -10px; right: -10px; top: 50%; bottom: auto; width: auto; height: 2px; margin: -1px 0 0; }
 }
 
 /* ==========================================================================
@@ -226,8 +303,8 @@ details > summary::-webkit-details-marker { display: none; }
     filter var(--dur-verdict) var(--ease-out);
 }
 .cta-accent:not(:disabled):hover {
-  filter: brightness(1.1);
-  transform: translateY(-1px);
+  filter: brightness(1.08);
+  transform: translateY(-2px);
   box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--accent) 75%, transparent);
 }
 .cta-accent:not(:disabled):active { transform: translateY(0) scale(0.98); }
@@ -262,3 +339,13 @@ details > summary:hover { color: var(--muted); }
   .cta-accent, .btn-quiet, .link-quiet, .field, details > summary { transition: none; }
   .cta-accent:not(:disabled):hover, .cta-accent:not(:disabled):active, .btn-quiet:active { transform: none; }
 }
+
+/* ==========================================================================
+   Plates — every card is an instrument plate laid on the drum.
+   ========================================================================== */
+.plate { background: linear-gradient(180deg, var(--surface), #191610); border: 1px solid var(--border); }
+.plate-hover { transition: border-color .25s var(--ease-out), transform .25s var(--ease-out); }
+.plate-hover:hover { border-color: rgba(237,230,214,.2); transform: translateY(-3px); }
+.rounded-card { border-radius: var(--r-card); }
+.bg-surface { background: linear-gradient(180deg, var(--surface), #191610); }
+@media (prefers-reduced-motion: reduce) { .plate-hover { transition: none; } .plate-hover:hover { transform: none; } }

@@ -64,10 +64,10 @@ export function FaultReportView({ hunt }: { hunt: Hunt }) {
         <div className="flex flex-wrap items-center gap-3">
           <span
             className="inline-block h-3 w-3 rounded-[3px]"
-            style={{ background: "var(--guilty)" }}
+            style={{ background: "var(--culprit)", boxShadow: "0 0 12px rgba(255,74,43,.7)" }}
             aria-hidden="true"
           />
-          <code className="min-w-0 break-all font-mono text-[20px] text-text max-md:text-[15px]">{report.culpritSha}</code>
+          <code className="min-w-0 break-all font-mono text-[22px] font-semibold max-md:text-[15px]" style={{ color: "var(--culprit)" }}>{report.culpritSha}</code>
           <span className="rounded-full border border-line px-2.5 py-0.5 text-[12px] text-muted">
             verified by executed tests
           </span>

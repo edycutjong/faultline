@@ -33,7 +33,7 @@ type State =
 export function RecordedRunLabel({ recordedAt }: { recordedAt: string | null }) {
   return (
     <span
-      className="inline-flex items-center gap-2 rounded-full border px-3 py-1 font-mono text-[12px]"
+      className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1 font-mono text-[12px]"
       style={{
         borderColor: "color-mix(in srgb, var(--accent) 55%, transparent)",
         color: "var(--text)",

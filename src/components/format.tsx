@@ -80,7 +80,7 @@ export function tickColor(state: TickState): string {
     case "guilty":
       return "var(--guilty)";
     case "error":
-      return "var(--inconclusive)";
+      return "var(--faint)"; // skipped: proves nothing, so it gets the quiet colour, not a verdict colour
     default:
       return "var(--unknown)";
   }
