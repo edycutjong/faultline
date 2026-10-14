@@ -5,7 +5,7 @@
 # Faultline 〰️
 
 **The bisect that refuses to blame the innocent.**
-Faultline bisects a broken commit range by testing each suspect in a fresh Nebius container built from that commit's own dependencies. It proves both ends first, refuses to guess when the evidence disagrees, and has NVIDIA Nemotron on Nebius Token Factory explain the culprit.
+When dependency pins drift across a commit range, `git bisect run` in one reused environment blames an innocent commit — on a 255-commit history we built to drift, 10 times out of 10. Faultline tests each suspect in a disposable Nebius Token Factory Sandbox that installs that commit's own dependencies (Serverless AI Jobs as the fallback), proves both ends first, refuses to guess when the evidence disagrees, and has NVIDIA Nemotron on Nebius Token Factory explain the culprit the tests found.
 
 <img src="docs/assets/readme-hero.png" width="100%" alt="Faultline — a range of suspect commits narrows to the one that broke the test, each probe a fresh container.">
 
@@ -138,6 +138,11 @@ and we added a Sandboxes backend the same day. Its first hunt on the drifting hi
 right commit in **46.5 s** — against 923–1,032 s for the four Jobs hunts on the same range — so
 Sandboxes is now this deployment's default and Jobs stays selectable
 ([`evidence/sandboxes-hunt.json`](evidence/sandboxes-hunt.json)).
+
+**Where Token Factory accelerated the workflow.** *Sandboxes:* the same 255-commit hunt went from
+923–1,032 s on Serverless AI Jobs (a VM start of about 4 min 20 s per job) to 46.5 s, each whole probe
+taking 8.6–13.4 s of sandbox time — one Sandboxes run so far. *Inference:* one OpenAI-compatible call to
+Nemotron 3 Super per hunt, with no GPU, weights or serving stack of our own.
 
 ### NVIDIA Nemotron on Token Factory
 
