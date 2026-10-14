@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/img/icon.png" width="96" height="96" alt="">
+<img src="docs/assets/icon-animated.svg" width="96" height="96" alt="">
 
 # Faultline
 
