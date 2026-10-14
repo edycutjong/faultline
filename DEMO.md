@@ -1,7 +1,8 @@
 # Demo — every number, and the command that produced it
 
-Everything below was run on 2026-10-13 and 2026-10-14 against the live deployment
-(https://faultline.edycu.dev) and real Nebius infrastructure. The raw output of
+Every hunt below ran on 2026-10-13 and 2026-10-14 against the live deployment
+(https://faultline.edycu.dev) and real Nebius infrastructure; the local `git bisect run` baselines ran on a
+MacBook (§5). The raw output of
 every run is committed under [`evidence/`](evidence). Where a figure is a property of a fixture we
 built, it says so.
 
@@ -246,7 +247,7 @@ Sandboxes publishes no list price, so no dollar figure is given; each operation 
 `resources.cost` value of undocumented unit, summed raw in the evidence file (0.808 over 20
 operations).
 
-By the rule the human set on 2026-10-14 — switch the default only if the hunt is correct and faster
+By a rule fixed on 2026-10-14 before the run — switch the default only if the hunt is correct and faster
 than the fastest Jobs hunt on this history (923 s) — Sandboxes became the deployment's default
 backend. Jobs stays selectable with `FAULTLINE_PROBE_BACKEND=jobs`. Faultline is 5 / 5 on this
 history: four hunts on Jobs, one on Sandboxes.
@@ -254,14 +255,15 @@ history: four hunts on Jobs, one on Sandboxes.
 ### What the numbers say
 
 - **Correctness.** On the drifting history, `git bisect run` in one reused environment named the
-  wrong commit in 10 of 10 runs; a fresh environment per step named the right one in 8 of 8 local
+  wrong commit in 10 of 10 runs. Across both histories, a fresh environment per step named the right one in 8 of 8 local
   runs (5 on the fixture, 3 on attrs) and in all six Faultline hunts over these two ranges (five on the fixture,
   one on attrs). On attrs,
   where nothing drifts, every method is right.
 - **Wall-clock.** On Serverless AI Jobs, Faultline is slower than both local methods on both
   repositories: a probe's VM takes about 4 min 20 s to start for ~5 s of work, and Nebius
   throttled job creation during these runs, so a round costs minutes where a local step costs
-  seconds. On Token Factory Sandboxes a round took about 10 s, and the one hunt measured (46.5 s)
+  seconds. On Token Factory Sandboxes the three rounds took 10.7 s, 24.1 s and 10.7 s from dispatch to last
+  verdict (two of round 2's probes waited ~15 s for a slot), and the one hunt measured (46.5 s)
   finished ahead of the local fresh-venv bisect (57.44 s p50) on the drifting history — once, so
   it is a measurement, not a rule. attrs has not been hunted on Sandboxes.
 - **So the claim is not speed.** It is the right commit without knowing about the drift or
