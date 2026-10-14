@@ -11,7 +11,7 @@ built, it says so.
 
 ```bash
 npm install
-npm test            # 532 unit + integration tests (100 % coverage of src/lib, enforced)
+npm test            # 553 unit + integration tests (100 % coverage of src/lib, enforced)
 npm run test:probe  # 9 tests: the real probe.py against a local repo and HTTP server
 npm run build && npm run e2e   # 50 checks: the production build with NO environment, desktop and mobile
 ```
@@ -20,7 +20,9 @@ The integration suite drives a whole hunt through the production code path — s
 auth, the Jobs REST client, SigV4 storage with conditional writes, presigned verdict URLs, the
 tick, Token Factory narration — with Nebius simulated at the HTTP boundary. It also asserts, for
 every job a hunt creates, that the job is given `probe.py` as an injected file and **no
-credential and no bucket mount**.
+credential and no bucket mount**. `tests/sandboxes-backend.test.ts` asserts the same for the
+Sandboxes backend: the spawn carries `probe.py` on stdin, the `FAULTLINE_*` variables and nothing
+else — not the Token Factory key that made the call.
 
 ## 2. Conditional writes on the real bucket (G5)
 
@@ -65,6 +67,19 @@ pytest's exits 4 and 5, and exit 125 from any command, as `error` — the comman
 the commit is skipped, never blamed — and a re-run of this smoke expects `error` for those three.
 The `pass` is a real run of itsdangerous at `672971d6`. Inside the container the work took ~4–8 s
 (clone, `pip install`, pytest). The rest is cold start.
+
+### The same probe on Token Factory Sandboxes
+
+```bash
+# needs the Nebius env plus TOKENFACTORY_API_KEY and TOKENFACTORY_PROJECT_ID → evidence/smoke-sandboxes.json
+npm run test:live -- tests/live/smoke-sandboxes.live.ts
+```
+
+[`evidence/smoke-sandboxes.json`](evidence/smoke-sandboxes.json), 2026-10-14: two probes through
+the production `SandboxesBackend` on the hero fixture — the known-good commit `0260b672` returned
+`pass`, the culprit `4e133d6c` returned `fail`, both via presigned PUT into the `eu-west1` bucket.
+Dispatch to terminal state 11.4 s and 10.8 s; operation durations 7.98 s and 8 s, of which the
+probe's own clone + install + test took 6.3 s and 6.8 s.
 
 ## 4. The first live hunt
 
@@ -156,7 +171,7 @@ ended it `ERROR (QuotaExceeded)` without running the test. The hunt counted that
 verdict — and re-dispatched commit 173 in eu-west1 (`aijob-e01e1sv0979rwsx4mq`), which cost about two minutes: 20 jobs
 for 19 probes. The engine's slot count is meant to stop a third job in a region; that it did not here was a bug (two ticks on the same hunt record could fill the same last slot), and
 the failure path is what kept the result right. It is fixed in `9d35f5f` — each launch into a region now claims its number with
-`If-None-Match` — and a fresh run on the fix (`evidence/p7-hunt.json`, hunt `9d33fada`) named `4e133d6c` in 932 s with 19 probes, 10 `429`s retried and no `QuotaExceeded` job. Faultline is 4 / 4 on this history (957 s, 923 s, 1,032 s and 932 s).
+`If-None-Match` — and a fresh run on the fix (`evidence/p7-hunt.json`, hunt `9d33fada`) named `4e133d6c` in 932 s with 19 probes, 10 `429`s retried and no `QuotaExceeded` job. On Jobs, Faultline is 4 / 4 on this history (957 s, 923 s, 1,032 s and 932 s); the Sandboxes hunt below makes it 5 / 5.
 Nemotron's paragraph (request `chatcmpl-a81f7f4ec15855e1`) names the swapped line, says `replace` attaches the zone
 without applying its offset rules for that date, and gives 06:37 UTC instead of 06:00 — the probe's own assertion reads
 `datetime(2023, 7, 1, 6, 37, …)` against `datetime(2023, 7, 1, 6, 0, …)`. Its fixes — restore `localize()` on line 78,
@@ -210,16 +225,42 @@ pickled by the old version is a tuple, and the new `__setstate__` only reads nam
 culprit is right because it came from running the test, not from the model; the report labels the
 paragraph as generated, and the hunt record keeps the request ID so it can be checked.
 
+### The drifting history on Token Factory Sandboxes
+
+[`evidence/sandboxes-hunt.json`](evidence/sandboxes-hunt.json) — hunt `89cf7952`, started on
+2026-10-14 at 12:55 UTC through `POST /api/hunts` on the deployed app with
+`FAULTLINE_PROBE_BACKEND=sandboxes` (16 slots): the same repository, test, install command and refs
+as `evidence/p7-hunt.json`. It named `4e133d6c` in **46.5 s** — 3 rounds, 20 probes, 20 sandboxes,
+0 retries, 0 throttled creates. Round 1 sent all 10 probes (both ends + 8 suspects) at once; each
+probe went from dispatch to verdict in 8.3–10.7 s, with 8.6–13.4 s of sandbox time per operation
+and 6.0–7.0 s of that the probe's own clone, install and test. In round 2 two of the eight probes
+waited ~15 s for a slot: round 1's ten sandboxes still counted as holding slots until their status
+was re-read (the engine's 15 s exit grace), and 10 + 8 exceeds 16. Nemotron's paragraph (request
+`chatcmpl-bdc1d9b0eabda9c2`) names the swapped line and says `replace` attaches the zone's tzinfo
+without its historical offset rules for that date.
+
+Sandboxes publishes no list price, so no dollar figure is given; each operation reports a
+`resources.cost` value of undocumented unit, summed raw in the evidence file (0.808 over 20
+operations).
+
+By the rule the human set on 2026-10-14 — switch the default only if the hunt is correct and faster
+than the fastest Jobs hunt on this history (923 s) — Sandboxes became the deployment's default
+backend. Jobs stays selectable with `FAULTLINE_PROBE_BACKEND=jobs`. Faultline is 5 / 5 on this
+history: four hunts on Jobs, one on Sandboxes.
+
 ### What the numbers say
 
 - **Correctness.** On the drifting history, `git bisect run` in one reused environment named the
   wrong commit in 10 of 10 runs; a fresh environment per step named the right one in 8 of 8 local
-  runs (5 on the fixture, 3 on attrs) and in all five Faultline hunts over these two ranges (four on the fixture,
+  runs (5 on the fixture, 3 on attrs) and in all six Faultline hunts over these two ranges (five on the fixture,
   one on attrs). On attrs,
   where nothing drifts, every method is right.
-- **Wall-clock.** Faultline is slower than both local methods on both repositories. A probe's VM
-  takes about 4 min 20 s to start for ~5 s of work, and Nebius throttled job creation during these
-  runs, so a round costs minutes where a local step costs seconds.
+- **Wall-clock.** On Serverless AI Jobs, Faultline is slower than both local methods on both
+  repositories: a probe's VM takes about 4 min 20 s to start for ~5 s of work, and Nebius
+  throttled job creation during these runs, so a round costs minutes where a local step costs
+  seconds. On Token Factory Sandboxes a round took about 10 s, and the one hunt measured (46.5 s)
+  finished ahead of the local fresh-venv bisect (57.44 s p50) on the drifting history — once, so
+  it is a measurement, not a rule. attrs has not been hunted on Sandboxes.
 - **So the claim is not speed.** It is the right commit without knowing about the drift or
   writing the fresh-environment harness, both ends proven, skips and contradictions handled, the
   work off your machine, and an explained report.

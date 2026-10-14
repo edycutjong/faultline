@@ -10,17 +10,19 @@ believed.
 
 Faultline turns a broken commit range into a named commit by running the failing test on
 several commits at once, each in a fresh container that installs that commit's own declared
-dependencies, on Nebius Serverless AI Jobs.
+dependencies — on Nebius Token Factory Sandboxes by default, or on Nebius Serverless AI Jobs,
+the selectable fallback.
 
 ```
   repo · failing test · good ref ──> POST /api/hunts ──> resolve range (GitHub API)
   (+ install command, resolved          (src/app/api/hunts/route.ts)   (src/lib/git.ts)
    from the repo, editable)                    │
                                                ▼
-                        round 1: BOTH ENDS + suspects ──> one Nebius job per probe
-                        (src/lib/hunt.ts planFirstRound)  (src/lib/backend/jobs-backend.ts)
-                                                               │  stock python:3.11,
-                                                               │  probe.py injected as a file
+                        round 1: BOTH ENDS + suspects ──> one sandbox (or job) per probe
+                        (src/lib/hunt.ts planFirstRound)  (src/lib/backend/sandboxes-backend.ts,
+                                                           src/lib/backend/jobs-backend.ts)
+                                                               │  stock python:3.11, probe.py
+                                                               │  on stdin (or injected as a file)
                                                                ▼
                probe: fetch one commit → install its deps → run the test
                → print the JSON verdict → PUT it to its presigned URL → empty POST /tick
@@ -145,12 +147,46 @@ races of 2, 5 and 8 concurrent creators on one key, exactly one won every time, 
 ## The backend, and its limits
 
 `ProbeBackend` (`src/lib/backend/types.ts`) is four verbs — dispatch, status, find (recovering
-a dispatch whose creator died) and cancel — and a capacity. `JobsBackend` implements it on Serverless AI Jobs,
-`cpu-d3` / `2vcpu-8gb`, stock `python:3.11`. A Token Factory Sandboxes backend would implement
-the same verbs. When first checked, `GET /sandboxes/v1/whoami` reported every permission `false`
+a dispatch whose creator died) and cancel — and a capacity. Two implementations, chosen per
+deploy by `FAULTLINE_PROBE_BACKEND` (`selectBackend` in `src/lib/store.ts`; anything but
+`sandboxes`, or Sandboxes without its key and project, is Jobs):
+
+### Token Factory Sandboxes — the default
+
+`SandboxesBackend` (`src/lib/backend/sandboxes-backend.ts`) over a small REST client
+(`src/lib/nebius/sandboxes.ts`; Bearer Token Factory key + `Project: aiproject-…` header):
+
+- **dispatch** — `POST /sandboxes/v1/instances`: the preloaded `tag:python:3.11` image,
+  `python3 -u -` with `probe.py` as base64 stdin (nothing built, pushed or uploaded),
+  `disposable: true`, the probe's deterministic name as the hostname, the same `FAULTLINE_*`
+  environment a job gets, timeout = the probe's own deadline + 300 s (capped at the API's 3600 s).
+  The Token Factory key that spawns the sandbox never enters it.
+- **status** — `GET /sandboxes/v1/operations/{id}`, mapped onto the job-state words the engine
+  already uses (`EXECUTING` → `RUNNING`, `SUCCESS` → `COMPLETED`, …); finish time = `created_at` +
+  `duration`. **find** — `GET /sandboxes/v1/operations` for the last 3 h, then each operation's
+  detail until its hostname matches (the list carries no metadata). **cancel** —
+  `DELETE /sandboxes/v1/operations/{id}`.
+- **Capacity** — one pseudo-region, `sandboxes`, with `FAULTLINE_SANDBOX_SLOTS` (default 16,
+  clamped to 1–50: the beta allows 50 simultaneous operations, `instance_max_concurrency` in
+  `evidence/sandboxes-whoami-2026-10-14.json`).
+- **Measured** (2026-10-14): two smoke probes on the hero history — good commit `pass`, culprit
+  `fail` — each ~11 s dispatch→terminal (`evidence/smoke-sandboxes.json`); then hunt `89cf7952`
+  named `4e133d6c` in 46.5 s, 3 rounds, 20 sandboxes, 0 retries, 8.3–10.7 s dispatch→verdict per
+  probe (`evidence/sandboxes-hunt.json`). In round 2 two of eight probes waited ~15 s for a slot:
+  round 1's ten sandboxes still counted as holding slots until their status was re-read (the
+  engine's 15 s exit grace), and 10 + 8 exceeds 16.
+- **Cost** — Sandboxes publishes no list price, so `huntCostUsd` returns null for a Sandboxes hunt
+  and the UI shows the cost as unknown. Each operation reports a `resources.cost` figure whose unit
+  is undocumented; the evidence file records it raw.
+
+Access history: when first checked, `GET /sandboxes/v1/whoami` reported every permission `false`
 (`evidence/sandboxes-whoami.json`); beta access arrived on 2026-10-14 (`spawn_disposable: true`,
-`evidence/sandboxes-whoami-2026-10-14.json`). Probes still run on Serverless AI Jobs; this
-repository has no Sandboxes backend.
+`evidence/sandboxes-whoami-2026-10-14.json`), and this backend was built and measured that day.
+
+### Serverless AI Jobs — the fallback
+
+`JobsBackend` implements the same verbs on Serverless AI Jobs, `cpu-d3` / `2vcpu-8gb`, stock
+`python:3.11`, `probe.py` injected as a file. Every hunt before 2026-10-14 ran on it.
 
 Measured on this tenant (2026-10-13; `evidence/smoke-jobs*.json`, `evidence/first-live-hunt.json`):
 
@@ -171,7 +207,7 @@ Measured on this tenant (2026-10-13; `evidence/smoke-jobs*.json`, `evidence/firs
 
 ## One live hunt at a time
 
-The 8 slots are shared by every hunt, so a second live hunt would only starve the first into
+The backend's slots (16 sandboxes, or 8 jobs on the fallback) are shared by every hunt, so a second live hunt would only starve the first into
 quota rejections. `acquireLiveLock` (`src/lib/store.ts`) takes `locks/live-hunt.json` with the
 same conditional writes; a second `POST /api/hunts` gets `409` and a link to the running hunt.
 The lock is released when the hunt stops holding capacity, and expires after 3 h regardless.
@@ -199,11 +235,11 @@ decides.
 3. Object Storage uses a separate S3 access key and SigV4 (`src/lib/nebius/sigv4.ts`), checked
    against AWS's own published vectors in `tests/sigv4.test.ts`.
 
-All of it stays in the app. A probe job receives none of it.
+All of it stays in the app — as does the Token Factory key. A probe, sandbox or job, receives none of it.
 
 ## Cost
 
-Measured VM time × today's list price: `huntCostUsd` in `src/lib/pricing.ts` (`cpu-d3` from
+On Serverless AI Jobs: measured VM time × today's list price: `huntCostUsd` in `src/lib/pricing.ts` (`cpu-d3` from
 1 October 2026: $0.015 per vCPU-hour, $0.0045 per GiB-hour; before that, $0.012 and $0.0032).
 VM time is Nebius's own create→finish for each job once it has ended; until then,
 dispatch→verdict, replaced by the job's figure on a later read (`billedMs`; `settleBill` in
@@ -221,7 +257,9 @@ memory with the same 412 semantics (`MemoryKv`), so a cold visit renders.
 ## Limits
 
 - Python test suites, public GitHub repositories.
-- A round costs about 4 min 20 s of cold start, more when job creation is throttled. For a fast suite a careful local bisect that builds a
-  fresh environment per step finishes sooner; Faultline's case is correctness without writing
-  that harness, both ends verified, and the work off your machine.
-- One live hunt at a time on this deployment's 8 slots.
+- On the Jobs fallback a round costs about 4 min 20 s of cold start, more when job creation is
+  throttled, and a careful local bisect that builds a fresh environment per step finishes sooner
+  on a fast suite. On Sandboxes a round took ~10 s in the one hunt measured. Faultline's case is
+  correctness without writing that harness, both ends verified, and the work off your machine.
+- Sandboxes is a beta (50 simultaneous operations); one Sandboxes hunt has been measured.
+- One live hunt at a time on this deployment's 16 slots.
