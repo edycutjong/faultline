@@ -99,6 +99,12 @@ export function recentCalls(): readonly CallRecord[] {
   return callLog;
 }
 
+/** Append one call to the log (Jobs here, Sandboxes from `sandboxes.ts`), keeping the newest. */
+export function logCall(record: CallRecord): void {
+  callLog.push(record);
+  if (callLog.length > CALL_LOG_LIMIT) callLog.splice(0, callLog.length - CALL_LOG_LIMIT);
+}
+
 async function api<T>(
   config: NebiusConfig,
   method: string,
@@ -118,14 +124,13 @@ async function api<T>(
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 
-  callLog.push({
+  logCall({
     method,
     path,
     status: res.status,
     durationMs: Date.now() - startedAt,
     at: new Date().toISOString(),
   });
-  if (callLog.length > CALL_LOG_LIMIT) callLog.splice(0, callLog.length - CALL_LOG_LIMIT);
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");

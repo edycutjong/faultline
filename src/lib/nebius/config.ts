@@ -171,6 +171,50 @@ export interface TokenFactoryConfig {
 export const TOKEN_FACTORY_BASE_URL = "https://api.tokenfactory.nebius.com/v1";
 export const NARRATION_MODEL = "nvidia/nemotron-3-super-120b-a12b";
 
+/** Which probe backend this deploy runs probes on. Serverless AI Jobs unless told otherwise. */
+export type ProbeBackendKind = "jobs" | "sandboxes";
+
+export function probeBackendKind(env: NodeJS.ProcessEnv = process.env): ProbeBackendKind {
+  return env.FAULTLINE_PROBE_BACKEND?.trim().toLowerCase() === "sandboxes" ? "sandboxes" : "jobs";
+}
+
+/**
+ * Token Factory Sandboxes: the second probe backend. It authenticates with the same Token
+ * Factory API key as narration plus the Token Factory project ID (`aiproject-…`, from
+ * tokenfactory.nebius.com/project/api-keys) — not the Nebius Cloud project the jobs run in.
+ */
+export interface SandboxesConfig {
+  apiKey: string;
+  projectId: string;
+  baseUrl: string;
+  /** A preloaded image tag; probe.py is fed to it on stdin, so nothing is built or pushed. */
+  image: string;
+  /** Concurrent probe sandboxes. Never above the beta's 50 simultaneous operations. */
+  slots: number;
+}
+
+export const SANDBOXES_BASE_URL = "https://api.tokenfactory.nebius.com/sandboxes";
+/** Beta limit, from the Sandboxes overview and GET /v1/whoami (`instance_max_concurrency`). */
+export const SANDBOXES_MAX_CONCURRENCY = 50;
+/** Room for a full round (8 interior + 2 endpoints) with headroom, far below the beta cap. */
+export const DEFAULT_SANDBOX_SLOTS = 16;
+/** The longest a sandbox may run (`instance_max_timeout` from GET /v1/whoami). */
+export const SANDBOXES_MAX_TIMEOUT_SECONDS = 3600;
+
+export function loadSandboxesConfig(env: NodeJS.ProcessEnv = process.env): SandboxesConfig | null {
+  const apiKey = env.FAULTLINE_SANDBOXES_API_KEY?.trim() || env.TOKENFACTORY_API_KEY?.trim();
+  const projectId = env.TOKENFACTORY_PROJECT_ID?.trim();
+  if (!apiKey || !projectId) return null;
+  const slots = Number(env.FAULTLINE_SANDBOX_SLOTS);
+  return {
+    apiKey,
+    projectId,
+    baseUrl: (env.FAULTLINE_SANDBOXES_URL?.trim() || SANDBOXES_BASE_URL).replace(/\/+$/, ""),
+    image: env.FAULTLINE_PROBE_IMAGE?.trim() || DEFAULT_PROBE_IMAGE,
+    slots: Number.isInteger(slots) && slots >= 1 && slots <= SANDBOXES_MAX_CONCURRENCY ? slots : DEFAULT_SANDBOX_SLOTS,
+  };
+}
+
 export function loadTokenFactoryConfig(env: NodeJS.ProcessEnv = process.env): TokenFactoryConfig | null {
   const apiKey = env.TOKENFACTORY_API_KEY?.trim();
   if (!apiKey) return null;
