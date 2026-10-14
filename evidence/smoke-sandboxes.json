@@ -1,0 +1,47 @@
+{
+  "check": "Two probes via SandboxesBackend (POST /sandboxes/v1/instances, probe.py on stdin, stock python:3.11, disposable) — verdicts read back from the presigned-PUT objects",
+  "ranAt": "2026-10-14T12:48:28.286Z",
+  "image": "python:3.11",
+  "probeSha256": "e831f807f6051f06ad508cd961d15d6fe4f9d8a290247227bf402a3adfcd1389",
+  "repo": "https://github.com/edycutjong/faultbench-tzdata-pipeline",
+  "testCommand": "python -m pytest -q tests/test_normalize.py::test_naive_local_midnight_is_interpreted_in_zone",
+  "installCommand": "pip install -e .[test]",
+  "results": [
+    {
+      "label": "good v0.1.0",
+      "commitSha": "0260b672a5da9536b4e661a9ebae19d8fcc6a551",
+      "expected": "pass",
+      "operationId": "01a13a74-d249-7509-99c4-85a05a84244f",
+      "operationStatus": "SUCCESS",
+      "operationDurationSeconds": 7.98,
+      "apiReportedCost": 0.03984277,
+      "dispatchToTerminalMs": 11441,
+      "verdict": "pass",
+      "detail": "deps: pip install -e .[test]; test exited 0",
+      "probeDurationMs": 6271,
+      "timings": {
+        "cloneMs": 886,
+        "installMs": 4960,
+        "testMs": 423
+      }
+    },
+    {
+      "label": "culprit",
+      "commitSha": "4e133d6c856c2e756fce5a328896f20fecfc62eb",
+      "expected": "fail",
+      "operationId": "01a13a74-d250-75ac-bdef-83c41f544ff6",
+      "operationStatus": "SUCCESS",
+      "operationDurationSeconds": 8,
+      "apiReportedCost": 0.04144358000000001,
+      "dispatchToTerminalMs": 10831,
+      "verdict": "fail",
+      "detail": "deps: pip install -e .[test]; test exited 1",
+      "probeDurationMs": 6758,
+      "timings": {
+        "cloneMs": 869,
+        "installMs": 5444,
+        "testMs": 443
+      }
+    }
+  ]
+}
