@@ -2,12 +2,12 @@
 
 <img src="docs/assets/icon-animated.svg" width="144" height="144" alt="Faultline Icon">
 
-# Faultline
+# Faultline 〰️
 
 **Find the commit that broke it — in a clean room.**
 Faultline bisects a broken commit range by testing each suspect in a fresh Nebius container built from that commit's own dependencies. It proves both ends first, refuses to guess when the evidence disagrees, and has NVIDIA Nemotron on Nebius Token Factory explain the culprit.
 
-<img src="docs/assets/readme-hero-animated.svg" width="100%" alt="Faultline — a range of suspect commits narrows to the one that broke the test, each probe a fresh container.">
+<img src="docs/assets/readme-hero.png" width="100%" alt="Faultline — a range of suspect commits narrows to the one that broke the test, each probe a fresh container.">
 
 [![Live Demo](https://img.shields.io/badge/🚀_Live-Demo-6057F7?style=for-the-badge)](https://faultline.edycu.dev)
 [![The Story](https://img.shields.io/badge/〰️_The-Story-FF4A2B?style=for-the-badge)](https://faultline.edycu.dev/about)
@@ -20,7 +20,7 @@ Faultline bisects a broken commit range by testing each suspect in a fresh Nebiu
 [![NVIDIA Nemotron](https://img.shields.io/badge/NVIDIA-Nemotron%203%20Super-76B900?style=flat)](https://huggingface.co/nvidia)
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=flat&logo=next.js)](https://nextjs.org)
 [![Tests](https://img.shields.io/badge/tests-514%20passing-10B981?style=flat)](#-testing--ci) [![Coverage](https://img.shields.io/badge/coverage-100%25-10B981?style=flat)](#-testing--ci)
-[![CI](https://github.com/edycutjong/faultline/actions/workflows/ci.yml/badge.svg)](https://github.com/edycutjong/faultline/actions/workflows/ci.yml)
+[![CI](https://gith ub.com/edycutjong/faultline/actions/workflows/ci.yml/badge.svg)](https://github.com/edycutjong/faultline/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/edycutjong/faultline?style=flat)](https://github.com/edycutjong/faultline/releases)
 [![License](https://img.shields.io/badge/license-MIT-yellow?style=flat)](LICENSE)
 
