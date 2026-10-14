@@ -61,7 +61,7 @@ export default function HomePage() {
           <Fact
             n="01"
             term="Each commit, its own environment"
-            detail={`One terminating Nebius Serverless AI Job per probe, installing that commit's own declared dependencies.${
+            detail={`One disposable Nebius sandbox per probe (Token Factory Sandboxes; Serverless AI Jobs as the fallback), installing that commit's own declared dependencies.${
               budget?.slots ? ` A round runs up to ${budget.slots} of them in parallel.` : ""
             }`}
           />
@@ -105,7 +105,7 @@ export default function HomePage() {
         <SectionHeading
           eyebrow="Trace 03 · sponsor integration"
           title="Nebius is the engine, not a badge"
-          blurb="Every probe is a container on Nebius Serverless AI Jobs; every verdict comes back through a presigned Object Storage URL, so no credential ever enters a probe; every explanation is one Token Factory call to NVIDIA Nemotron."
+          blurb="Every probe is a disposable Nebius Token Factory Sandbox, with Serverless AI Jobs as the selectable fallback; every verdict comes back through a presigned Object Storage URL, so no credential ever enters a probe; every explanation is one Token Factory call to NVIDIA Nemotron."
         />
         <IntegrationProof />
       </section>

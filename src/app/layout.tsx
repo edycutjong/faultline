@@ -88,7 +88,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
             <span className="rec hidden lg:inline-flex" aria-hidden="true">
               <i />
-              live app · Nebius Serverless AI Jobs
+              live app · Nebius Token Factory Sandboxes
             </span>
             <nav aria-label="Primary" className="ml-auto flex items-center gap-4 text-[14.5px] text-muted sm:gap-5">
               <a className="link-quiet hidden min-h-[40px] items-center sm:inline-flex" href="/about">
@@ -119,7 +119,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <footer className="site-foot mt-24">
           <div className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-9 text-[13.5px] text-muted">
             <p className="max-w-[80ch]">
-              Every probe is a real Nebius Serverless AI Job. Job IDs are on screen because they are the proof a
+              Every probe is a real Nebius Token Factory Sandbox (or Serverless AI Job, the fallback). Their IDs are on screen because they are the proof a
               probe was a cloud container and not a local shell.
             </p>
             <p className="flex flex-wrap items-center gap-x-5 gap-y-1 font-mono text-[12.5px] tracking-[0.04em]">
