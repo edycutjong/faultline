@@ -152,7 +152,9 @@ every permission `false` on this account (`evidence/sandboxes-whoami.json`).
 Measured on this tenant (2026-10-13; `evidence/smoke-jobs*.json`, `evidence/first-live-hunt.json`):
 
 - **2 concurrent VMs per region**; a third is rejected (`QuotaExceeded`), not queued. The
-  dispatcher never puts more than `slotsPerRegion` live jobs in a region (`dispatchQueued`).
+  dispatcher is meant to keep at most `slotsPerRegion` live jobs in a region (`dispatchQueued`); in hunt `69542695`
+  round 3 still sent a third job to `uk-south1`, which Nebius ended `QuotaExceeded` and the hunt re-dispatched in
+  `eu-west1` as an infrastructure failure, never a verdict — an open bug ([DEMO.md](DEMO.md), "The same range again").
 - So capacity comes from regions: `eu-west1`, `uk-south1`, `uk-south2` and `me-west1`, 8 slots
   in all (`FAULTLINE_EXTRA_REGIONS`, parsed by `parseExtraRegions`). A probe in `uk-south1`
   writes its verdict into the `eu-west1` bucket over HTTPS — the presigned URL is what makes the
