@@ -30,7 +30,9 @@ describe("smoke: injected probe on a stock image, verdict via presigned PUT", ()
     const home = process.env.SMOKE_SKIP_HOME === "1" || !config.probeRegions[0] ? [] : [config.probeRegions[0]];
     const targets: Array<{ target: ProbeRegion; test: string; expect: string }> = [
       ...home.map((target) => ({ target, test: "python -m pytest -q", expect: "pass" })),
-      ...extra.map((target) => ({ target, test: "python -m pytest -q -k no_such_test_anywhere", expect: "fail" })),
+      // Selects nothing: pytest exits 5, which the probe records as `error` (it tested nothing).
+      // The committed evidence predates that rule and shows `fail`.
+      ...extra.map((target) => ({ target, test: "python -m pytest -q -k no_such_test_anywhere", expect: "error" })),
     ];
     const run = randomUUID().slice(0, 8);
 

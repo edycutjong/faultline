@@ -59,7 +59,10 @@ delivered its verdict into the `eu-west1` bucket through a presigned URL:
 | me-west1 | `aijob-i00qatnkkk2eby3v2y` | fail (exit 5) | 4 m 31 s |
 
 The three `fail`s are deliberate: those jobs ran pytest with `-k no_such_test_anywhere`, which
-selects nothing and exits 5, to prove a failing verdict travels the same path as a passing one.
+selects nothing and exits 5, to prove a non-passing verdict travels the same path as a passing one.
+That was the probe of the day (sha256 `1f56a510…`, recorded in both files). The probe now records
+pytest's exits 4 and 5, and exit 125 from any command, as `error` — the command tested nothing, so
+the commit is skipped, never blamed — and a re-run of this smoke expects `error` for those three.
 The `pass` is a real run of itsdangerous at `672971d6`. Inside the container the work took ~4–8 s
 (clone, `pip install`, pytest). The rest is cold start.
 

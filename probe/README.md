@@ -11,7 +11,7 @@ from scratch, runs the failing test, and reports.
 On the default path there is **no custom image**. Every probe job runs the stock
 `python:3.11` image (it ships git and pip), and the application injects `probe.py` into the
 container at creation through the Jobs API's `spec.injectedFiles` (≤ 64 KiB; this file is
-~22 KB). The entrypoint is `python3 -u /opt/faultline/probe.py`. The bytes the app injects
+~23 KB). The entrypoint is `python3 -u /opt/faultline/probe.py`. The bytes the app injects
 are `src/lib/probe-source.ts`, generated from this file by `scripts/embed-probe.mjs`;
 `tests/probe-source.test.ts` fails if the two ever drift.
 
@@ -85,8 +85,8 @@ probe (hunt, key and commit). Anything else is treated as silence: retried, neve
 | Verdict | Means | `exitCode` |
 |---|---|---|
 | `pass` | The test command exited 0. | `0` |
-| `fail` | The test command itself exited non-zero. | the code |
-| `error` | The commit could not be tested: clone, checkout or install failed, or the probe's own deadline passed. The app treats it as `git bisect skip`. | `null` |
+| `fail` | The test command itself exited non-zero — other than the exits below. | the code |
+| `error` | The commit could not be tested: clone, checkout or install failed, or the probe's own deadline passed. Or the command tested nothing: exit 125 from any command (`git bisect run`'s "cannot test this commit"), or pytest's exit 4 (usage error, e.g. the selected test does not exist at this commit) or 5 (no tests collected). The app treats it as `git bisect skip`. | `null` |
 
 **The pass/fail/error split is the correctness backbone.** An `error` recorded as a `fail`
 would narrow the bisection and blame an innocent commit.

@@ -218,7 +218,7 @@ is what the quickstart teaches.
   about half a cent at list price ($0.0948 for the 19 jobs of our 255-commit hunt). Billing by
   the second keeps that honest.
 - **`spec.injectedFiles`.** It let us run every probe on the stock `python:3.11` image with our
-  22 KB probe script written into the container at launch — no image build, no registry, no
+  23 KB probe script written into the container at launch — no image build, no registry, no
   credentials for either. A small field that removed a whole step.
 - **`GET /ai/v1/jobs/get-by-name`.** With deterministic job names it gives a crashed dispatcher
   a way to find the job it may have created, instead of creating a second one.

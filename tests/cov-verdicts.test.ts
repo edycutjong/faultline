@@ -23,6 +23,22 @@ describe("endpointRefusal detail formatting", () => {
     expect(r?.explanation).not.toContain("second line");
   });
 
+  it("tells a known-good ref that tested nothing apart from one that would not build (a2a r06)", () => {
+    const r = endpointRefusal([endpoint("good", "error", "pytest exited 4 (usage error: the selected test does not exist at this commit)")]);
+    expect(r?.reason).toBe("good_unbuildable");
+    expect(r?.headline).toBe("Your known-good ref can't run this test.");
+    expect(r?.explanation).toContain("one where this test exists");
+    expect(r?.explanation).not.toContain("dependencies still install");
+  });
+
+  it("points a failing ref that tested nothing at the test command, not the install", () => {
+    const untested = endpointRefusal([endpoint("good", "pass", null), endpoint("bad", "error", "test command exited 125 (cannot test this commit)")]);
+    expect(untested?.reason).toBe("bad_unbuildable");
+    expect(untested?.explanation).toContain("Check the test command.");
+    const unbuilt = endpointRefusal([endpoint("good", "pass", null), endpoint("bad", "error", "dependency install failed (exit 1)")]);
+    expect(unbuilt?.explanation).toContain("Check the install command.");
+  });
+
   it("truncates a first line longer than 160 characters", () => {
     const r = endpointRefusal([endpoint("good", "error", "x".repeat(200))]);
     expect(r?.explanation).toContain(`(${"x".repeat(157)}...)`);

@@ -15,10 +15,13 @@ storage itself, so a forged tick can at worst cause a harmless extra reconcile.
 The single most important rule in this file is the pass/fail/error split:
 
     pass   the test command exited 0
-    fail   the test command itself exited non-zero
+    fail   the test command itself exited non-zero — except the exits below
     error  the test never got to run (clone, checkout, dependency install, timeout,
-           bad configuration, unhandled exception) — the application treats this as
-           `git bisect skip`, never as evidence about the commit
+           bad configuration, unhandled exception), or the command said it tested
+           nothing: exit 125 from any command (`git bisect run`'s "cannot test this
+           commit"), and pytest's exit 4 (usage error, e.g. the selected test does not
+           exist at this commit) or 5 (no tests collected). The application treats
+           `error` as `git bisect skip`, never as evidence about the commit
 
 An `error` recorded as a `fail` would narrow the bisection search and blame an
 innocent commit. Every code path below is written to preserve that distinction.
@@ -57,6 +60,16 @@ TAIL_LIMIT = 4000
 TRUNCATION_MARKER = "[... output truncated, showing last {n} characters ...]\n"
 
 DEFAULT_TIMEOUT_SECONDS = 900
+
+# `git bisect run`'s exit for "this commit cannot be tested", from any test command.
+CANNOT_TEST_EXIT = 125
+
+# pytest's documented exits for "nothing was tested". 1 (tests failed) and 2 (interrupted, or a
+# collection error, which a regression can cause) remain `fail`.
+PYTEST_DID_NOT_RUN = {
+    4: "usage error: the selected test does not exist at this commit",
+    5: "no tests were collected",
+}
 
 # Env vars that carry capabilities. Never handed to a child process.
 PRIVATE_ENV = ("FAULTLINE_VERDICT_URL", "FAULTLINE_TICK_URL")
@@ -309,8 +322,9 @@ def ensure_pytest(argv: list[str], workdir: str, budget: Budget) -> str | None:
 def run_test(command: str, workdir: str, budget: Budget) -> tuple[int, str, str | None]:
     """Run the test command. Returns (exit_code, combined_output, note).
 
-    Raises ProbeError only when the command could not run at all or timed out. A
-    non-zero exit is returned normally: that is a `fail`, which is a real result.
+    Raises ProbeError when the command could not run at all, timed out, or exited with a
+    code that means it tested nothing (125; pytest's 4 and 5). Any other non-zero exit is
+    returned normally: that is a `fail`, which is a real result.
     """
     try:
         argv = shlex.split(command)
@@ -319,6 +333,7 @@ def run_test(command: str, workdir: str, budget: Budget) -> tuple[int, str, str 
     if not argv:
         raise ProbeError("test command is empty")
 
+    is_pytest = wants_pytest(argv)
     note = ensure_pytest(argv, workdir, budget)
     head = os.path.basename(argv[0])
     if head in ("python", "python3"):
@@ -345,6 +360,12 @@ def run_test(command: str, workdir: str, budget: Budget) -> tuple[int, str, str 
         raise ProbeError(f"test command timed out after {int(timeout)}s", partial)
     except OSError as exc:
         raise ProbeError(f"could not execute test command {argv[0]!r}: {exc}")
+    # Exits that say the command tested nothing. Recorded as `fail`, a commit where the test
+    # file does not exist yet would narrow the search and blame an innocent commit.
+    if proc.returncode == CANNOT_TEST_EXIT:
+        raise ProbeError(f"test command exited {CANNOT_TEST_EXIT} (cannot test this commit)", proc.stdout)
+    if is_pytest and proc.returncode in PYTEST_DID_NOT_RUN:
+        raise ProbeError(f"pytest exited {proc.returncode} ({PYTEST_DID_NOT_RUN[proc.returncode]})", proc.stdout)
     return (proc.returncode, proc.stdout, note)
 
 

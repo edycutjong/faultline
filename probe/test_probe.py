@@ -153,6 +153,42 @@ class ProbeContract(unittest.TestCase):
         self.assertEqual(doc["verdict"], "error")
         self.assertIn("timed out", doc["detail"])
 
+    def test_exit_125_means_not_tested_from_any_command(self) -> None:
+        self.run_probe(self.good, FAULTLINE_TEST_COMMAND="python -c \"import sys; sys.exit(125)\"")
+        doc = self.verdict()
+        self.assertEqual(doc["verdict"], "error")
+        self.assertIsNone(doc["exitCode"])
+        self.assertIn("exited 125 (cannot test this commit)", doc["detail"])
+
+    def test_pytest_exits_4_and_5_mean_not_tested_but_1_and_2_stay_fail(self) -> None:
+        # A stand-in `pytest` module at the repo root: `python -m pytest N` exits N. Hermetic —
+        # the probe's own `import pytest` check and the test run both resolve to it.
+        repo = tempfile.mkdtemp(prefix="probe-test-pytest-")
+        git("init", "--quiet", "-b", "main", cwd=repo)
+        git("config", "uploadpack.allowReachableSHA1InWant", "true", cwd=repo)
+        with open(os.path.join(repo, "pytest.py"), "w") as fh:
+            fh.write("import sys\nprint('stand-in pytest')\nsys.exit(int(sys.argv[-1]))\n")
+        git("add", ".", cwd=repo)
+        git("commit", "--quiet", "-m", "fake pytest", cwd=repo)
+        sha = git("rev-parse", "HEAD", cwd=repo)
+
+        for code, verdict, text in [
+            ("4", "error", "pytest exited 4 (usage error"),
+            ("5", "error", "pytest exited 5 (no tests were collected)"),
+            ("1", "fail", "test exited 1"),
+            ("2", "fail", "test exited 2"),
+        ]:
+            Recorder.received = []
+            self.run_probe(sha, FAULTLINE_REPO_URL=f"file://{repo}", FAULTLINE_TEST_COMMAND=f"python -m pytest {code}")
+            doc = self.verdict()
+            self.assertEqual(doc["verdict"], verdict, code)
+            self.assertIn(text, doc["detail"], code)
+
+        # Exit 5 from a command that is not pytest carries no such meaning: still a fail.
+        Recorder.received = []
+        self.run_probe(self.good, FAULTLINE_TEST_COMMAND="python -c \"import sys; sys.exit(5)\"")
+        self.assertEqual(self.verdict()["verdict"], "fail")
+
     def test_undeliverable_verdict_exits_nonzero(self) -> None:
         proc = self.run_probe(self.good, FAULTLINE_VERDICT_URL="http://127.0.0.1:9/verdict.json")
         self.assertEqual(proc.returncode, 2)

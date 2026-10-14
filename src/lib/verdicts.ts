@@ -80,6 +80,15 @@ export function endpointRefusal(probes: readonly Probe[]): Inconclusive | null {
   const bad = probes.find((p) => p.role === "bad" && p.verdict !== null);
 
   if (good?.verdict === "error") {
+    if (testedNothing(good.detail)) {
+      return refusal(
+        "good_unbuildable",
+        "Your known-good ref can't run this test.",
+        `At ${short(good.commitSha)} the test command ran but tested nothing ` +
+          `(${firstLine(good.detail)}). Faultline will not take its "good" on faith, so there is ` +
+          `no floor to search from. Pick a newer known-good ref — one where this test exists.`,
+      );
+    }
     return refusal(
       "good_unbuildable",
       "Your known-good ref can't be built today.",
@@ -104,7 +113,7 @@ export function endpointRefusal(probes: readonly Probe[]): Inconclusive | null {
       "The failing ref can't be built in a clean environment.",
       `Commit ${short(bad.commitSha)} could not be checked out, installed or run in a fresh ` +
         `container (${firstLine(bad.detail)}). Without a clean failure to anchor on, any commit ` +
-        `Faultline named would be a guess. Check the install command.`,
+        `Faultline named would be a guess. ${testedNothing(bad.detail) ? "Check the test command." : "Check the install command."}`,
     );
   }
   if (bad?.verdict === "pass") {
@@ -183,6 +192,11 @@ export function skippedRange(
 
 function refusal(reason: Inconclusive["reason"], headline: string, explanation: string): Inconclusive {
   return { reason, headline, explanation, evidence: null, range: null };
+}
+
+/** The probe's detail for a command that ran but tested nothing (probe.py: exit 125, pytest 4/5). */
+function testedNothing(detail: string | null): boolean {
+  return /^(pytest exited [45] |test command exited 125 )/.test(detail ?? "");
 }
 
 function firstLine(text: string | null): string {
