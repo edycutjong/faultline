@@ -607,8 +607,12 @@ async function dispatchQueued(ctx: StoreContext, hunt: Hunt, probes: Probe[], no
   // launch claims, so a tick working from a stale record collides instead of over-filling.
   const launches = new Map<string, number>();
   for (const probe of probes) {
-    for (const f of probe.infraFailures) if (f.region) launches.set(f.region, (launches.get(f.region) ?? 0) + 1);
-    if (probe.phase !== "queued" && probe.region) launches.set(probe.region, (launches.get(probe.region) ?? 0) + 1);
+    const regions = probe.infraFailures.map((f) => f.region);
+    if (probe.phase !== "queued") regions.push(probe.region);
+    for (const r of regions) {
+      /* v8 ignore next -- @preserve */
+      if (r) launches.set(r, (launches.get(r) ?? 0) + 1); // a failure before any region was chosen has none
+    }
   }
 
   const assignments: Array<{ position: number; region: string; launch: number }> = [];
@@ -633,14 +637,12 @@ async function dispatchQueued(ctx: StoreContext, hunt: Hunt, probes: Probe[], no
   for (let i = 0; i < assignments.length; i += DISPATCH_CONCURRENCY) {
     await Promise.all(
       assignments.slice(i, i + DISPATCH_CONCURRENCY).map(async ({ position, region, launch }) => {
-        const probe = out[position];
+        // unreachable: position always comes from probes.forEach, so the entry exists
+        const probe = out[position] as Probe;
         // A probe that already holds its own dispatch claim (a tick that lost the hunt write) is adopted, not re-slotted.
-        const held = probe ? await readClaim(ctx, hunt.id, probe.key).catch(() => null) : null;
-        const mine = held !== null || (await claimSlot(ctx, hunt.id, region, launch, now).catch(() => false));
-        if (!mine) return; // another tick took this slot (or storage hiccuped): stay queued
-        // unreachable else: position always comes from probes.forEach, so the entry exists
-        /* v8 ignore else -- @preserve */
-        if (probe) out[position] = await dispatchOne(ctx, backend, hunt, probe, region, now);
+        const held = await readClaim(ctx, hunt.id, probe.key);
+        if (held === null && !(await claimSlot(ctx, hunt.id, region, launch, now))) return; // another tick took this slot: stay queued
+        out[position] = await dispatchOne(ctx, backend, hunt, probe, region, now);
       }),
     );
   }
