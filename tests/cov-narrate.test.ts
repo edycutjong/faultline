@@ -50,11 +50,13 @@ describe("narrate branch coverage", () => {
       throw new Error("down");
     });
     expect(out.error).toBe("Token Factory request failed: down");
+    expect(out.retryable).toBe(true);
   });
 
   it("includes a truncated body for HTTP errors", async () => {
     const out = await narrate(TF, "p", async () => new Response("x".repeat(500), { status: 500 }));
     expect(out.error).toBe(`Token Factory returned 500: ${"x".repeat(200)}`);
+    expect(out.retryable).toBe(true);
   });
 
   it("omits the body suffix when it is empty or unreadable", async () => {
@@ -65,9 +67,16 @@ describe("narrate branch coverage", () => {
     expect(unreadable.error).toBe("Token Factory returned 503");
   });
 
+  it("marks 429 retryable and any other 4xx not (a2a r06)", async () => {
+    expect((await narrate(TF, "p", async () => new Response("slow down", { status: 429 }))).retryable).toBe(true);
+    expect((await narrate(TF, "p", async () => new Response("bad", { status: 400 }))).retryable).toBe(false);
+    expect((await narrate(TF, "p", async () => new Response("no", { status: 401 }))).retryable).toBe(false);
+  });
+
   it("reports non-JSON 200 responses", async () => {
     const out = await narrate(TF, "p", async () => new Response("<html>", { status: 200 }));
     expect(out.error).toBe("Token Factory returned a response that is not JSON.");
+    expect(out.retryable).toBe(true);
   });
 
   it("reports an empty answer with unknown finish_reason and no reasoning count", async () => {
@@ -75,6 +84,7 @@ describe("narrate branch coverage", () => {
     expect(out.rootCauseMd).toBeNull();
     expect(out.requestId).toBeNull();
     expect(out.error).toBe("The model returned no answer (finish_reason unknown).");
+    expect(out.retryable).toBe(false);
   });
 
   it("reports an empty answer with finish_reason, id and reasoning tokens", async () => {

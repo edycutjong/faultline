@@ -181,7 +181,8 @@ configured only in the deployment's environment, lifts the cap — never the loc
 ## Narration — NVIDIA Nemotron on Nebius Token Factory
 
 One `POST /v1/chat/completions` per hunt to `nvidia/nemotron-3-super-120b-a12b`
-(`src/lib/narrate.ts`), after test execution has already named the culprit: the diff, the
+(`src/lib/narrate.ts`) — sent a second time only if the first failed fast (under 20 s) with no
+response, a 429, a 5xx or a body that is not JSON — after test execution has already named the culprit: the diff, the
 failing test's output, and an instruction to write one paragraph. Nemotron 3 Super is a
 reasoning model — with a small budget it can return its reasoning and no answer — so the call
 asks for `reasoning_effort: "low"` with `max_tokens: 4096` and reads `content` only.

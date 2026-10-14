@@ -81,6 +81,9 @@ const DISPATCH_RECOVERY_MS = 3 * 60_000;
 /** A narration claim with no result this old is abandoned; the next attempt may run. */
 const NARRATION_STALE_MS = 3 * 60_000;
 const NARRATION_ATTEMPTS = 2;
+/** A first narration failure faster than this is retried once, inside the same claim. */
+const NARRATION_RETRY_IF_UNDER_MS = 20_000;
+const NARRATION_RETRY_DELAY_MS = 3_000;
 /** A finished probe's job is read this long after its verdict; before that it is still exiting. */
 const JOB_EXIT_GRACE_MS = 15_000;
 /** Stop waking for a job that never reads as ended; viewers and the sweep still tick. */
@@ -860,7 +863,13 @@ async function runNarration(
   }
   const failing = hunt.probes.find((p) => p.commitSha === report.culpritSha && p.verdict === "fail");
   const prompt = buildPrompt({ ...hunt, report: { ...report, diffText } }, diffText, failing?.tail ?? failing?.detail ?? "");
-  const outcome = await narrate(ctx.tokenFactory, prompt, ctx.fetchImpl);
+  let outcome = await narrate(ctx.tokenFactory, prompt, ctx.fetchImpl);
+  // One transient failure must not erase the only paragraph the model writes. A fast failure
+  // leaves room in the route's 120 s for one more try (the request itself times out at 90 s).
+  if (outcome.error && outcome.retryable && outcome.durationMs < NARRATION_RETRY_IF_UNDER_MS) {
+    await new Promise((resolve) => setTimeout(resolve, NARRATION_RETRY_DELAY_MS));
+    outcome = await narrate(ctx.tokenFactory, prompt, ctx.fetchImpl);
+  }
   return { rootCauseMd: outcome.rootCauseMd, error: outcome.error, requestId: outcome.requestId, diffText };
 }
 

@@ -112,7 +112,7 @@ answer and no culprit ([`evidence/refusal-hunt.json`](evidence/refusal-hunt.json
 | **Serverless AI Jobs** (CPU) | `src/lib/backend/jobs-backend.ts`, `src/lib/nebius/jobs.ts` | every probe: one terminating job per commit, `cpu-d3`/`2vcpu-8gb`, stock `python:3.11`, `probe.py` delivered through `spec.injectedFiles`, at most 2 per region |
 | Job status, get-by-name, cancel, list | `getJob`, `getJobByName`, `cancelJob`, `listJobs` | the tick; recovering a dispatch whose creator died; cancelling a probe past its deadline; the latest probe jobs on `/api/integrations/verify` |
 | **Object Storage** (S3 API) | `src/lib/nebius/storage.ts` | hunt records and every coordination decision (`If-None-Match` / `If-Match`), plus a presigned PUT URL per probe — the only thing a probe can write |
-| **Token Factory** inference | `src/lib/narrate.ts` | one `chat/completions` call per hunt to `nvidia/nemotron-3-super-120b-a12b` |
+| **Token Factory** inference | `src/lib/narrate.ts` | one `chat/completions` call per hunt to `nvidia/nemotron-3-super-120b-a12b` (retried once after a fast 429/5xx) |
 | IAM token exchange | `src/lib/nebius/auth.ts` | RS256 JWT signed with the service-account key, exchanged for a Bearer token |
 
 **Remove Serverless AI Jobs and Faultline is a `git bisect` wrapper with nowhere clean to run.**
@@ -129,7 +129,7 @@ to try one.
 
 ### NVIDIA Nemotron on Token Factory
 
-`nvidia/nemotron-3-super-120b-a12b`, called once per hunt after test execution has named the
+`nvidia/nemotron-3-super-120b-a12b`, called once per hunt (twice only after a fast 429/5xx) after test execution has named the
 culprit, with the culprit's diff and the failing test's output. It writes one paragraph: the
 mechanism, the lines responsible, and the fix if there is an obvious one. On the first live hunt
 it explained that `replace(tzinfo=...)` skips pytz's zone rules and lands at 06:37 UTC instead of

@@ -63,6 +63,12 @@ export interface NarrationOutcome {
   model: string;
   durationMs: number;
   usage: { promptTokens: number | null; completionTokens: number | null; reasoningTokens: number | null };
+  /**
+   * The same request could succeed if sent again: no response, 429, 5xx, or a body that is not
+   * JSON. An empty answer is not retryable — with the same budget the model would think until
+   * it ran out of room again.
+   */
+  retryable: boolean;
 }
 
 interface ChatCompletion {
@@ -102,6 +108,7 @@ export async function narrate(
     model: tf.model,
     durationMs: Date.now() - started,
     usage: { promptTokens: null, completionTokens: null, reasoningTokens: null },
+    retryable: false,
     ...patch,
   });
 
@@ -123,19 +130,22 @@ export async function narrate(
       signal: AbortSignal.timeout(90_000),
     });
   } catch (error) {
-    return outcome({ error: `Token Factory request failed: ${error instanceof Error ? error.message : String(error)}` });
+    return outcome({ error: `Token Factory request failed: ${error instanceof Error ? error.message : String(error)}`, retryable: true });
   }
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    return outcome({ error: `Token Factory returned ${res.status}${text ? `: ${text.slice(0, 200)}` : ""}` });
+    return outcome({
+      error: `Token Factory returned ${res.status}${text ? `: ${text.slice(0, 200)}` : ""}`,
+      retryable: res.status === 429 || res.status >= 500,
+    });
   }
 
   let body: ChatCompletion;
   try {
     body = (await res.json()) as ChatCompletion;
   } catch {
-    return outcome({ error: "Token Factory returned a response that is not JSON." });
+    return outcome({ error: "Token Factory returned a response that is not JSON.", retryable: true });
   }
 
   const choice = body.choices?.[0];

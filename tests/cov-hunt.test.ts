@@ -646,7 +646,7 @@ describe("narration", () => {
   const claim = (claimedAt: string, result: unknown = null) => ({ attempt: 1, claimedAt, result }) as never;
   const outcome = (over = {}) => ({
     rootCauseMd: "because", error: null, requestId: "req-1", model: "m", durationMs: 1,
-    usage: { promptTokens: 1, completionTokens: 1, reasoningTokens: 0 }, ...over,
+    usage: { promptTokens: 1, completionTokens: 1, reasoningTokens: 0 }, retryable: false, ...over,
   });
   const tf = (env: Env) => ({ ...env.ctx, tokenFactory: { apiKey: "k" } as never });
 
@@ -739,6 +739,35 @@ describe("narration", () => {
     const noFailing = await narrating(env, { probes: [probe(2, "pass")] });
     await tick(tf(env), noFailing.id);
     expect(mocked(narration.buildPrompt).mock.calls[3]?.[2]).toBe("");
+  });
+
+  it("retries one fast transient narration failure, but not a slow one or a refusal (a2a r06)", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    try {
+      const env = fresh();
+      mocked(narration.narrate)
+        .mockResolvedValueOnce(outcome({ rootCauseMd: null, error: "Token Factory returned 503", requestId: null, retryable: true, durationMs: 400 }))
+        .mockResolvedValueOnce(outcome());
+      const pending = tick(tf(env), (await narrating(env)).id);
+      await vi.advanceTimersByTimeAsync(3_000);
+      const retried = must(await pending);
+      expect(mocked(narration.narrate)).toHaveBeenCalledTimes(2);
+      expect(retried.report).toMatchObject({ rootCauseMd: "because", narrationError: null });
+
+      mocked(narration.narrate).mockClear();
+      mocked(narration.narrate).mockResolvedValueOnce(outcome({ rootCauseMd: null, error: "Token Factory returned 400", requestId: null }));
+      const refused = must(await tick(tf(env), (await narrating(env)).id));
+      expect(mocked(narration.narrate)).toHaveBeenCalledTimes(1);
+      expect(refused.report?.narrationError).toBe("Token Factory returned 400");
+
+      mocked(narration.narrate).mockClear();
+      mocked(narration.narrate).mockResolvedValueOnce(outcome({ rootCauseMd: null, error: "timeout", requestId: null, retryable: true, durationMs: 90_000 }));
+      const slow = must(await tick(tf(env), (await narrating(env)).id));
+      expect(mocked(narration.narrate)).toHaveBeenCalledTimes(1);
+      expect(slow.report?.narrationError).toBe("timeout");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("still finishes when the narration result cannot be recorded, keeping the old diff if the new one is empty", async () => {
