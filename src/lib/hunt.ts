@@ -310,7 +310,7 @@ async function advance(ctx: StoreContext, hunt: Hunt): Promise<Hunt> {
 
   const now = ctx.now();
   let probes = await Promise.all(hunt.probes.map((probe) => refreshProbe(ctx, hunt, probe, now)));
-  let next: Hunt = { ...hunt, probes, costUsd: totalCost(probes) };
+  let next: Hunt = { ...hunt, probes, costUsd: totalCost(hunt, probes) };
 
   // Jobs of the last round are still exiting when the culprit is named; keep reading them
   // through narration so their VM time reaches the cost.
@@ -748,8 +748,8 @@ async function dispatchOne(
 
 export { billedMs };
 
-function totalCost(probes: readonly Probe[]): number | null {
-  return huntCostUsd({ probes });
+function totalCost(hunt: Pick<Hunt, "backend">, probes: readonly Probe[]): number | null {
+  return huntCostUsd({ probes, backend: hunt.backend });
 }
 
 /** Probes whose jobs had not ended when the hunt did; their VM time is still provisional. */
@@ -779,7 +779,7 @@ async function settleBill(ctx: StoreContext, hunt: Hunt): Promise<Hunt> {
         : withRunStatus(p, await backend.status(p.jobId).catch(() => null)),
     ),
   );
-  return { ...hunt, probes, costUsd: totalCost(probes) };
+  return { ...hunt, probes, costUsd: totalCost(hunt, probes) };
 }
 
 // ---------------------------------------------------------------------------------------------

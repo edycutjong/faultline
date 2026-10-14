@@ -49,8 +49,15 @@ export function totalVmMs(probes: readonly Probe[]): number | null {
   return measured.length === 0 ? null : measured.reduce((sum, ms) => sum + ms, 0);
 }
 
+/**
+ * Backends this price does not describe. Token Factory Sandboxes publishes no list price, so a
+ * hunt that ran there has no derived cost — shown as unknown, never as a cpu-d3 figure.
+ */
+export const UNPRICED_BACKENDS: readonly string[] = ["nebius-tokenfactory-sandboxes"];
+
 /** A hunt's cost at the current list price, from its probes' VM time. */
-export function huntCostUsd(hunt: { probes: readonly Probe[] }): number | null {
+export function huntCostUsd(hunt: { probes: readonly Probe[]; backend?: string }): number | null {
+  if (hunt.backend && UNPRICED_BACKENDS.includes(hunt.backend)) return null;
   const ms = totalVmMs(hunt.probes);
   return ms === null ? null : probeCostUsd(ms);
 }

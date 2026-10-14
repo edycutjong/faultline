@@ -24,7 +24,9 @@
 import type { Hunt, ProbeResult, Verdict } from "@/lib/types";
 import {
   loadConfig,
+  loadSandboxesConfig,
   loadTokenFactoryConfig,
+  probeBackendKind,
   type NebiusConfig,
   type TokenFactoryConfig,
 } from "@/lib/nebius/config";
@@ -40,6 +42,7 @@ import {
 } from "@/lib/nebius/storage";
 import type { ProbeBackend } from "@/lib/backend/types";
 import { JobsBackend } from "@/lib/backend/jobs-backend";
+import { SandboxesBackend } from "@/lib/backend/sandboxes-backend";
 
 // ---------------------------------------------------------------------------------------------
 // The key-value seam
@@ -136,11 +139,25 @@ export function storeContext(env: NodeJS.ProcessEnv = process.env): StoreContext
   return {
     kv: config ? new S3Kv(config) : memoryKv,
     config,
-    backend: config ? new JobsBackend(config) : null,
+    backend: config ? selectBackend(config, env) : null,
     tokenFactory: loadTokenFactoryConfig(env),
     fetchImpl: (...args) => fetch(...args),
     now: () => new Date(),
   };
+}
+
+/**
+ * The probe backend this deploy runs on: `FAULTLINE_PROBE_BACKEND=sandboxes` picks Token Factory
+ * Sandboxes when its key and project are set; anything else — or a Sandboxes selection missing
+ * its credentials — is Serverless AI Jobs, the fallback. Either way the bucket above holds the
+ * hunt and every verdict, so the Nebius Cloud configuration is required for both.
+ */
+export function selectBackend(config: NebiusConfig, env: NodeJS.ProcessEnv = process.env): ProbeBackend {
+  if (probeBackendKind(env) === "sandboxes") {
+    const sandboxes = loadSandboxesConfig(env);
+    if (sandboxes) return new SandboxesBackend(sandboxes);
+  }
+  return new JobsBackend(config);
 }
 
 /** Test seam: clear in-memory state between cases. */
