@@ -12,7 +12,7 @@ built, it says so.
 ```bash
 npm install
 npm test            # 532 unit + integration tests (100 % coverage of src/lib, enforced)
-npm run test:probe  # 7 tests: the real probe.py against a local repo and HTTP server
+npm run test:probe  # 9 tests: the real probe.py against a local repo and HTTP server
 npm run build && npm run e2e   # 50 checks: the production build with NO environment, desktop and mobile
 ```
 
