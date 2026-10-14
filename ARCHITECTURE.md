@@ -146,9 +146,11 @@ races of 2, 5 and 8 concurrent creators on one key, exactly one won every time, 
 
 `ProbeBackend` (`src/lib/backend/types.ts`) is four verbs — dispatch, status, find (recovering
 a dispatch whose creator died) and cancel — and a capacity. `JobsBackend` implements it on Serverless AI Jobs,
-`cpu-d3` / `2vcpu-8gb`, stock `python:3.11`. A Token Factory Sandboxes backend would have to
-implement the same verbs; we have not been able to try one — `GET /sandboxes/v1/whoami` reports
-every permission `false` on this account (`evidence/sandboxes-whoami.json`).
+`cpu-d3` / `2vcpu-8gb`, stock `python:3.11`. A Token Factory Sandboxes backend would implement
+the same verbs. When first checked, `GET /sandboxes/v1/whoami` reported every permission `false`
+(`evidence/sandboxes-whoami.json`); beta access arrived on 2026-10-14 (`spawn_disposable: true`,
+`evidence/sandboxes-whoami-2026-10-14.json`). Probes still run on Serverless AI Jobs; this
+repository has no Sandboxes backend.
 
 Measured on this tenant (2026-10-13; `evidence/smoke-jobs*.json`, `evidence/first-live-hunt.json`):
 

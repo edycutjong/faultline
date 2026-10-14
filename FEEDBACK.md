@@ -76,6 +76,10 @@ closed to us: `GET /sandboxes/v1/whoami` answers 200 with every permission `fals
 `spawn`, `spawn_disposable`, `list`, `cancel`, `set_image_tag`) while the beta-access request is
 pending — a clear, honest answer, which we appreciated.
 
+**Update 2026-10-14.** Beta access arrived: the same request now reports all six permissions
+`true` (`evidence/sandboxes-whoami-2026-10-14.json`). Faultline's probes still run on Serverless
+AI Jobs; a Sandboxes backend is not built.
+
 **Suggestion:** let a promo activation code stand in for the card, at least up to the credit
 value. A prize that cannot be spent is not a prize.
 

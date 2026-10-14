@@ -121,11 +121,12 @@ injects and the latest probe jobs, read live from the Nebius Jobs API — so thi
 checked in thirty seconds.
 
 Sandboxes would be the natural home for a probe — this is the Coding and Agentic Engineering
-track — but the account's `GET /sandboxes/v1/whoami` reports every permission `false` while
-beta access is pending ([`evidence/sandboxes-whoami.json`](evidence/sandboxes-whoami.json)). The
-engine talks to a four-verb `ProbeBackend` interface (`src/lib/backend/types.ts`: dispatch,
-status, find, cancel); a Sandboxes backend would implement the same four. We have not been able
-to try one.
+track. When we built Faultline the account's `GET /sandboxes/v1/whoami` reported every permission
+`false` ([`evidence/sandboxes-whoami.json`](evidence/sandboxes-whoami.json)); beta access arrived
+on 2026-10-14 ([`evidence/sandboxes-whoami-2026-10-14.json`](evidence/sandboxes-whoami-2026-10-14.json),
+`spawn_disposable: true`). Probes still run on Serverless AI Jobs: the engine talks to a four-verb
+`ProbeBackend` interface (`src/lib/backend/types.ts`: dispatch, status, find, cancel), a Sandboxes
+backend would implement the same four, and this repository does not have one yet.
 
 ### NVIDIA Nemotron on Token Factory
 
