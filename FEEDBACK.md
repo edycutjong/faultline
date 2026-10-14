@@ -1,8 +1,8 @@
 # Feedback for Nebius and the hackathon organisers
 
-Written 2026-09-04, updated 2026-09-10 and 2026-10-13, while building
-[Faultline](./README.md), which runs its probes on Nebius AI Cloud Serverless AI Jobs and its
-narration on Nebius Token Factory.
+Written 2026-09-04, updated 2026-09-10, 2026-10-13 and 2026-10-14, while building
+[Faultline](./README.md), which runs its probes on Nebius Token Factory Sandboxes (default) or
+Nebius AI Cloud Serverless AI Jobs (fallback), and its narration on Nebius Token Factory.
 
 Everything below is reproducible and dated. Where something blocked us, we say what we did
 next, because a report that only complains is less useful than one that shows the workaround.
@@ -77,8 +77,9 @@ closed to us: `GET /sandboxes/v1/whoami` answers 200 with every permission `fals
 pending — a clear, honest answer, which we appreciated.
 
 **Update 2026-10-14.** Beta access arrived: the same request now reports all six permissions
-`true` (`evidence/sandboxes-whoami-2026-10-14.json`). Faultline's probes still run on Serverless
-AI Jobs; a Sandboxes backend is not built.
+`true` (`evidence/sandboxes-whoami-2026-10-14.json`). We built a Sandboxes probe backend the same
+day; its first hunt took 46.5 s where the same hunt on Serverless AI Jobs takes 923–1,032 s, and
+Sandboxes is now Faultline's default backend (§7).
 
 **Suggestion:** let a promo activation code stand in for the card, at least up to the credit
 value. A prize that cannot be spent is not a prize.
@@ -213,6 +214,37 @@ is what the quickstart teaches.
   Award OR one (1) Track Award and one (1) Bonus Award"* parses two ways depending on whether
   the `OR` or the `and` binds tighter: either an Overall Award excludes a Bonus Award, or it
   does not. That changes how a team allocates effort across the bonus tracks.
+
+## 7. Token Factory Sandboxes, used for real (2026-10-14)
+
+Beta access arrived on 2026-10-14; that day we built a second probe backend on it and ran one
+hunt (`evidence/sandboxes-hunt.json`: 255 commits, the right culprit, 46.5 s, 20 sandboxes, no
+retries). What slowed us down:
+
+- **No REST reference we could find.** The overview points to the CLI, SDK and MCP; the request
+  shapes we needed — the spawn body, the `Project` header, base64 `stdin`, the operations
+  endpoints — we read out of the `contree-sdk` 0.3.6 source. `GET /sandboxes/openapi.json` and
+  `GET /sandboxes/v1/openapi.json` return 404. Our app runs on Vercel in TypeScript, so a Python
+  SDK is a reference, not an option. A short REST page (or a served OpenAPI document) would have
+  saved an hour.
+- **Two different "project IDs" under one variable name.** The SDK reads the Token Factory
+  project (`aiproject-…`) from `NEBIUS_PROJECT_ID` — the same name Nebius AI Cloud tooling uses
+  for a `project-…` ID. A deployment that uses both (ours: Jobs + Object Storage on AI Cloud,
+  Sandboxes + inference on Token Factory) cannot follow both conventions; we use
+  `TOKENFACTORY_PROJECT_ID` for the second one.
+- **`resources.cost` has no documented unit, and Sandboxes has no published price.** Every
+  operation reports a cost figure (0.808 summed over our 20 probes); without a unit or a list
+  price we cannot turn it into dollars, so Faultline shows the cost of a Sandboxes hunt as
+  unknown.
+- **The operations list carries no hostname or label.** To recover a lost dispatch by name we set
+  the probe's deterministic name as the sandbox hostname, then read each recent operation's detail
+  until it matches. A name or label filter on `GET /v1/operations` — the role
+  `GET /ai/v1/jobs/get-by-name` plays for Jobs — would make that one call.
+
+What we would keep: a sandbox ran our whole probe (start, `git` fetch, `pip install`, pytest,
+verdict upload) in 8.6–13.4 s of operation time where a job's VM takes ~4 min 20 s just to
+start; `python:3.11` is preloaded, so nothing had to be imported; outbound networking is on;
+50 concurrent operations; and 20 spawns in under 40 s drew no throttling.
 
 ---
 
