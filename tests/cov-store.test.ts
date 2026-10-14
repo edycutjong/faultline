@@ -194,7 +194,44 @@ describe("verdicts", () => {
     const url = verdictUrl(ctx, "h", "p", 60);
     expect(url).toBe("memory://hunts/h/verdicts/p.json");
     await kv.putPresigned(url, JSON.stringify(good));
-    expect(await readVerdict(ctx, "h", "p", "c")).toEqual({ kind: "valid", result: good });
+    expect(await readVerdict(ctx, "h", "p", "c")).toEqual({
+      kind: "valid",
+      result: { ...good, exitCode: null, installCommand: null, timings: {}, detail: null, tail: null },
+    });
+  });
+
+  it("refuses a verdict document over 256 KiB before parsing it (a2a r06)", async () => {
+    const kv = new MemoryKv();
+    const ctx = ctxOf(kv);
+    await kv.putPresigned(verdictUrl(ctx, "h", "p", 60), JSON.stringify({ ...good, tail: "x".repeat(300 * 1024) }));
+    expect(await readVerdict(ctx, "h", "p", "c")).toEqual({ kind: "invalid", reason: "verdict document is too large" });
+  });
+
+  it("rebuilds a valid verdict from checked fields only — hostile shapes never reach the record (a2a r06)", () => {
+    const parse = (extra: Record<string, unknown>) => {
+      const r = parseVerdict(JSON.stringify({ ...good, ...extra }), "h", "p", "c");
+      if (r.kind !== "valid") throw new Error(r.kind);
+      return r.result;
+    };
+    const hostile = parse({
+      tail: { html: "<script>" },
+      detail: 42,
+      installCommand: ["pip"],
+      exitCode: 1.5,
+      timings: { cloneMs: 10, installMs: "slow", testMs: Number.MAX_VALUE, extra: 1 },
+      injected: "dropped",
+    });
+    expect(hostile.tail).toBeNull();
+    expect(hostile.detail).toBeNull();
+    expect(hostile.installCommand).toBeNull();
+    expect(hostile.exitCode).toBeNull();
+    expect(hostile.timings).toEqual({ cloneMs: 10, testMs: Number.MAX_VALUE });
+    expect(hostile).not.toHaveProperty("injected");
+    const long = parse({ tail: "y".repeat(1_000_000), detail: "d", exitCode: 3, timings: null });
+    expect(long.tail).toHaveLength(8_000);
+    expect(long.detail).toBe("d");
+    expect(long.exitCode).toBe(3);
+    expect(long.timings).toEqual({});
   });
 
   it("classifies invalid documents", () => {
@@ -210,6 +247,10 @@ describe("verdicts", () => {
     expect(reason(JSON.stringify({ ...good, verdict: undefined }))).toMatch(/value missing/);
     expect(reason(JSON.stringify({ ...good, verdict: "maybe" }))).toMatch(/value missing/);
     expect(reason(JSON.stringify({ ...good, durationMs: "5" }))).toMatch(/no duration/);
+    expect(reason(JSON.stringify({ ...good, durationMs: null }))).toMatch(/no duration/);
+    // Valid JSON that is not an object used to throw, which refreshProbe swallows and retries
+    // forever: a probe that wrote `null` here would have wedged its hunt (a2a r06).
+    for (const t of ["null", "5", '"pass"', "[]"]) expect(reason(t)).toMatch(/not an object/);
     expect(parseVerdict(JSON.stringify(good), "h", "p", "c").kind).toBe("valid");
   });
 });

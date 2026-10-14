@@ -211,23 +211,66 @@ export async function readVerdict(
 ): Promise<VerdictRead> {
   const found = await ctx.kv.get(keys.probeVerdict(huntId, probeKey));
   if (!found) return { kind: "absent" };
+  // Written by a container that runs visitor code: everything about it is checked, size first.
+  if (found.value.length > VERDICT_DOC_MAX) return { kind: "invalid", reason: "verdict document is too large" };
   return parseVerdict(found.value, huntId, probeKey, commitSha);
 }
 
+/** The probe caps its own text at 4,000 characters plus a marker; this cap holds without it. */
+const VERDICT_TEXT_MAX = 8_000;
+/** A real verdict is a few KB. Anything this large is not one, and never enters the hunt record. */
+const VERDICT_DOC_MAX = 256 * 1024;
+
+const capped = (v: unknown): string | null => (typeof v === "string" ? v.slice(0, VERDICT_TEXT_MAX) : null);
+const millis = (v: unknown): number | undefined => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
+
+/**
+ * Validate a verdict document and rebuild it from checked fields only. The presigned URL lets
+ * a hostile test suite replace its own probe's document; it can change that probe's verdict,
+ * which is the same power it has over its own exit code — but not the shape of the hunt
+ * record every tick and every viewer reads.
+ */
 export function parseVerdict(text: string, huntId: string, probeKey: string, commitSha: string): VerdictRead {
-  let doc: Partial<ProbeResult>;
+  let parsed: unknown;
   try {
-    doc = JSON.parse(text) as Partial<ProbeResult>;
+    parsed = JSON.parse(text);
   } catch {
     return { kind: "invalid", reason: "verdict document is not complete JSON" };
   }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return { kind: "invalid", reason: "verdict document is not an object" };
+  }
+  const doc = parsed as Record<string, unknown>;
   if (doc.schema !== "faultline.probe.v2") return { kind: "invalid", reason: "unknown verdict schema" };
   if (doc.huntId !== huntId || doc.probeKey !== probeKey || doc.commitSha !== commitSha) {
     return { kind: "invalid", reason: "verdict names a different probe" };
   }
-  if (!doc.verdict || !VERDICTS.includes(doc.verdict)) return { kind: "invalid", reason: "verdict value missing" };
-  if (typeof doc.durationMs !== "number") return { kind: "invalid", reason: "verdict has no duration" };
-  return { kind: "valid", result: doc as ProbeResult };
+  const verdict = VERDICTS.find((v) => v === doc.verdict);
+  if (!verdict) return { kind: "invalid", reason: "verdict value missing" };
+  const durationMs = millis(doc.durationMs);
+  if (durationMs === undefined) return { kind: "invalid", reason: "verdict has no duration" };
+  const t = typeof doc.timings === "object" && doc.timings !== null ? (doc.timings as Record<string, unknown>) : {};
+  const timings: ProbeResult["timings"] = {};
+  for (const name of ["cloneMs", "installMs", "testMs"] as const) {
+    const ms = millis(t[name]);
+    if (ms !== undefined) timings[name] = ms;
+  }
+  return {
+    kind: "valid",
+    result: {
+      schema: "faultline.probe.v2",
+      huntId,
+      probeKey,
+      commitSha,
+      verdict,
+      exitCode: Number.isInteger(doc.exitCode) ? (doc.exitCode as number) : null,
+      durationMs,
+      installCommand: capped(doc.installCommand),
+      timings,
+      detail: capped(doc.detail),
+      tail: capped(doc.tail),
+    },
+  };
 }
 
 export function verdictUrl(ctx: StoreContext, huntId: string, probeKey: string, expiresSeconds: number): string {
