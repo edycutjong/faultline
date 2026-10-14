@@ -163,7 +163,8 @@ h1 .hl{color:var(--fault);text-shadow:0 0 42px #ff4a2b5c}
 .seis .dot{transform-box:fill-box;transform-origin:center}
 @keyframes tear{0%{opacity:0;stroke-dasharray:0 600}100%{opacity:1;stroke-dasharray:600 0}}
 @keyframes fade{from{opacity:0}to{opacity:1}}
-.quake{animation:shake .42s cubic-bezier(.36,.07,.19,.97) both}
+.seis{overflow:clip}
+.quake .seis-scroll{animation:shake .42s cubic-bezier(.36,.07,.19,.97) both}
 @keyframes shake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(3px)}30%,50%,70%{transform:translateX(-5px)}40%,60%{transform:translateX(5px)}}
 .hold .fault-card{animation:none!important;opacity:0;transform:translateY(10px)}
 .fault-card{transition:opacity .6s,transform .6s}
