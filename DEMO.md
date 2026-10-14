@@ -1,6 +1,6 @@
 # Demo — every number, and the command that produced it
 
-Everything below was run on 2026-10-13 against the live deployment
+Everything below was run on 2026-10-13 and 2026-10-14 against the live deployment
 (https://faultline.edycu.dev) and real Nebius infrastructure. The raw output of
 every run is committed under [`evidence/`](evidence). Where a figure is a property of a fixture we
 built, it says so.
@@ -11,7 +11,7 @@ built, it says so.
 
 ```bash
 npm install
-npm test            # 514 unit + integration tests (100 % coverage of src/lib, enforced)
+npm test            # 516 unit + integration tests (100 % coverage of src/lib, enforced)
 npm run test:probe  # 7 tests: the real probe.py against a local repo and HTTP server
 npm run build && npm run e2e   # 50 checks: the production build with NO environment, desktop and mobile
 ```
@@ -153,7 +153,7 @@ ended it `ERROR (QuotaExceeded)` without running the test. The hunt counted that
 verdict — and re-dispatched commit 173 in eu-west1 (`aijob-e01e1sv0979rwsx4mq`), which cost about two minutes: 20 jobs
 for 19 probes. The engine's slot count is meant to stop a third job in a region; that it did not here was a bug (two ticks on the same hunt record could fill the same last slot), and
 the failure path is what kept the result right. It is fixed in `9d35f5f` — each launch into a region now claims its number with
-`If-None-Match` — and a fresh run on the fix (`evidence/p7-hunt.json`, hunt `9d33fada`) named `4e133d6c` in 932 s with 19 probes, 10 `429`s retried and no `QuotaExceeded` job. Faultline is 3 / 3 on this history (957 s, 923 s and 1,032 s).
+`If-None-Match` — and a fresh run on the fix (`evidence/p7-hunt.json`, hunt `9d33fada`) named `4e133d6c` in 932 s with 19 probes, 10 `429`s retried and no `QuotaExceeded` job. Faultline is 4 / 4 on this history (957 s, 923 s, 1,032 s and 932 s).
 Nemotron's paragraph (request `chatcmpl-a81f7f4ec15855e1`) names the swapped line, says `replace` attaches the zone
 without applying its offset rules for that date, and gives 06:37 UTC instead of 06:00 — the probe's own assertion reads
 `datetime(2023, 7, 1, 6, 37, …)` against `datetime(2023, 7, 1, 6, 0, …)`. Its fixes — restore `localize()` on line 78,
@@ -211,7 +211,7 @@ paragraph as generated, and the hunt record keeps the request ID so it can be ch
 
 - **Correctness.** On the drifting history, `git bisect run` in one reused environment named the
   wrong commit in 10 of 10 runs; a fresh environment per step named the right one in 8 of 8 local
-  runs (5 on the fixture, 3 on attrs) and in all three Faultline hunts over these two ranges (two on the fixture,
+  runs (5 on the fixture, 3 on attrs) and in all five Faultline hunts over these two ranges (four on the fixture,
   one on attrs). On attrs,
   where nothing drifts, every method is right.
 - **Wall-clock.** Faultline is slower than both local methods on both repositories. A probe's VM

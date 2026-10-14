@@ -20,7 +20,7 @@ Faultline bisects a broken commit range by testing each suspect in a fresh Nebiu
 [![Nebius Token Factory](https://img.shields.io/badge/Nebius-Token%20Factory-6057F7?style=flat)](https://docs.tokenfactory.nebius.com)
 [![NVIDIA Nemotron](https://img.shields.io/badge/NVIDIA-Nemotron%203%20Super-76B900?style=flat)](https://huggingface.co/nvidia)
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=flat&logo=next.js)](https://nextjs.org)
-[![Tests](https://img.shields.io/badge/tests-514%20passing-10B981?style=flat)](#-testing--ci) [![Coverage](https://img.shields.io/badge/coverage-100%25-10B981?style=flat)](#-testing--ci)
+[![Tests](https://img.shields.io/badge/tests-516%20passing-10B981?style=flat)](#-testing--ci) [![Coverage](https://img.shields.io/badge/coverage-100%25-10B981?style=flat)](#-testing--ci)
 [![CI/CD](https://img.shields.io/github/actions/workflow/status/edycutjong/faultline/ci.yml?branch=main&style=flat&label=CI%2FCD)](https://github.com/edycutjong/faultline/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/edycutjong/faultline?style=flat)](https://github.com/edycutjong/faultline/releases)
 [![License](https://img.shields.io/badge/license-MIT-yellow?style=flat)](LICENSE)
@@ -133,8 +133,8 @@ to try one.
 culprit, with the culprit's diff and the failing test's output. It writes one paragraph: the
 mechanism, the lines responsible, and the fix if there is an obvious one. On the first live hunt
 it explained that `replace(tzinfo=...)` skips pytz's zone rules and lands at 06:37 UTC instead of
-06:00 ([`evidence/first-live-hunt.json`](evidence/first-live-hunt.json)). Across the four hunts
-that named a culprit the culprit was right every time; the paragraph was right twice and partly wrong
+06:00 ([`evidence/first-live-hunt.json`](evidence/first-live-hunt.json)). Across the six hunts
+that named a culprit the culprit was right every time; the paragraph was right four times and partly wrong
 twice ([`DEMO.md`](DEMO.md) §4 and §5 say which) — which is why the UI labels it as generated.
 
 It is a reasoning model, and with a small budget it can return its reasoning and no answer — so the call
@@ -158,10 +158,11 @@ command that reproduces each run. Costs are the Nebius VM time of every probe jo
 | `git bisect run`, fresh venv at every step | `4e133d6c` | 5 / 5 | 57.4 s p50 |
 | **Faultline**, 8 slots in 4 regions | `4e133d6c` | 1 / 1 | 957 s — 3 rounds, 19 jobs, $0.09 |
 
-Two more Faultline hunts on the same range, both started from the app's own form, named `4e133d6c` again:
-`94efded1` in 923 s ([`evidence/rerun-hunt.json`](evidence/rerun-hunt.json)) and `69542695`, screen-recorded for
-the demo video, in 1,032 s ([`evidence/video-hunt.json`](evidence/video-hunt.json)) — 3 rounds, 19 probes and $0.09
-each: Faultline is 3 / 3 on this history.
+Three more Faultline hunts on the same range, all started from the app, named `4e133d6c` again:
+`94efded1` in 923 s ([`evidence/rerun-hunt.json`](evidence/rerun-hunt.json)), `69542695`, screen-recorded for
+the demo video, in 1,032 s ([`evidence/video-hunt.json`](evidence/video-hunt.json)) and `9d33fada` in 932 s, run after the
+per-region slot-claim fix ([`evidence/p7-hunt.json`](evidence/p7-hunt.json)) — 3 rounds, 19 probes and $0.09
+each: Faultline is 4 / 4 on this history.
 
 That fixture was built to drift, so the reused-environment failures are by construction; what it
 shows is the mechanism. **A real regression** — [python-attrs/attrs](https://github.com/python-attrs/attrs)
@@ -209,7 +210,7 @@ hunts need the Nebius and Token Factory credentials listed in [`.env.example`](.
 
 ## 🧪 Testing & CI
 
-**514 unit and integration tests**, **7 probe contract tests** and **50 end-to-end checks**
+**516 unit and integration tests**, **7 probe contract tests** and **50 end-to-end checks**
 (`npm test`, `npm run test:probe`, and `npm run build && npm run e2e`). The engine (`src/lib`) is at **100 %
 statement, branch, function and line coverage**, and `vitest.config.ts` fails the build if any of the four drops;
 the handful of `v8 ignore` comments each sit on a provably unreachable fallback with the reason beside it.
