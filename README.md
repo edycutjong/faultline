@@ -157,9 +157,10 @@ command that reproduces each run. Costs are the Nebius VM time of every probe jo
 | `git bisect run`, fresh venv at every step | `4e133d6c` | 5 / 5 | 57.4 s p50 |
 | **Faultline**, 8 slots in 4 regions | `4e133d6c` | 1 / 1 | 957 s — 3 rounds, 19 jobs, $0.09 |
 
-A second Faultline hunt on the same range, started from the app's own form and screen-recorded for
-the demo video (`94efded1`, [`evidence/video-hunt.json`](evidence/video-hunt.json)), named `4e133d6c`
-again in 923 s — 3 rounds, 19 jobs, $0.09: Faultline is 2 / 2 on this history.
+Two more Faultline hunts on the same range, both started from the app's own form, named `4e133d6c` again:
+`94efded1` in 923 s ([`evidence/rerun-hunt.json`](evidence/rerun-hunt.json)) and `69542695`, screen-recorded for
+the demo video, in 1,032 s ([`evidence/video-hunt.json`](evidence/video-hunt.json)) — 3 rounds, 19 probes and $0.09
+each: Faultline is 3 / 3 on this history.
 
 That fixture was built to drift, so the reused-environment failures are by construction; what it
 shows is the mechanism. **A real regression** — [python-attrs/attrs](https://github.com/python-attrs/attrs)

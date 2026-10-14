@@ -135,17 +135,29 @@ Nemotron's paragraph on this hunt (request `chatcmpl-988d2b477be0c269`) has the 
 daylight saving time since October 2022, which is the very change this fixture's drift is about.
 UTC−6 is simply standard time.
 
-**The same range again, on camera.** [`evidence/video-hunt.json`](evidence/video-hunt.json) — hunt
-`94efded1`, started from the app's own form on 2026-10-13 at 21:58 UTC and screen-recorded start to finish
-for the demo video: the same 255 commits, the same test, `v0.1.0` as the known-good ref. It named `4e133d6c`
-again — 3 rounds, 19 jobs across the four regions (6 eu-west1, 5 uk-south1, 4 uk-south2, 4 me-west1),
-923 s, 5,047 VM-seconds = $0.0925 at list price; 12 creates were refused with `429` and retried. Faultline
-is 2 / 2 on this history (957 s and 923 s). Nemotron's paragraph (request `chatcmpl-a5fbc7ddf16c7f81`) says
-the change swaps `localize()` for `replace(tzinfo=...)`, which attaches the zone without applying its offset
-rules, so midnight lands at 06:37 UTC instead of 06:00, and that the fix is to restore `localize()`. Read
-against the diff and the test output, the mechanism, both times and the fix all hold; its aside that a zone's
-rules include "any DST or past-offset adjustments" is generic — it does not say DST applied in July 2023, when
-Mexico City had none.
+**The same range again, twice, from the app's own form.** [`evidence/rerun-hunt.json`](evidence/rerun-hunt.json) —
+hunt `94efded1`, started on 2026-10-13 at 21:58 UTC and screen-recorded for the first cut of the demo video: the same
+255 commits, the same test, `v0.1.0` as the known-good ref. It named `4e133d6c` again — 3 rounds, 19 jobs across the
+four regions (6 eu-west1, 5 uk-south1, 4 uk-south2, 4 me-west1), 923 s, 5,047 VM-seconds = $0.0925 at list price; 12
+creates were refused with `429` and retried. Nemotron's paragraph (request `chatcmpl-a5fbc7ddf16c7f81`) says the change
+swaps `localize()` for `replace(tzinfo=...)`, which attaches the zone without applying its offset rules, so midnight lands
+at 06:37 UTC instead of 06:00, and that the fix is to restore `localize()`. Read against the diff and the test output, the
+mechanism, both times and the fix all hold; its aside that a zone's rules include "any DST or past-offset adjustments" is
+generic — it does not say DST applied in July 2023, when Mexico City had none.
+
+[`evidence/video-hunt.json`](evidence/video-hunt.json) — hunt `69542695`, started on 2026-10-14 at 04:41 UTC and
+screen-recorded start to finish for the demo video, on the redesigned app. It named `4e133d6c` — 3 rounds, 19 probes,
+1,032 s, 5,060 VM-seconds = $0.0928 at list price. 14 creates were refused with `429` and retried. Round 3 also sent three
+jobs to uk-south1 within two seconds; the third, `aijob-e03s3sxfzvv3mqk2ay`, exceeded the two-per-region quota and Nebius
+ended it `ERROR (QuotaExceeded)` without running the test. The hunt counted that as an infrastructure failure — not a
+verdict — and re-dispatched commit 173 in eu-west1 (`aijob-e01e1sv0979rwsx4mq`), which cost about two minutes: 20 jobs
+for 19 probes. The engine's slot count is meant to stop a third job in a region; that it did not here is an open bug, and
+the failure path is what kept the result right. Faultline is 3 / 3 on this history (957 s, 923 s and 1,032 s).
+Nemotron's paragraph (request `chatcmpl-a81f7f4ec15855e1`) names the swapped line, says `replace` attaches the zone
+without applying its offset rules for that date, and gives 06:37 UTC instead of 06:00 — the probe's own assertion reads
+`datetime(2023, 7, 1, 6, 37, …)` against `datetime(2023, 7, 1, 6, 0, …)`. Its fixes — restore `localize()` on line 78,
+or call `localize(moment, is_dst=None)` — both hold. Its "(the zone's base or wrong DST offset)" is a hedge: the offset
+`replace` attaches is pytz's first entry for the zone, local mean time (−6:37), and no DST applied in July 2023.
 
 ### A real regression — `python-attrs/attrs` 22.1.0 → 22.2.0, 135 commits
 
