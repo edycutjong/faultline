@@ -2,7 +2,8 @@
  * Waking a hunt that is waiting out a backoff.
  *
  * Probes tick a hunt when they report — but a probe whose create was throttled never ran,
- * so nothing will tick for it. A route that ends with such a probe queued keeps its function
+ * so nothing will tick for it; nor for a probe queued at a round boundary behind a slot whose
+ * job has reported but is still exiting (`nextWakeAt`). A route that ends with such a probe queued keeps its function
  * alive after the response (`after`), sleeps until the backoff ends — at most 60 s, so the
  * wait, the request and the tick before it all fit the route's 120 s budget — then POSTs the
  * hunt's own tick URL. That request is a fresh invocation which does the same if it still has
@@ -21,7 +22,7 @@ const TICK_REQUEST_TIMEOUT_MS = 30_000;
 /** How long to sleep before re-ticking `hunt`, or null when nothing is waiting on a backoff. */
 export function retickDelayMs(hunt: Hunt | null, now = Date.now()): number | null {
   if (!hunt) return null;
-  const wake = nextWakeAt(hunt);
+  const wake = nextWakeAt(hunt, new Date(now));
   if (!wake) return null;
   return Math.max(1_000, Math.min(MAX_WAIT_MS, wake.getTime() - now + 1_000));
 }

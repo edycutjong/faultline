@@ -81,6 +81,12 @@ const DISPATCH_RECOVERY_MS = 3 * 60_000;
 /** A narration claim with no result this old is abandoned; the next attempt may run. */
 const NARRATION_STALE_MS = 3 * 60_000;
 const NARRATION_ATTEMPTS = 2;
+/** A finished probe's job is read this long after its verdict; before that it is still exiting. */
+const JOB_EXIT_GRACE_MS = 15_000;
+/** Stop waking for a job that never reads as ended; viewers and the sweep still tick. */
+const JOB_EXIT_WAIT_MAX_MS = 5 * 60_000;
+/** A wake-up already due while its probe is still queued waits at least this long again. */
+const REWAKE_MIN_MS = 10_000;
 /** The presigned verdict URL outlives every deadline above. */
 const VERDICT_URL_TTL_SECONDS = 2 * 60 * 60;
 
@@ -506,7 +512,7 @@ async function refreshProbe(ctx: StoreContext, hunt: Hunt, probe: Probe, now: Da
     if (probe.phase === "done" && probe.jobId && !(probe.jobState && isJobFinal(probe.jobState))) {
       // The verdict is in; read the job once it has had time to exit, for its billed VM time.
       const since = probe.finishedAt ? now.getTime() - new Date(probe.finishedAt).getTime() : Infinity;
-      return since < 15_000 ? probe : withRunStatus(probe, await backend.status(probe.jobId));
+      return since < JOB_EXIT_GRACE_MS ? probe : withRunStatus(probe, await backend.status(probe.jobId));
     }
 
     if (probe.phase !== "running" || !probe.jobId) return probe;
@@ -669,19 +675,28 @@ const DISPATCH_CONCURRENCY = 4;
 const MAX_SLOT_SKIPS = 8;
 
 /**
- * When the hunt next has something to do that no probe will tick it for: the earliest
- * backoff among queued probes. A tick that leaves one behind waits it out and ticks again,
- * so a throttled round does not stall until someone happens to look.
+ * When the hunt next has something to do that no probe will tick it for, or null.
+ *
+ * Two things wait without a tick of their own: a queued probe's throttle backoff, and — at a
+ * round boundary — a queued probe that needs a slot still held by a job whose verdict is in but
+ * which is still exiting (`dispatchQueued` counts it as holding its region). That job's probe has
+ * already ticked, so nothing would wake the hunt until the next viewer, probe or sweep: wake when
+ * `refreshProbe` will next read the job. Pure; `now` is passed in.
  */
-export function nextWakeAt(hunt: Hunt): Date | null {
-  if (hunt.status !== "running") return null;
-  let earliest: number | null = null;
+export function nextWakeAt(hunt: Hunt, now: Date = new Date()): Date | null {
+  if (hunt.status !== "running" || !hunt.probes.some((p) => p.phase === "queued")) return null;
+  const t = now.getTime();
+  const times: number[] = [];
   for (const probe of hunt.probes) {
-    if (probe.phase !== "queued" || !probe.notBefore) continue;
-    const at = new Date(probe.notBefore).getTime();
-    if (earliest === null || at < earliest) earliest = at;
+    if (probe.phase === "queued" && probe.notBefore) times.push(new Date(probe.notBefore).getTime());
+    if (probe.phase === "done" && probe.jobId && probe.finishedAt && !(probe.jobState && isJobFinal(probe.jobState))) {
+      const due = new Date(probe.finishedAt).getTime() + JOB_EXIT_GRACE_MS;
+      if (t - due < JOB_EXIT_WAIT_MAX_MS) times.push(due);
+    }
   }
-  return earliest === null ? null : new Date(earliest);
+  if (times.length === 0) return null;
+  // A time already passed means the probe is still queued for want of a slot: wait, don't spin.
+  return new Date(Math.min(...times.map((at) => (at > t ? at : t + REWAKE_MIN_MS))));
 }
 
 async function dispatchOne(

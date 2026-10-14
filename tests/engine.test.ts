@@ -21,7 +21,8 @@ import {
 } from "@/lib/hunt";
 import { claimSlot, readHunt, readLiveLock, readDailyCount, type StoreContext } from "@/lib/store";
 import type { Hunt } from "@/lib/types";
-import { indexOf, memoryContext, must, shaFor, syntheticCommits, type Behaviour } from "./helpers";
+import { indexOf, memoryContext, must, probe, shaFor, syntheticCommits, type Behaviour } from "./helpers";
+import { retickDelayMs } from "@/lib/retick";
 
 const GOOD = shaFor(0);
 
@@ -283,7 +284,7 @@ describe("#7 — a missing verdict is infrastructure: retried, then a pause, nev
       expect(p.notBefore).not.toBeNull();
     }
     // The hunt says when it next has work no probe will tick it for.
-    expect(nextWakeAt(h)?.toISOString()).toBe(queued.map((p) => p.notBefore).sort()[0]);
+    expect(nextWakeAt(h, env.ctx.now())?.toISOString()).toBe(queued.map((p) => p.notBefore).sort()[0]);
 
     // Ticking before the backoff ends dispatches nothing new.
     const before = env.backend.launches.length;
@@ -293,6 +294,49 @@ describe("#7 — a missing verdict is infrastructure: retried, then a pause, nev
     const done = await drive(env, h.id);
     expect(done.status).toBe("done");
     expect(done.report?.culpritSha).toBe(shaFor(30));
+  });
+
+  it("wakes at a round boundary when exiting jobs free their slots, instead of waiting for a viewer (a2a r06)", async () => {
+    const env = memoryContext(regression(30), { regions: ["eu-west1"], slotsPerRegion: 2 });
+    const h = await started(env);
+    // Both endpoint verdicts land before a single tick; their jobs have not read as ended yet.
+    await env.backend.completeAll();
+    for (const run of env.backend.runs.values()) run.state = "RUNNING";
+    env.advance(100_000);
+    const boundary = must(await tick(env.ctx, h.id));
+    expect(boundary.round).toBe(2);
+    const queued = boundary.probes.filter((p) => p.round === 2);
+    expect(queued.length).toBeGreaterThan(0);
+    expect(queued.every((p) => p.phase === "queued" && p.notBefore === null)).toBe(true);
+    // Nothing else will tick this hunt: it wakes itself 15 s after the verdicts, when the jobs are read again.
+    const now = env.ctx.now();
+    expect(nextWakeAt(boundary, now)?.getTime()).toBe(now.getTime() + 15_000);
+    expect(retickDelayMs(boundary, now.getTime())).toBe(16_000);
+
+    for (const run of env.backend.runs.values()) run.state = "COMPLETED";
+    env.advance(16_000);
+    const woken = must(await tick(env.ctx, h.id));
+    expect(woken.probes.filter((p) => p.round === 2).every((p) => p.phase === "running")).toBe(true);
+  });
+
+  it("nextWakeAt never spins on a wake-up already due, and stops waking for a job that never ends (a2a r06)", () => {
+    const base = hunt(memoryContext(regression(30)).ctx, 16);
+    const at = (iso: string) => new Date(iso);
+    const queued = probe(8, null, { phase: "queued", jobId: null, notBefore: "2026-10-13T10:00:00.000Z" });
+    const exiting = probe(4, "pass", { jobState: "RUNNING", finishedAt: "2026-10-13T10:00:00.000Z" });
+    const running = (probes: Hunt["probes"]): Hunt => ({ ...base, status: "running", probes });
+
+    // A backoff already over, its probe still queued for want of a slot: no sooner than 10 s from now.
+    expect(nextWakeAt(running([queued]), at("2026-10-13T10:05:00Z"))?.toISOString()).toBe("2026-10-13T10:05:10.000Z");
+    // A queued probe next to a job still exiting: 15 s after that verdict.
+    const noBackoff = { ...queued, notBefore: null };
+    expect(nextWakeAt(running([noBackoff, exiting]), at("2026-10-13T10:00:05Z"))?.toISOString()).toBe("2026-10-13T10:00:15.000Z");
+    // A job that never reads as ended is waited on for 5 min, then left to viewers and the sweep.
+    expect(nextWakeAt(running([noBackoff, exiting]), at("2026-10-13T10:05:16Z"))).toBeNull();
+    // Nothing queued, or nothing to wait for, or not running: no wake-up.
+    expect(nextWakeAt(running([exiting]), at("2026-10-13T10:00:05Z"))).toBeNull();
+    expect(nextWakeAt(running([noBackoff, { ...exiting, jobState: "COMPLETED" }]), at("2026-10-13T10:00:05Z"))).toBeNull();
+    expect(nextWakeAt({ ...running([queued]), status: "paused" }, at("2026-10-13T10:00:05Z"))).toBeNull();
   });
 
   it(`pauses after ${MAX_THROTTLED} throttled creates in a row, and says it was capacity`, async () => {
