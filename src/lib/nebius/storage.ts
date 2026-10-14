@@ -173,13 +173,11 @@ export async function listObjects(
   return keys;
 }
 
-function decodeXmlEntities(value: string): string {
-  return value
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'");
+const XML_ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
+
+/** One pass, so a key holding a literal "&lt;" (sent as "&amp;lt;") is not decoded twice. */
+export function decodeXmlEntities(value: string): string {
+  return value.replace(/&(amp|lt|gt|quot|apos);/g, (_, name: string) => XML_ENTITIES[name]);
 }
 
 /** A stored object together with the ETag a conditional replace must quote back. */

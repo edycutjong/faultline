@@ -18,6 +18,7 @@ import {
   putJsonConditional,
   putObject,
   putObjectConditional,
+  decodeXmlEntities,
 } from "@/lib/nebius/storage";
 import type { NebiusConfig } from "@/lib/nebius/config";
 
@@ -216,5 +217,13 @@ describe("presignPut and keys", () => {
     expect(keys.narrationClaim("h", 2)).toBe("hunts/h/claims/narration-a2.json");
     expect(keys.liveLock()).toBe("locks/live-hunt.json");
     expect(keys.dailyCounter("2026-01-01")).toBe("counters/2026-01-01.json");
+  });
+});
+
+describe("decodeXmlEntities", () => {
+  it("decodes each entity once, so an escaped entity stays literal", () => {
+    expect(decodeXmlEntities("a&amp;lt;b")).toBe("a&lt;b");
+    expect(decodeXmlEntities("&lt;&gt;&quot;&apos;&amp;")).toBe(`<>"'&`);
+    expect(decodeXmlEntities("plain/key.json")).toBe("plain/key.json");
   });
 });
