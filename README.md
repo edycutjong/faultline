@@ -142,8 +142,8 @@ Sandboxes is now this deployment's default and Jobs stays selectable
 culprit, with the culprit's diff and the failing test's output. It writes one paragraph: the
 mechanism, the lines responsible, and the fix if there is an obvious one. On the first live hunt
 it explained that `replace(tzinfo=...)` skips pytz's zone rules and lands at 06:37 UTC instead of
-06:00 ([`evidence/first-live-hunt.json`](evidence/first-live-hunt.json)). Across the six hunts
-that named a culprit the culprit was right every time; the paragraph was right four times and partly wrong
+06:00 ([`evidence/first-live-hunt.json`](evidence/first-live-hunt.json)). Across the seven hunts
+that named a culprit the culprit was right every time; the paragraph was right five times and partly wrong
 twice ([`DEMO.md`](DEMO.md) §4 and §5 say which) — which is why the UI labels it as generated.
 
 It is a reasoning model, and with a small budget it can return its reasoning and no answer — so the call
