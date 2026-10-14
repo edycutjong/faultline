@@ -83,7 +83,11 @@ export function FaultReportView({ hunt }: { hunt: Hunt }) {
           </div>
           <div>
             <dt className="text-muted">Compute cost</dt>
-            <dd className="mt-0.5 font-mono" title="Nebius VM time of every probe job, at the current cpu-d3 list price">
+            <dd className="mt-0.5 font-mono" title={
+                huntCostUsd(hunt) === null
+                  ? "No published list price for this probe backend, so no cost is derived"
+                  : "Nebius VM time of every probe job, at the current cpu-d3 list price"
+              }>
               {formatCost(huntCostUsd(hunt))}
             </dd>
           </div>

@@ -15,7 +15,7 @@ import { ProbeList } from "./ProbeList";
 import { FaultReportView } from "./FaultReportView";
 import { InconclusiveView } from "./InconclusiveView";
 import { PausedView } from "./PausedView";
-import { formatDuration, isActive } from "./format";
+import { formatDuration, isActive, probeRunNoun } from "./format";
 
 function StatusBadge({ hunt }: { hunt: Hunt }) {
   const map: Record<Hunt["status"], { text: string; color: string }> = {
@@ -108,8 +108,8 @@ export function HuntView({
               Probes
             </h2>
             <p className="text-[13px] text-muted">
-              Each row is a real Nebius job — its ID and region are on screen because they are
-              the proof a probe was a cloud container.
+              Each row is a real {probeRunNoun(hunt.backend)} — its ID and region are on screen
+              because they are the proof a probe was a cloud container.
             </p>
           </div>
           <ProbeList hunt={hunt} />

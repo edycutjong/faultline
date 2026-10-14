@@ -20,6 +20,11 @@ export const VERDICT_LABEL: Record<Verdict, string> = {
   error: "skip",
 };
 
+/** What one probe ran as, by the backend recorded on the hunt. */
+export function probeRunNoun(backend: string | undefined): string {
+  return backend === "nebius-tokenfactory-sandboxes" ? "Token Factory Sandbox" : "Nebius Serverless AI Job";
+}
+
 export function shortSha(sha: string): string {
   return sha ? sha.slice(0, 7) : EM_DASH;
 }

@@ -14,7 +14,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { Hunt } from "@/lib/types";
 import { HuntView } from "@/components/HuntView";
-import { isActive } from "@/components/format";
+import { isActive, probeRunNoun } from "@/components/format";
 
 const POLL_MS = 2000;
 
@@ -151,7 +151,7 @@ export default function HuntPage() {
                   ? "Nothing was concluded from the missing probe. Everything already learned is kept."
                   : isActive(hunt.status)
                     ? "Each round goes out together, one fresh container per commit. Probes report as they finish and the next round is dispatched automatically — you can close this tab."
-                    : "The search is finished. Every probe below ran as a real Nebius Serverless AI Job."}
+                    : `The search is finished. Every probe below ran as a real ${probeRunNoun(hunt.backend)}.`}
             </p>
           </header>
 

@@ -26,14 +26,29 @@ interface LatestJob {
   createdAt: string | null;
 }
 
+interface LatestSandbox {
+  id: string;
+  state: string;
+  createdAt: string | null;
+  durationSeconds: number | null;
+}
+
 interface VerifyResponse {
   nebiusConfigured: boolean;
+  probeBackend?: { active: string | null; requested: string };
+  latestSandboxes?: { readAt: string | null; operations: LatestSandbox[]; unavailable: boolean } | null;
   tokenFactoryConfigured?: boolean;
   region: string | null;
   probeRegions?: string[];
   probeCapacity?: number;
   surfaces: Surface[];
   latestJobs?: { readAt: string | null; jobs: LatestJob[]; unavailableRegions?: string[] };
+}
+
+/** The active probe backend, named the way the surfaces below name it. */
+function backendLabel(data: VerifyResponse): string {
+  if (data.probeBackend?.active === "nebius-tokenfactory-sandboxes") return "probes on Token Factory Sandboxes";
+  return `probes on Serverless AI Jobs in ${(data.probeRegions ?? [data.region ?? "—"]).join(", ")}`;
 }
 
 /** `2026-10-13 16:22 UTC` — the API's own timestamp, not the visitor's clock. */
@@ -72,7 +87,7 @@ export function IntegrationProof() {
           {data === null
             ? "loading…"
             : data.nebiusConfigured
-              ? `credentials configured · probes in ${(data.probeRegions ?? [data.region ?? "—"]).join(", ")} · ${data.probeCapacity ?? "—"} slots`
+              ? `credentials configured · ${backendLabel(data)} · ${data.probeCapacity ?? "—"} slots`
               : "no credentials on this deploy · surfaces listed from the code path"}
         </p>
       </header>
@@ -98,6 +113,23 @@ export function IntegrationProof() {
       </ul>
 
       <footer className="border-t border-line px-6 py-4">
+        {data?.latestSandboxes && data.latestSandboxes.operations.length > 0 ? (
+          <div className="mb-3">
+            <p className="text-[13px] text-muted">
+              Latest probe sandboxes, read from Token Factory Sandboxes at {utcMinute(data.latestSandboxes.readAt)}:
+            </p>
+            <ul className="mt-2 grid gap-y-2 font-mono text-[12px] text-muted md:grid-cols-[max-content_max-content_max-content_1fr] md:gap-x-6 md:gap-y-1">
+              {data.latestSandboxes.operations.slice(0, 4).map((op) => (
+                <li key={op.id} className="flex flex-wrap gap-x-3 md:contents">
+                  <span className="whitespace-nowrap text-text">{op.id}</span>
+                  <span className="whitespace-nowrap">{op.state.toLowerCase()}</span>
+                  <span className="whitespace-nowrap">{op.durationSeconds === null ? "—" : `${op.durationSeconds.toFixed(1)} s`}</span>
+                  <span className="whitespace-nowrap">{utcMinute(op.createdAt)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         {data?.latestJobs && data.latestJobs.jobs.length > 0 ? (
           <>
             <p className="text-[13px] text-muted">
