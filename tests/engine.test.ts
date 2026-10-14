@@ -485,13 +485,61 @@ describe("region slots under concurrent ticks", () => {
     const env = memoryContext(regression(30), { regions: ["eu-west1"], slotsPerRegion: 2 });
     const h = hunt(env.ctx, 64);
     // A concurrent tick, working from the same record, already took launches 1 and 2 into the region.
-    await claimSlot(env.ctx, h.id, "eu-west1", 1, env.ctx.now());
-    await claimSlot(env.ctx, h.id, "eu-west1", 2, env.ctx.now());
+    await claimSlot(env.ctx, h.id, "eu-west1", 1, "rival-1", new Set(), env.ctx.now());
+    await claimSlot(env.ctx, h.id, "eu-west1", 2, "rival-2", new Set(), env.ctx.now());
     const result = await startHunt(env.ctx, h);
     if (!result.ok) throw new Error(result.error);
     const after = must(await readHunt(env.ctx, h.id));
     expect(after.probes.filter((p) => p.round === 1 && p.phase === "queued").length).toBeGreaterThan(0);
     expect(after.probes.some((p) => p.jobId !== null)).toBe(false);
+  });
+
+  it("an orphaned slot claim cannot stall a region: the probe walks past spent numbers (a2a r06)", async () => {
+    const env = memoryContext(regression(30), { regions: ["eu-west1"], slotsPerRegion: 2 });
+    const h = hunt(env.ctx, 64);
+    // The first dispatch claim of round 1 hits a storage error after its slot claim was won.
+    const put = env.kv.put.bind(env.kv);
+    let thrown = false;
+    env.kv.put = async (key, body, condition) => {
+      if (!thrown && condition && "ifNoneMatch" in condition && key.startsWith(`hunts/${h.id}/claims/r1-`)) {
+        thrown = true;
+        throw new Error("storage hiccup");
+      }
+      return put(key, body, condition);
+    };
+    const result = await startHunt(env.ctx, h);
+    if (!result.ok) throw new Error(result.error);
+    expect(thrown).toBe(true);
+    expect(result.hunt.probes.filter((p) => p.phase === "queued").length).toBe(1);
+    // Before r06 the queued probe re-computed a number the running one already held, on every tick.
+    const next = must(await tick(env.ctx, h.id));
+    expect(next.probes.filter((p) => p.round === 1).every((p) => p.phase === "running")).toBe(true);
+    expect(env.backend.launches.length).toBe(2);
+  });
+
+  it("skips a stranger's slot claim only once its tick has certainly ended (a2a r06)", async () => {
+    for (const [ageMs, dispatched] of [[4 * 60_000, true], [10_000, false]] as const) {
+      const env = memoryContext(regression(30), { regions: ["eu-west1"], slotsPerRegion: 1 });
+      const h = hunt(env.ctx, 64);
+      await claimSlot(env.ctx, h.id, "eu-west1", 1, "x", new Set(), new Date(env.ctx.now().getTime() - ageMs));
+      const result = await startHunt(env.ctx, h);
+      if (!result.ok) throw new Error(result.error);
+      expect(env.backend.launches.length).toBe(dispatched ? 1 : 0);
+      expect(env.kv.keys().includes(`hunts/${h.id}/claims/slot-eu-west1-2.json`)).toBe(dispatched);
+    }
+  });
+
+  it("gives up walking after a bounded number of spent slot numbers, and stays queued", async () => {
+    const env = memoryContext(regression(30), { regions: ["eu-west1"], slotsPerRegion: 1 });
+    const h = hunt(env.ctx, 64);
+    const old = new Date(env.ctx.now().getTime() - 10 * 60_000);
+    for (let n = 1; n <= 8; n += 1) await claimSlot(env.ctx, h.id, "eu-west1", n, `dead-${n}`, new Set(), old);
+    const result = await startHunt(env.ctx, h);
+    if (!result.ok) throw new Error(result.error);
+    expect(env.backend.launches.length).toBe(0);
+    // The next tick starts from the same number and walks on.
+    const next = must(await tick(env.ctx, h.id));
+    expect(next.probes.some((p) => p.phase === "running")).toBe(false);
   });
 
   it("ticks working from the same record never launch more jobs into a region than it has slots", async () => {

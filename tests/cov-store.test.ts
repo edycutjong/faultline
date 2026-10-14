@@ -5,6 +5,7 @@ import {
   acquireLiveLock,
   claimDispatch,
   claimNarration,
+  claimSlot,
   createHunt,
   dailyCap,
   incrementDailyCount,
@@ -252,6 +253,30 @@ describe("verdicts", () => {
     // forever: a probe that wrote `null` here would have wedged its hunt (a2a r06).
     for (const t of ["null", "5", '"pass"', "[]"]) expect(reason(t)).toMatch(/not an object/);
     expect(parseVerdict(JSON.stringify(good), "h", "p", "c").kind).toBe("valid");
+  });
+});
+
+describe("slot claims (a2a r06)", () => {
+  const fake = (value: string | null): Kv => ({
+    get: async () => (value === null ? null : { value, etag: '"e"' }),
+    put: async () => ({ ok: false, status: 412 }),
+    presignPut: () => "",
+  });
+
+  it("names the probe, and tells won, spent and contended apart", async () => {
+    const ctx = ctxOf(new MemoryKv());
+    expect(await claimSlot(ctx, "h", "r", 1, "p1", new Set(), NOW)).toBe("won");
+    expect(await claimSlot(ctx, "h", "r", 1, "p1", new Set(), NOW)).toBe("won");
+    expect(await claimSlot(ctx, "h", "r", 1, "p2", new Set(), NOW)).toBe("contended");
+    expect(await claimSlot(ctx, "h", "r", 1, "p2", new Set(["p1"]), NOW)).toBe("spent");
+    expect(await claimSlot(ctx, "h", "r", 1, "p2", new Set(), new Date(NOW.getTime() + 3 * 60_000))).toBe("spent");
+  });
+
+  it("treats a claim that vanished as contended, and one without a probe or time by its age", async () => {
+    expect(await claimSlot(ctxOf(fake(null)), "h", "r", 1, "p", new Set(), NOW)).toBe("contended");
+    expect(await claimSlot(ctxOf(fake("{}")), "h", "r", 1, "p", new Set(), NOW)).toBe("spent");
+    const before = JSON.stringify({ region: "r", launch: 1, claimedAt: NOW.toISOString() });
+    expect(await claimSlot(ctxOf(fake(before)), "h", "r", 1, "p", new Set(["p"]), NOW)).toBe("contended");
   });
 });
 

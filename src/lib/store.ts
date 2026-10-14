@@ -298,14 +298,42 @@ export async function claimDispatch(ctx: StoreContext, huntId: string, claim: Di
   return { won: result.ok, etag: result.ok ? result.etag : null };
 }
 
+/** What a slot claim came to: ours, a number already spent on another launch, or held by a live rival. */
+export type SlotOutcome = "won" | "spent" | "contended";
+
+/** A slot claim this old was made by a tick that has certainly ended: routes run at most 120 s. */
+export const SLOT_CLAIM_SETTLED_MS = 3 * 60_000;
+
 /**
  * Claim the n-th launch into a region. Region capacity is counted from the hunt record a tick
  * read, which a concurrent tick may have outdated; both would then fill the same last slot and
  * Nebius would reject the second job (QuotaExceeded). Numbering the launches and claiming each
  * number with `If-None-Match` lets exactly one of them go; the loser stays queued for the next tick.
+ *
+ * The claim names the probe it was made for, so a number can be told apart when it is taken:
+ * by this same probe on an earlier tick (`won` — the dispatch claim still decides who creates
+ * the job); by a launch `launched` already counts, or by a tick long dead that never launched
+ * anything (`spent` — the caller moves on to the next number, otherwise an orphaned claim would
+ * hold its region's numbering one behind for good); or by a live rival (`contended`).
  */
-export async function claimSlot(ctx: StoreContext, huntId: string, region: string, launch: number, now: Date): Promise<boolean> {
-  return (await ctx.kv.put(keys.slotClaim(huntId, region, launch), json({ region, launch, claimedAt: now.toISOString() }), { ifNoneMatch: "*" })).ok;
+export async function claimSlot(
+  ctx: StoreContext,
+  huntId: string,
+  region: string,
+  launch: number,
+  probeKey: string,
+  launched: ReadonlySet<string>,
+  now: Date,
+): Promise<SlotOutcome> {
+  const key = keys.slotClaim(huntId, region, launch);
+  const body = json({ region, launch, probeKey, claimedAt: now.toISOString() });
+  if ((await ctx.kv.put(key, body, { ifNoneMatch: "*" })).ok) return "won";
+  const held = (await getJsonVersioned<{ probeKey?: string; claimedAt?: string }>(ctx.kv, key))?.value;
+  if (!held) return "contended";
+  if (held.probeKey === probeKey) return "won";
+  if (held.probeKey !== undefined && launched.has(held.probeKey)) return "spent";
+  const age = held.claimedAt ? now.getTime() - new Date(held.claimedAt).getTime() : Number.POSITIVE_INFINITY;
+  return age >= SLOT_CLAIM_SETTLED_MS ? "spent" : "contended";
 }
 
 /** The owner records the outcome of its dispatch. Nobody else ever writes a claim. */

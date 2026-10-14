@@ -48,6 +48,7 @@ import {
   replaceHunt,
   verdictUrl,
   type DispatchClaim,
+  type SlotOutcome,
   type StoreContext,
 } from "@/lib/store";
 import { keys } from "@/lib/nebius/storage";
@@ -615,6 +616,13 @@ async function dispatchQueued(ctx: StoreContext, hunt: Hunt, probes: Probe[], no
     }
   }
 
+  // Attempts this record counts as launched. A slot claim naming one of them is a number spent.
+  const launched = new Set<string>();
+  for (const probe of probes) {
+    if (probe.phase !== "queued") launched.add(probe.key);
+    for (const f of probe.infraFailures) launched.add(probeKey(probe.round, probe.commitIndex, probe.commitSha, f.attempt));
+  }
+
   const assignments: Array<{ position: number; region: string; launch: number }> = [];
   probes.forEach((probe, position) => {
     if (probe.phase !== "queued") return;
@@ -641,7 +649,14 @@ async function dispatchQueued(ctx: StoreContext, hunt: Hunt, probes: Probe[], no
         const probe = out[position] as Probe;
         // A probe that already holds its own dispatch claim (a tick that lost the hunt write) is adopted, not re-slotted.
         const held = await readClaim(ctx, hunt.id, probe.key);
-        if (held === null && !(await claimSlot(ctx, hunt.id, region, launch, now))) return; // another tick took this slot: stay queued
+        if (held === null) {
+          // An orphaned claim leaves this region's numbering one behind its claims: walk past spent numbers.
+          let outcome: SlotOutcome = "spent";
+          for (let n = launch; outcome === "spent" && n < launch + MAX_SLOT_SKIPS; n += 1) {
+            outcome = await claimSlot(ctx, hunt.id, region, n, probe.key, launched, now);
+          }
+          if (outcome !== "won") return; // a live rival holds this slot (or the skips ran out): stay queued
+        }
         out[position] = await dispatchOne(ctx, backend, hunt, probe, region, now);
       }),
     );
@@ -650,6 +665,8 @@ async function dispatchQueued(ctx: StoreContext, hunt: Hunt, probes: Probe[], no
 }
 
 const DISPATCH_CONCURRENCY = 4;
+/** Bound on spent slot numbers one dispatch walks past; more than this waits for the next tick. */
+const MAX_SLOT_SKIPS = 8;
 
 /**
  * When the hunt next has something to do that no probe will tick it for: the earliest
@@ -680,7 +697,7 @@ async function dispatchOne(
     const { won } = await claimDispatch(ctx, hunt.id, claim);
     if (!won) return await adoptClaim(ctx, hunt, { ...probe, phase: "dispatching", region }, now);
   } catch {
-    return probe; // storage hiccup: nothing happened, try next tick
+    return probe; // storage hiccup: no job was created; the slot claim names this probe, so it is reused by it or, once settled, skipped
   }
 
   try {
