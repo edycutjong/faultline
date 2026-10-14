@@ -234,7 +234,8 @@ def clone_commit(repo_url: str, sha: str, workdir: str, budget: Budget) -> str:
 def detect_install(workdir: str) -> tuple[str, list[str] | None]:
     """The install this commit declares, when the caller gave none. (strategy, argv).
 
-    Priority: pyproject.toml > requirements.txt > setup.py > none. `none` is not an
+    Priority: pyproject.toml or setup.py -> `pip install -e .`; else requirements.txt ->
+    `pip install -r requirements.txt`; else none. `none` is not an
     error: plenty of suites are stdlib-only, and refusing to run them would report
     `error` for commits that are perfectly testable.
     """
