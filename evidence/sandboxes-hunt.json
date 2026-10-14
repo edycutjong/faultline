@@ -37,7 +37,7 @@
    "decision": "correct and faster → Sandboxes becomes the production default; Jobs remains selectable (FAULTLINE_PROBE_BACKEND=jobs)"
   },
   "observations": [
-   "Every sandbox reached a terminal state; 0 dispatch failures, 0 throttled creates (Jobs hunts on this history retried 10 throttled creates each).",
+   "Every sandbox reached a terminal state; 0 dispatch failures, 0 throttled creates (Jobs hunts on this history retried 10–14 throttled creates each).",
    "Per probe: dispatch to verdict 8.3–10.7 s; operation duration 8.6–13.4 s (vmMs); the probe itself (clone + install + test) 6.0–7.0 s.",
    "Round 2 dispatched 6 of 8 probes at once and the other 2 ~15 s later: round 1's 10 sandboxes still counted as holding slots until their status was re-read (the engine's 15 s exit grace), and 10 + 8 > 16 slots."
   ]

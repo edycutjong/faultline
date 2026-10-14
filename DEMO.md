@@ -77,7 +77,7 @@ npm run test:live -- tests/live/smoke-sandboxes.live.ts
 
 [`evidence/smoke-sandboxes.json`](evidence/smoke-sandboxes.json), 2026-10-14: two probes through
 the production `SandboxesBackend` on the hero fixture — the known-good commit `0260b672` returned
-`pass`, the culprit `4e133d6c` returned `fail`, both via presigned PUT into the `eu-west1` bucket.
+`pass`, the culprit `4e133d6c` returned `fail`, both via presigned PUT into the Object Storage bucket.
 Dispatch to terminal state 11.4 s and 10.8 s; operation durations 7.98 s and 8 s, of which the
 probe's own clone + install + test took 6.3 s and 6.8 s.
 
@@ -172,6 +172,8 @@ verdict — and re-dispatched commit 173 in eu-west1 (`aijob-e01e1sv0979rwsx4mq`
 for 19 probes. The engine's slot count is meant to stop a third job in a region; that it did not here was a bug (two ticks on the same hunt record could fill the same last slot), and
 the failure path is what kept the result right. It is fixed in `9d35f5f` — each launch into a region now claims its number with
 `If-None-Match` — and a fresh run on the fix (`evidence/p7-hunt.json`, hunt `9d33fada`) named `4e133d6c` in 932 s with 19 probes, 10 `429`s retried and no `QuotaExceeded` job. On Jobs, Faultline is 4 / 4 on this history (957 s, 923 s, 1,032 s and 932 s); the Sandboxes hunt below makes it 5 / 5.
+Hunt `9d33fada`'s paragraph (request `chatcmpl-84f55213a6a6f7b8`) names the swapped line, gives 06:37 UTC instead of
+06:00 and restores `localize()`; all of it holds; its aside about DST adjustments is generic, as above.
 Nemotron's paragraph (request `chatcmpl-a81f7f4ec15855e1`) names the swapped line, says `replace` attaches the zone
 without applying its offset rules for that date, and gives 06:37 UTC instead of 06:00 — the probe's own assertion reads
 `datetime(2023, 7, 1, 6, 37, …)` against `datetime(2023, 7, 1, 6, 0, …)`. Its fixes — restore `localize()` on line 78,
@@ -237,7 +239,8 @@ and 6.0–7.0 s of that the probe's own clone, install and test. In round 2 two 
 waited ~15 s for a slot: round 1's ten sandboxes still counted as holding slots until their status
 was re-read (the engine's 15 s exit grace), and 10 + 8 exceeds 16. Nemotron's paragraph (request
 `chatcmpl-bdc1d9b0eabda9c2`) names the swapped line and says `replace` attaches the zone's tzinfo
-without its historical offset rules for that date.
+without its historical offset rules for that date, gives 06:37 UTC instead of 06:00 and restores
+`localize()`. Read against the diff and the test output, it holds.
 
 Sandboxes publishes no list price, so no dollar figure is given; each operation reports a
 `resources.cost` value of undocumented unit, summed raw in the evidence file (0.808 over 20

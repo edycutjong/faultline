@@ -54,7 +54,7 @@ It resolves the commit range, suggests the install command from the repository's
 files (shown, editable), and starts a hunt:
 
 1. **Round 1 tests both ends** — the known-good ref and the failing ref — plus as many suspects
-   as there are free slots. Each probe is a disposable **Nebius Token Factory Sandbox** on the
+   as the free slots allow, up to eight. Each probe is a disposable **Nebius Token Factory Sandbox** on the
    stock `python:3.11` image (or, on the fallback backend, a terminating **Serverless AI Job**):
    it fetches one commit, installs *that commit's* declared dependencies from scratch, runs the
    test, and reports.
@@ -74,7 +74,10 @@ watching.
 
 ## 🏗️ Architecture & Tech Stack
 
-<a href="docs/assets/architecture.png"><img src="docs/assets/architecture.png" width="100%" alt="Faultline architecture: you post a broken range to the Next.js app on Vercel, which holds every key; it creates one Nebius Serverless AI Job per probe across four regions (eight slots); each probe fetches one commit, installs its dependencies, runs the test, PUTs its verdict to Object Storage through a presigned URL and sends an empty tick; the tick reads the verdicts, refuses or narrows and starts the next round; once the culprit is named, one Token Factory call to NVIDIA Nemotron 3 Super explains it."></a>
+<a href="docs/assets/architecture.png"><img src="docs/assets/architecture.png" width="100%" alt="Faultline architecture (the Serverless AI Jobs fallback shown): you post a broken range to the Next.js app on Vercel, which holds every key; it creates one Nebius Serverless AI Job per probe across four regions (eight slots); each probe fetches one commit, installs its dependencies, runs the test, PUTs its verdict to Object Storage through a presigned URL and sends an empty tick; the tick reads the verdicts, refuses or narrows and starts the next round; once the culprit is named, one Token Factory call to NVIDIA Nemotron 3 Super explains it."></a>
+
+*The diagram shows the Serverless AI Jobs fallback (8 slots across four regions). On the live deployment every
+probe is a Token Factory Sandbox instead: 16 slots, the same presigned-URL verdict path.*
 
 - **A probe holds nothing.** Any public repository's `conftest.py` is arbitrary code, so a probe
   gets no bucket mount and no key — not even the Token Factory key that spawned its sandbox: one
@@ -92,7 +95,7 @@ watching.
 
 ### Tech stack
 
-Next.js 15 on Vercel · Nebius Token Factory Sandboxes (probes, default) · Nebius Serverless AI Jobs (CPU probes in four regions, the fallback) · Nebius Object Storage (S3 API, conditional writes) · Nebius Token Factory (NVIDIA Nemotron 3 Super) · stock `python:3.11` probe image. Full write-up, every claim naming its file: [`ARCHITECTURE.md`](ARCHITECTURE.md).
+Next.js 15 on Vercel · Nebius Token Factory Sandboxes (probes on the live deployment, `FAULTLINE_PROBE_BACKEND=sandboxes`) · Nebius Serverless AI Jobs (CPU probes in four regions: the fallback, and what runs when that variable is unset) · Nebius Object Storage (S3 API, conditional writes) · Nebius Token Factory (NVIDIA Nemotron 3 Super) · stock `python:3.11` probe image. Full write-up, every claim naming its file: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ### Honest refusal
 
@@ -114,7 +117,7 @@ answer and no culprit ([`evidence/refusal-hunt.json`](evidence/refusal-hunt.json
 | Surface | Where in the code | What it does |
 |---|---|---|
 | **Token Factory Sandboxes** | `src/lib/backend/sandboxes-backend.ts`, `src/lib/nebius/sandboxes.ts` | every probe on this deployment: one disposable sandbox per commit on the preloaded `python:3.11` image, `probe.py` on stdin, the probe name as its hostname, up to 16 at once — `POST /v1/instances`, `GET /v1/operations/{id}`, `GET /v1/operations`, `DELETE /v1/operations/{id}` |
-| **Serverless AI Jobs** (CPU) | `src/lib/backend/jobs-backend.ts`, `src/lib/nebius/jobs.ts` | the selectable fallback backend (`FAULTLINE_PROBE_BACKEND=jobs`): one terminating job per commit, `cpu-d3`/`2vcpu-8gb`, stock `python:3.11`, `probe.py` delivered through `spec.injectedFiles`, at most 2 per region |
+| **Serverless AI Jobs** (CPU) | `src/lib/backend/jobs-backend.ts`, `src/lib/nebius/jobs.ts` | the fallback backend, used when `FAULTLINE_PROBE_BACKEND` is anything but `sandboxes` (including unset) or Sandboxes credentials are missing: one terminating job per commit, `cpu-d3`/`2vcpu-8gb`, stock `python:3.11`, `probe.py` delivered through `spec.injectedFiles`, at most 2 per region |
 | Job status, get-by-name, cancel, list | `getJob`, `getJobByName`, `cancelJob`, `listJobs` | the tick; recovering a dispatch whose creator died; cancelling a probe past its deadline; the latest probe jobs on `/api/integrations/verify` |
 | **Object Storage** (S3 API) | `src/lib/nebius/storage.ts` | hunt records and every coordination decision (`If-None-Match` / `If-Match`), plus a presigned PUT URL per probe — the only thing a probe can write |
 | **Token Factory** inference | `src/lib/narrate.ts` | one `chat/completions` call per hunt to `nvidia/nemotron-3-super-120b-a12b` (retried once after a fast 429/5xx) |
