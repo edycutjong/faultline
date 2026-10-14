@@ -37,7 +37,7 @@ jobs:
 
           # The landing page and the recorded example are the two paths a judge actually
           # takes. Both must answer without credentials.
-          for path in "/" "/api/examples/recorded" "/api/integrations/verify"; do
+          for path in "/" "/about" "/pitch" "/api/examples/recorded" "/api/integrations/verify"; do
             code=$(curl -sS -o /tmp/body -w "%{http_code}" --max-time 30 "${BASE_URL}${path}" || echo 000)
             echo "${path} -> ${code}"
             if [ "$code" != "200" ]; then

@@ -171,7 +171,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: production
-      url: ${{ steps.deploy.outputs.url }}
+      url: https://faultline.edycu.dev
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -208,17 +208,27 @@ jobs:
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "Deployed to $URL"
 
-      - name: Verify the deploy answers the paths a judge takes
+      # Judges use the canonical domain, not the per-deployment URL, so that is what is checked.
+      # The alias moves to the new deployment a few seconds after `vercel deploy --prod` returns,
+      # hence the short retry per path.
+      - name: Verify the canonical domain answers the paths a judge takes
         if: steps.creds.outputs.ready == 'true'
         env:
-          URL: ${{ steps.deploy.outputs.url }}
+          BASE_URL: ${{ vars.FAULTLINE_BASE_URL || 'https://faultline.edycu.dev' }}
         run: |
           set -uo pipefail
+          BASE_URL="${BASE_URL%/}"
+          echo "Checking ${BASE_URL}"
           fail=0
-          for path in "/" "/api/examples/recorded" "/api/integrations/verify"; do
-            code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 "${URL}${path}" || echo 000)
+          for path in "/" "/about" "/pitch" "/api/examples/recorded" "/api/integrations/verify"; do
+            code=000
+            for attempt in 1 2 3 4 5 6; do
+              code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 "${BASE_URL}${path}" || echo 000)
+              [ "$code" = "200" ] && break
+              sleep 10
+            done
             echo "${path} -> ${code}"
-            [ "$code" = "200" ] || { echo "::error::${path} returned ${code}"; fail=1; }
+            [ "$code" = "200" ] || { echo "::error::${BASE_URL}${path} returned ${code}"; fail=1; }
           done
           exit $fail
 
@@ -233,4 +243,4 @@ jobs:
           echo "| 3 · Build + bundle budget + probe image | passed |" >> "$GITHUB_STEP_SUMMARY"
           echo "| 4 · E2E (Playwright, desktop + mobile) | passed |" >> "$GITHUB_STEP_SUMMARY"
           echo "| 5 · Performance (Lighthouse) | advisory |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| 6 · Deploy | ${{ steps.creds.outputs.ready == 'true' && 'deployed' || 'skipped, no VERCEL_TOKEN' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 6 · Deploy | ${{ steps.creds.outputs.ready == 'true' && 'deployed, verified on https://faultline.edycu.dev' || 'skipped, no VERCEL_TOKEN' }} |" >> "$GITHUB_STEP_SUMMARY"
