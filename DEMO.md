@@ -144,8 +144,8 @@ is 2 / 2 on this history (957 s and 923 s). Nemotron's paragraph (request `chatc
 the change swaps `localize()` for `replace(tzinfo=...)`, which attaches the zone without applying its offset
 rules, so midnight lands at 06:37 UTC instead of 06:00, and that the fix is to restore `localize()`. Read
 against the diff and the test output, the mechanism, both times and the fix all hold; its aside that a zone's
-rules include "any DST or past-offset adjustments" is generic (Mexico City had no DST in July 2023) but claims
-none applied here.
+rules include "any DST or past-offset adjustments" is generic — it does not say DST applied in July 2023, when
+Mexico City had none.
 
 ### A real regression — `python-attrs/attrs` 22.1.0 → 22.2.0, 135 commits
 
