@@ -32,7 +32,7 @@ import {
 } from "@/lib/planner";
 import { classifyInconclusive, skippedRange } from "@/lib/verdicts";
 import {
-  claimDispatch,
+  claimDispatch, claimSlot,
   claimNarration,
   createHunt,
   incrementDailyCount,
@@ -603,7 +603,15 @@ async function dispatchQueued(ctx: StoreContext, hunt: Hunt, probes: Probe[], no
     if (holding && probe.region) busy.set(probe.region, (busy.get(probe.region) ?? 0) + 1);
   }
 
-  const assignments: Array<{ position: number; region: string }> = [];
+  // Launches so far into each region (every attempt, failed or not): the number the next
+  // launch claims, so a tick working from a stale record collides instead of over-filling.
+  const launches = new Map<string, number>();
+  for (const probe of probes) {
+    for (const f of probe.infraFailures) if (f.region) launches.set(f.region, (launches.get(f.region) ?? 0) + 1);
+    if (probe.phase !== "queued" && probe.region) launches.set(probe.region, (launches.get(probe.region) ?? 0) + 1);
+  }
+
+  const assignments: Array<{ position: number; region: string; launch: number }> = [];
   probes.forEach((probe, position) => {
     if (probe.phase !== "queued") return;
     if (probe.notBefore && new Date(probe.notBefore).getTime() > now.getTime()) return;
@@ -614,7 +622,9 @@ async function dispatchQueued(ctx: StoreContext, hunt: Hunt, probes: Probe[], no
     if (!region) return;
     /* v8 ignore next -- @preserve */
     busy.set(region, (busy.get(region) ?? 0) + 1); // unreachable: region comes from the seeded busy map
-    assignments.push({ position, region });
+    const launch = (launches.get(region) ?? 0) + 1;
+    launches.set(region, launch);
+    assignments.push({ position, region, launch });
   });
 
   // Creates go out four at a time: a create takes ~11 s server-side, and a burst of them is
@@ -622,8 +632,12 @@ async function dispatchQueued(ctx: StoreContext, hunt: Hunt, probes: Probe[], no
   const out = [...probes];
   for (let i = 0; i < assignments.length; i += DISPATCH_CONCURRENCY) {
     await Promise.all(
-      assignments.slice(i, i + DISPATCH_CONCURRENCY).map(async ({ position, region }) => {
+      assignments.slice(i, i + DISPATCH_CONCURRENCY).map(async ({ position, region, launch }) => {
         const probe = out[position];
+        // A probe that already holds its own dispatch claim (a tick that lost the hunt write) is adopted, not re-slotted.
+        const held = probe ? await readClaim(ctx, hunt.id, probe.key).catch(() => null) : null;
+        const mine = held !== null || (await claimSlot(ctx, hunt.id, region, launch, now).catch(() => false));
+        if (!mine) return; // another tick took this slot (or storage hiccuped): stay queued
         // unreachable else: position always comes from probes.forEach, so the entry exists
         /* v8 ignore else -- @preserve */
         if (probe) out[position] = await dispatchOne(ctx, backend, hunt, probe, region, now);

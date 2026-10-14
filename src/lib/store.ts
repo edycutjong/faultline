@@ -255,6 +255,16 @@ export async function claimDispatch(ctx: StoreContext, huntId: string, claim: Di
   return { won: result.ok, etag: result.ok ? result.etag : null };
 }
 
+/**
+ * Claim the n-th launch into a region. Region capacity is counted from the hunt record a tick
+ * read, which a concurrent tick may have outdated; both would then fill the same last slot and
+ * Nebius would reject the second job (QuotaExceeded). Numbering the launches and claiming each
+ * number with `If-None-Match` lets exactly one of them go; the loser stays queued for the next tick.
+ */
+export async function claimSlot(ctx: StoreContext, huntId: string, region: string, launch: number, now: Date): Promise<boolean> {
+  return (await ctx.kv.put(keys.slotClaim(huntId, region, launch), json({ region, launch, claimedAt: now.toISOString() }), { ifNoneMatch: "*" })).ok;
+}
+
 /** The owner records the outcome of its dispatch. Nobody else ever writes a claim. */
 export async function recordDispatch(ctx: StoreContext, huntId: string, claim: DispatchClaim): Promise<void> {
   await ctx.kv.put(keys.dispatchClaim(huntId, claim.probeKey), json(claim));

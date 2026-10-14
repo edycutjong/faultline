@@ -290,6 +290,8 @@ export const keys = {
   probeVerdict: (huntId: string, probeKey: string) => `hunts/${huntId}/verdicts/${probeKey}.json`,
   /** `If-None-Match` claim that makes dispatch of one (round, sha, attempt) happen once. */
   dispatchClaim: (huntId: string, probeKey: string) => `hunts/${huntId}/claims/${probeKey}.json`,
+  /** `If-None-Match` claim on the n-th launch into a region: two ticks on stale views cannot both take the same slot. */
+  slotClaim: (huntId: string, region: string, launch: number) => `hunts/${huntId}/claims/slot-${region}-${launch}.json`,
   narrationClaim: (huntId: string, attempt: number) => `hunts/${huntId}/claims/narration-a${attempt}.json`,
   liveLock: () => "locks/live-hunt.json",
   dailyCounter: (day: string) => `counters/${day}.json`,

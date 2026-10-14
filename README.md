@@ -4,7 +4,7 @@
 
 # Faultline 〰️
 
-**Find the commit that broke it — in a clean room.**
+**The bisect that refuses to blame the innocent.**
 Faultline bisects a broken commit range by testing each suspect in a fresh Nebius container built from that commit's own dependencies. It proves both ends first, refuses to guess when the evidence disagrees, and has NVIDIA Nemotron on Nebius Token Factory explain the culprit.
 
 <img src="docs/assets/readme-hero.png" width="100%" alt="Faultline — a range of suspect commits narrows to the one that broke the test, each probe a fresh container.">

@@ -19,7 +19,7 @@ import {
   MAX_THROTTLED,
   PROBE_TIMEOUT_SECONDS,
 } from "@/lib/hunt";
-import { readHunt, readLiveLock, readDailyCount, type StoreContext } from "@/lib/store";
+import { claimSlot, readHunt, readLiveLock, readDailyCount, type StoreContext } from "@/lib/store";
 import type { Hunt } from "@/lib/types";
 import { indexOf, memoryContext, must, shaFor, syntheticCommits, type Behaviour } from "./helpers";
 
@@ -455,5 +455,33 @@ describe("narration", () => {
     expect(done.status).toBe("done");
     expect(done.report?.rootCauseMd).toBeNull();
     expect(done.report?.narrationError).toMatch(/not configured/);
+  });
+});
+
+describe("region slots under concurrent ticks", () => {
+  it("a launch another tick already claimed is not taken twice — the probe stays queued", async () => {
+    const env = memoryContext(regression(30), { regions: ["eu-west1"], slotsPerRegion: 2 });
+    const h = hunt(env.ctx, 64);
+    // A concurrent tick, working from the same record, already took launches 1 and 2 into the region.
+    await claimSlot(env.ctx, h.id, "eu-west1", 1, env.ctx.now());
+    await claimSlot(env.ctx, h.id, "eu-west1", 2, env.ctx.now());
+    const result = await startHunt(env.ctx, h);
+    if (!result.ok) throw new Error(result.error);
+    const after = must(await readHunt(env.ctx, h.id));
+    expect(after.probes.filter((p) => p.round === 1 && p.phase === "queued").length).toBeGreaterThan(0);
+    expect(after.probes.some((p) => p.jobId !== null)).toBe(false);
+  });
+
+  it("ticks working from the same record never launch more jobs into a region than it has slots", async () => {
+    const env = memoryContext(regression(30), { regions: ["eu-west1", "uk-south1"], slotsPerRegion: 2 });
+    const h = await started(env, 64);
+    const perRegion = new Map<string, number>();
+    const orig = env.backend.dispatch.bind(env.backend);
+    env.backend.dispatch = async (spec) => {
+      perRegion.set(spec.region, (perRegion.get(spec.region) ?? 0) + 1);
+      return orig(spec);
+    };
+    await Promise.all([tick(env.ctx, h.id), tick(env.ctx, h.id), tick(env.ctx, h.id)]);
+    for (const n of perRegion.values()) expect(n).toBeLessThanOrEqual(2);
   });
 });
