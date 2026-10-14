@@ -763,10 +763,9 @@ export async function resumeHunt(ctx: StoreContext, huntId: string): Promise<Res
   }
 
   const hunt = current.value;
+  // Exhausted either way — silent attempts or throttling — or the next tick pauses it again.
   const probes = hunt.probes.map((probe) =>
-    probe.phase === "queued" && attemptsUsed(probe) >= MAX_ATTEMPTS
-      ? { ...probe, notBefore: null, budgetFrom: probe.attempt }
-      : probe,
+    exhausted(probe) ? { ...probe, notBefore: null, budgetFrom: probe.attempt } : probe,
   );
   const resumed: Hunt = { ...hunt, status: "running", pause: null, probes };
   const written = await replaceHunt(ctx, resumed, current.etag);

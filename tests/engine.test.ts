@@ -309,6 +309,28 @@ describe("#7 — a missing verdict is infrastructure: retried, then a pause, nev
     expect(current.pause?.attempts).toBe(MAX_THROTTLED);
   });
 
+  it("resume gives a throttle-exhausted probe a fresh budget, instead of pausing again on the next tick (a2a r06)", async () => {
+    const env = memoryContext(regression(30));
+    env.backend.throttledCreates = 1_000;
+    const h = await started(env);
+    let current = h;
+    for (let i = 0; i < 40 && current.status === "running"; i += 1) {
+      env.advance(5 * 60_000);
+      current = must(await tick(env.ctx, h.id));
+    }
+    expect(current.status).toBe("paused");
+    expect(current.pause?.message).toMatch(/refused to start/);
+
+    env.backend.throttledCreates = 0; // capacity is back
+    const resumed = await resumeHunt(env.ctx, h.id);
+    if (!resumed.ok) throw new Error(resumed.error);
+    expect(resumed.hunt.status).toBe("running");
+    expect(resumed.hunt.pause).toBeNull();
+    expect(resumed.hunt.probes.filter((p) => p.phase === "running").length).toBeGreaterThan(0);
+    const done = await drive(env, h.id);
+    expect(done.report?.culpritSha).toBe(shaFor(30));
+  });
+
   it("recognises throttling from the API's words, and nothing else", () => {
     expect(isThrottle("dispatch failed: POST /ai/v1/jobs failed: 429 Too Many Requests")).toBe(true);
     expect(isThrottle("the job ended ERROR (QuotaExceeded) without reporting")).toBe(true);
