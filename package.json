@@ -2,7 +2,7 @@
   "name": "faultline",
   "version": "0.2.1",
   "private": true,
-  "description": "Parallel N-ary bisection of a broken commit range across Nebius Serverless AI Jobs.",
+  "description": "Parallel N-ary bisection of a broken commit range in disposable Nebius Token Factory Sandboxes (Serverless AI Jobs as the fallback).",
   "license": "MIT",
   "scripts": {
     "dev": "next dev",
