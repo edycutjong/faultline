@@ -10,7 +10,7 @@
 # contract — environment variables in, one verdict PUT to a presigned URL out.
 # =====================================================================================
 
-FROM python:3.11.16-slim-bookworm
+FROM python:3.11.18-slim-bookworm
 
 # git is the only OS package the probe needs. ca-certificates for https remotes.
 RUN apt-get update \
